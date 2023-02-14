@@ -6,7 +6,6 @@ These modules should be pasted in the project folder before being ran
 '''
 import os
 import shutil
-import time
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
@@ -155,7 +154,7 @@ if __name__ == "__main__":
     shutil.copy(path_case / "plpplanos.csv", path_out)
 
     # Tiempo final
-    t_end = time.time()
+    t_end = datetime.now()
     print(t_end)
     t = t_end - t_ini
     print("Process Time: " + str(int(t)) + ":" + str(int(60 * (t - int(t)))))
