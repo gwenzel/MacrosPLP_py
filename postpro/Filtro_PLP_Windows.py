@@ -1,6 +1,8 @@
 '''Filtro PLP Windows
 
 Module to turn PLP outputs to Engie Format, to be used in other models and visualizers.
+
+These modules should be pasted in the project folder before being ran
 '''
 import os
 import shutil
