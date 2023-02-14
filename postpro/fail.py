@@ -10,7 +10,7 @@ FAL_NAME = "plpfal.csv"
 
 
 @timeit
-def process_and_write_fail_data(path_case, path_out, blo_eta):
+def fail_converter(path_case, path_out, blo_eta):
     '''
     Read, process and write all failure related data
     '''

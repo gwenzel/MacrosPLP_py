@@ -6,23 +6,21 @@ These modules should be pasted in the project folder before being ran
 '''
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
 
 from utils import timeit
-from marginal_costs import process_marginal_costs, process_marginal_costs_monthly, write_marginal_costs_file
-from generation import process_gen_data, process_gen_data_monthly, write_gen_data_file
-from transmission import process_lin_data, process_lin_data_monthly, write_transmission_data
-from fail import process_and_write_fail_data
-
+from marginal_costs import marginal_costs_converter
+from generation import generation_converter
+from transmission import transmission_converter
+from fail import fail_converter
 
 
 # Hidrologías en Hyd med
 N_HYD = 20
 N_BLO = 12
-CASE_ID = 0
+CASE_ID = 1
 # Archivo de etapas y block2day
 PLPETA_NAME = "plpetapas.csv"
 PLPB2D_NAME = "block2day.csv"
@@ -47,6 +45,9 @@ BLO2DAY_HOURS = ["Hour", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"
 
 @timeit
 def define_directories():
+    '''
+    Build main folder structure
+    '''
     # Directorios y carpetas
     location = os.getcwd()
     path_dat = Path(location) /  "Dat"
@@ -65,6 +66,9 @@ def define_directories():
 
 @timeit
 def process_etapas_blocks(path_dat):
+    '''
+    Get blocks to etapas definition and tasa
+    '''
     plpetapas = pd.read_csv(path_dat / PLPETA_NAME)
     plpetapas["Tasa"] = 1.1 ** ((plpetapas["Etapa"] // 12 - 1) / 12)
 
@@ -84,77 +88,33 @@ def process_etapas_blocks(path_dat):
     return blo_eta, tasa
 
 
-if __name__ == "__main__":
-
-    # Tiempo inicial
-    t_ini = datetime.now()
-    print(t_ini)
-
-    path_dat, path_sal, path_out, path_case = define_directories()
+@timeit
+def main():
+    '''
+    Main routine
+    '''
+    path_dat, _, path_out, path_case = define_directories()
 
     # Block - Etapa definition
     blo_eta, tasa = process_etapas_blocks(path_dat)
 
     # Marginales
-    bar_data, bar_param = process_marginal_costs(path_case, blo_eta)
+    marginal_costs_converter(path_case, path_out, blo_eta)
 
-    # Data mensual
-    cmg_b, dem_b, cmg_m, dem_m = process_marginal_costs_monthly(bar_data)
+    # Generation
+    generation_converter(path_case, path_out, blo_eta, tasa)
 
-    # Write files
-    write_marginal_costs_file(bar_param, path_out, 'CMg', cmg_b, type = 'B')
-    write_marginal_costs_file(bar_param, path_out, 'CMg', cmg_m, type = 'M')
-    write_marginal_costs_file(bar_param, path_out, 'Dem', dem_b, type = 'B')
-    write_marginal_costs_file(bar_param, path_out, 'Dem', dem_m, type = 'M')
-
-    # Generación
-    gen_data, gen_data_m, gen_param = process_gen_data(path_case, blo_eta, tasa)
-    Energ_B, Reven_B, CapPrice_B, Curtail_B = process_gen_data_monthly(
-        gen_data, type="B"
-    )
-    Energ_M, Reven_M, CapPrice_M, Curtail_M = process_gen_data_monthly(
-        gen_data_m, type="M"
-    )
-
-    # remove large data frames
-    del gen_data
-    del gen_data_m
-
-    # write gen data
-
-    write_gen_data_file(gen_param, path_out, "Energy", Energ_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Revenue", Reven_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Cap Price", CapPrice_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Curtailment", Curtail_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Energy", Energ_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Revenue", Reven_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Cap Price", CapPrice_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Curtailment", Curtail_M, type="M")
-
-
-    # Líneas Transmisión
-    lin_data, lin_data_m, lin_param = process_lin_data(path_case, blo_eta)
-
-    LinFlu_B, LinUse_B = process_lin_data_monthly(lin_data, type="B")
-    LinFlu_M, LinUse_M = process_lin_data_monthly(lin_data_m, type="M")
-
-    # Write Transmission data
-
-    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_B, type="B")
-    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_M, type="M")
-    write_transmission_data(lin_param, path_out, "LinUse", LinUse_B, type="B")
-    write_transmission_data(lin_param, path_out, "LinUse", LinUse_M, type="M")
+    # Transmission
+    transmission_converter(path_case, path_out, blo_eta)
 
     # Fallas
-    process_and_write_fail_data(path_case, path_out, blo_eta)
+    fail_converter(path_case, path_out, blo_eta)
 
     # Copiar salidas extras
-
     shutil.copy(path_case / "plpfal.csv", path_out)
     shutil.copy(path_case / "plpplanos.csv", path_out)
 
-    # Tiempo final
-    t_end = datetime.now()
-    print(t_end)
-    t = t_end - t_ini
-    print("Process Time: " + str(int(t)) + ":" + str(int(60 * (t - int(t)))))
+
+
+if __name__ == "__main__":
+    main()

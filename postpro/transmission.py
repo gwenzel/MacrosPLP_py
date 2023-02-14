@@ -112,3 +112,21 @@ def write_transmission_data(lin_param, path_out, item, df, type="B"):
         path_out / filename[item], index=False, header=False, na_rep=0, mode="w"
     )
     df.to_csv(path_out / filename[item], header=True, na_rep=0, mode="a")
+
+
+@timeit
+def transmission_converter(path_case, path_out, blo_eta):
+    '''
+    Wrap transmission read, process and write
+    '''
+    lin_data, lin_data_m, lin_param = process_lin_data(path_case, blo_eta)
+
+    LinFlu_B, LinUse_B = process_lin_data_monthly(lin_data, type="B")
+    LinFlu_M, LinUse_M = process_lin_data_monthly(lin_data_m, type="M")
+
+    # Write Transmission data
+
+    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_B, type="B")
+    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_M, type="M")
+    write_transmission_data(lin_param, path_out, "LinUse", LinUse_B, type="B")
+    write_transmission_data(lin_param, path_out, "LinUse", LinUse_M, type="M")
