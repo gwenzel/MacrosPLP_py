@@ -14,9 +14,9 @@ import pandas as pd
 
 from utils import timeit
 from marginal_costs import process_marginal_costs, process_marginal_costs_monthly, write_marginal_costs_file
-from generation import *
-from transmission import *
-from fail import *
+from generation import process_gen_data, process_gen_data_monthly, write_gen_data_file
+from transmission import process_lin_data, process_lin_data_monthly, write_transmission_data
+from fail import process_and_write_fail_data
 
 
 
