@@ -4,7 +4,7 @@ Module to store all functions related with marginal costs
 '''
 import sys
 import pandas as pd
-from utils import timeit
+from postpro.utils import timeit
 
 
 BAR_NAME = "plpbar.csv"

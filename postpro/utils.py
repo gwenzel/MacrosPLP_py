@@ -3,6 +3,7 @@
 Module to store all transversal utility functions
 '''
 from functools import wraps
+from pathlib import Path
 import time
 
 
@@ -20,3 +21,7 @@ def timeit(func):
         print(f'Function {func.__name__} Took {total_time:.4f} seconds')
         return result
     return timeit_wrapper
+
+
+def get_project_root() -> Path:
+    return Path(__file__).parent.parent

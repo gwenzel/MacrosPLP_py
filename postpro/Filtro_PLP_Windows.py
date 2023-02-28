@@ -10,11 +10,11 @@ from pathlib import Path
 import pandas as pd
 
 
-from utils import timeit
-from marginal_costs import marginal_costs_converter
-from generation import generation_converter
-from transmission import transmission_converter
-from fail import fail_converter
+from postpro.utils import timeit
+from postpro.marginal_costs import marginal_costs_converter
+from postpro.generation import generation_converter
+from postpro.transmission import transmission_converter
+from postpro.fail import fail_converter
 
 
 # Hidrologías en Hyd med
@@ -49,16 +49,16 @@ def define_directories():
     Build main folder structure
     '''
     # Directorios y carpetas
-    location = os.getcwd()
-    path_dat = Path(location) /  "Dat"
-    path_sal = Path(location) / "Sal"
+    here = os.getcwd()
+    path_dat = Path(here) /  "Dat"
+    path_sal = Path(here) / "Sal"
     sal_folders = os.listdir(path_sal)
-    g = location.rsplit(os.path.sep, 1)
+    g = here.rsplit(os.path.sep, 1)
     res_name = g[1].split(os.path.sep)[-1]
 
-    (Path(location) / res_name).mkdir(parents=True, exist_ok=True)
+    (Path(here) / res_name).mkdir(parents=True, exist_ok=True)
     case_name = sal_folders[CASE_ID]
-    path_out = Path(location) / res_name / case_name
+    path_out = Path(here) / res_name / case_name
     path_case = Path(path_sal) / case_name
 
     return path_dat, path_sal, path_out, path_case
@@ -68,6 +68,7 @@ def define_directories():
 def process_etapas_blocks(path_dat):
     '''
     Get blocks to etapas definition and tasa
+    TO DO CHECK
     '''
     plpetapas = pd.read_csv(path_dat / PLPETA_NAME)
     plpetapas["Tasa"] = 1.1 ** ((plpetapas["Etapa"] // 12 - 1) / 12)
