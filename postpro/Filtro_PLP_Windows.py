@@ -7,6 +7,7 @@ These modules should be pasted in the project folder before being ran
 import os
 import shutil
 from pathlib import Path
+from numpy import ceil
 import pandas as pd
 
 
@@ -56,7 +57,9 @@ def define_directories():
     g = here.rsplit(os.path.sep, 1)
     res_name = g[1].split(os.path.sep)[-1]
 
-    (Path(here) / res_name).mkdir(parents=True, exist_ok=True)
+    Path(here, res_name).mkdir(parents=True, exist_ok=True)
+
+    # Choose case based on folder location
     case_name = sal_folders[CASE_ID]
     path_out = Path(here) / res_name / case_name
     path_case = Path(path_sal) / case_name
@@ -71,7 +74,7 @@ def process_etapas_blocks(path_dat):
     TO DO CHECK
     '''
     plpetapas = pd.read_csv(path_dat / PLPETA_NAME)
-    plpetapas["Tasa"] = 1.1 ** ((plpetapas["Etapa"] // 12 - 1) / 12)
+    plpetapas["Tasa"] = 1.1 ** ((ceil(plpetapas["Etapa"] / N_BLO) - 1) / 12)
 
     block2day = pd.read_csv(path_dat / PLPB2D_NAME)
     block2day = block2day.rename(columns=BLO2DAY_COLS)
