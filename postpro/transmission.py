@@ -4,7 +4,7 @@ Module to store all transmission related functions
 '''
 import sys
 import pandas as pd
-from postpro.utils import timeit
+from utils import timeit
 
 
 LIN_NAME = "plplin.csv"

@@ -3,7 +3,7 @@
 Module to store all failure related functions
 '''
 import pandas as pd
-from postpro.utils import timeit
+from utils import timeit
 
 
 FAL_NAME = "plpfal.csv"

@@ -4,7 +4,7 @@ Module to store all processing and writing functions related to Generation data
 '''
 import sys
 import pandas as pd
-from postpro.utils import timeit
+from utils import timeit
 
 
 CEN_NAME = "plpcen.csv"

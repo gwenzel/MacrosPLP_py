@@ -11,7 +11,7 @@ from numpy import ceil
 import pandas as pd
 
 
-from postpro.utils import timeit
+from utils import timeit
 from postpro.marginal_costs import marginal_costs_converter
 from postpro.generation import generation_converter
 from postpro.transmission import transmission_converter
@@ -71,7 +71,6 @@ def define_directories():
 def process_etapas_blocks(path_dat):
     '''
     Get blocks to etapas definition and tasa
-    TO DO CHECK
     '''
     plpetapas = pd.read_csv(path_dat / PLPETA_NAME)
     plpetapas["Tasa"] = 1.1 ** ((ceil(plpetapas["Etapa"] / N_BLO) - 1) / 12)
@@ -88,6 +87,7 @@ def process_etapas_blocks(path_dat):
         block2day.groupby(["Month", "Block"]).size().reset_index(name="Block_Len")
     )
     blo_eta = pd.merge(plpetapas, block_len, on=["Month", "Block"])
+    blo_eta = blo_eta.sort_values(by=["Etapa"])
     tasa = plpetapas["Tasa"]
     return blo_eta, tasa
 

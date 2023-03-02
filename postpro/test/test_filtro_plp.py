@@ -2,7 +2,7 @@ import unittest
 import os
 
 from pathlib import Path
-from postpro.utils import get_project_root
+from utils import get_project_root
 from postpro.Filtro_PLP_Windows import process_etapas_blocks
 
 
