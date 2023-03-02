@@ -89,7 +89,7 @@ def process_etapas_blocks(path_dat):
     blo_eta = pd.merge(plpetapas, block_len, on=["Month", "Block"])
     blo_eta = blo_eta.sort_values(by=["Etapa"])
     tasa = plpetapas["Tasa"]
-    return blo_eta, tasa
+    return blo_eta, tasa, block2day
 
 
 @timeit
@@ -100,7 +100,7 @@ def main():
     path_dat, _, path_out, path_case = define_directories()
 
     # Block - Etapa definition
-    blo_eta, tasa = process_etapas_blocks(path_dat)
+    blo_eta, tasa, _ = process_etapas_blocks(path_dat)
 
     # Marginales
     marginal_costs_converter(path_case, path_out, blo_eta)

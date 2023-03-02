@@ -12,7 +12,7 @@ class Test_Filtro_PLP_Windows(unittest.TestCase):
 
     def test_process_etapas_blocks(self):
         path_dat = Path(root, 'postpro', 'test', 'Dat')
-        blo_eta, tasa = process_etapas_blocks(path_dat)
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
         # Check tasa first month
         mask1 = blo_eta['Year'] == 2023
