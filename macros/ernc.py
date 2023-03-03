@@ -132,14 +132,23 @@ def get_rating_factors(ernc_data, blo_eta):
     
     blo_eta = blo_eta.drop(['Block', 'Block_Len'], axis=1)
     # Get initial etapa of each year-month
+    df_rf['Year-Month'] = df_rf.apply(lambda x: (x['Year'], x['Month']), axis=1)
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
+    df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
-    # df_rf['Initial_Eta'] = 
-    # 
+    return df_rf
 
+def get_scaled_profiles(df_all_profiles, df_rf):
 
     import pdb; pdb.set_trace()
     
+    return ''
+
+def write_dat_file(df_scaled_profiles):
+
+    import pdb; pdb.set_trace()
+    
+    return ''
 
 
 @timeit
@@ -152,25 +161,18 @@ def main():
 
     # Convert hourly profiles to blocks
     profiles_dict = get_profiles_blo(ernc_data, block2day)
-
     # Replicate data for all Etapas
-
     df_all_profiles = get_all_profiles(blo_eta, profiles_dict)
 
     # Get Rating Factors
-
-    get_rating_factors(ernc_data, blo_eta)
-
+    df_rf = get_rating_factors(ernc_data, blo_eta)
 
     # Use RFs to scale profiles
-
-
+    df_scaled_profiles = get_scaled_profiles(df_all_profiles, df_rf)
 
     # Write data in .dat format
+    write_dat_file(df_scaled_profiles)
 
-
-
-    # import pdb; pdb.set_trace()
 
 
 if __name__ == "__main__":
