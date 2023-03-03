@@ -140,9 +140,16 @@ def get_rating_factors(ernc_data, blo_eta):
 
 def get_scaled_profiles(df_all_profiles, df_rf):
 
+    unit_names = df_rf['Name'].unique().tolist()
+    # Base of output dataframe
+    df_profiles = df_all_profiles[['Month', 'Etapa']]
+
+    # iterate units and add scaled profiles
+
+    
     import pdb; pdb.set_trace()
     
-    return ''
+    return df_profiles
 
 def write_dat_file(df_scaled_profiles):
 
