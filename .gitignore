@@ -130,5 +130,8 @@ dmypy.json
 
 # folders
 postpro/test/inputs/
+macros/inputs/
+macros/inputs/Dat
+macros/test/
 *.csv
 *.xlsx
