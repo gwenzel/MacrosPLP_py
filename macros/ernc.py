@@ -27,6 +27,9 @@ custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
 
 @timeit
 def read_ernc_files(path_inputs):
+    '''
+    Read all input csv files to generate ernc profiles
+    '''
     dict_max_capacity = pd.read_csv(
         Path(path_inputs, MAX_CAPACITY_FILENAME),
         index_col='Name').to_dict()['MaxCapacityFactor']
@@ -73,6 +76,10 @@ def hour2block(df, block2day):
 
 @timeit
 def get_profiles_blo(ernc_data, block2day):
+    '''
+    Get all hourly, hour-monthly and monthly profiles,
+    with their blocks definition on one dictionary
+    '''
     profiles_h_blo = hour2block(ernc_data['profiles_h'], block2day)
     profiles_hm_blo = hour2block(ernc_data['profiles_hm'], block2day)
     profiles_m_blo = hour2block(ernc_data['profiles_m'], block2day)
@@ -83,6 +90,9 @@ def get_profiles_blo(ernc_data, block2day):
 
 @timeit
 def replicate_profiles(blo_eta, df, type= 'H'):
+    '''
+    Use Merge left to match the generation on each block
+    '''
     if type == 'H':
         df = df.drop(['Month'], axis=1)
         return pd.merge(blo_eta, df, how='left', on=['Block'])
@@ -96,6 +106,10 @@ def replicate_profiles(blo_eta, df, type= 'H'):
 
 @timeit
 def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
+    '''
+    Run the replicate_profiles function for all profiles and group data
+    on one output dataframe
+    '''
     df_out = blo_eta.copy()
     for type, df in profiles_dict.items():
         if len(df) > 0:
@@ -106,6 +120,9 @@ def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
 
 @timeit
 def get_ini_date(blo_eta):
+    '''
+    Get initial date
+    '''
     ini_year = blo_eta['Year'].min()
     ini_month = blo_eta['Month'].min()
     ini_day = 1
@@ -113,9 +130,11 @@ def get_ini_date(blo_eta):
 
 @timeit
 def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
+    '''
+    Return Rating Factors dataframe
+    '''
     ini_date = get_ini_date(blo_eta)
     df_rf = ernc_data['rating_factor']
-    #df_rf['Profile'] = df_rf['Name'].map(ernc_data['dict_max_capacity'])
     
     # Replace all dates before ini_date to match with 1st block
     df_rf['DateFrom'] = df_rf['DateFrom']
@@ -132,7 +151,7 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
-    # Simplify df_rf
+    # TO DO Simplify df_rf
     # remove repeated rows
 
     if print_files:
@@ -142,6 +161,9 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
 
 @timeit
 def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FILES):
+    '''
+    Use all profiles data and rating factors to generate scaled profiles
+    '''
 
     profile_dict = ernc_data['dict_max_capacity']
     # Base of output dataframe
@@ -166,6 +188,9 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FIL
 
 @timeit
 def write_dat_file(ernc_data, df_scaled_profiles):
+    '''
+    Write dat file in PLP format
+    '''
     num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
     lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)',
@@ -190,6 +215,9 @@ def write_dat_file(ernc_data, df_scaled_profiles):
 
 @timeit
 def main():
+    '''
+    Main routine
+    '''
 
     # Get inputs
     ernc_data = read_ernc_files(path_inputs)
