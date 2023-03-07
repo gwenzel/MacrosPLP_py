@@ -35,6 +35,7 @@ path_dat = Path(root, 'macros', 'inputs', 'Dat')
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
 
 
+@timeit
 def read_ernc_files(path_inputs):
     dict_max_capacity = pd.read_csv(
         Path(path_inputs, MAX_CAPACITY_FILENAME),
@@ -59,6 +60,7 @@ def read_ernc_files(path_inputs):
                  'profiles_m': df_profiles_m}
     return ernc_data
 
+@timeit
 def hour2block(df, block2day):
     '''
     Reshape dataframe to show energy per block
@@ -79,7 +81,7 @@ def hour2block(df, block2day):
         return df.reset_index()
     return df
 
-
+@timeit
 def get_profiles_blo(ernc_data, block2day):
     profiles_h_blo = hour2block(ernc_data['profiles_h'], block2day)
     profiles_hm_blo = hour2block(ernc_data['profiles_hm'], block2day)
@@ -89,7 +91,7 @@ def get_profiles_blo(ernc_data, block2day):
                      'M': profiles_m_blo}
     return profiles_dict
 
-
+@timeit
 def replicate_profiles(blo_eta, df, type= 'H'):
     if type == 'H':
         df = df.drop(['Month'], axis=1)
@@ -102,7 +104,7 @@ def replicate_profiles(blo_eta, df, type= 'H'):
     else:
         sys.exit("Invalid type: %s" % type)
 
-
+@timeit
 def get_all_profiles(blo_eta, profiles_dict):
     df_out = blo_eta.copy()
     for type, df in profiles_dict.items():
@@ -110,16 +112,18 @@ def get_all_profiles(blo_eta, profiles_dict):
             df_out = replicate_profiles(df_out, df, type=type)            
     return df_out
 
+@timeit
 def get_ini_date(blo_eta):
     ini_year = blo_eta['Year'].min()
     ini_month = blo_eta['Month'].min()
     ini_day = 1
     return datetime(ini_year, ini_month, ini_day)
 
+@timeit
 def get_rating_factors(ernc_data, blo_eta):
     ini_date = get_ini_date(blo_eta)
     df_rf = ernc_data['rating_factor']
-    df_rf['Profile'] = df_rf['Name'].map(ernc_data['dict_max_capacity'])
+    #df_rf['Profile'] = df_rf['Name'].map(ernc_data['dict_max_capacity'])
     
     # Replace all dates before ini_date to match with 1st block
     df_rf['DateFrom'] = df_rf['DateFrom']
@@ -136,26 +140,52 @@ def get_rating_factors(ernc_data, blo_eta):
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
+    # Simplify df_rf
+    # remove repeated rows
+
     return df_rf
 
-def get_scaled_profiles(df_all_profiles, df_rf):
+@timeit
+def get_scaled_profiles(ernc_data, df_all_profiles, df_rf):
 
-    unit_names = df_rf['Name'].unique().tolist()
+    profile_dict = ernc_data['dict_max_capacity']
     # Base of output dataframe
-    df_profiles = df_all_profiles[['Month', 'Etapa']]
+    df_profiles = df_all_profiles[['Month', 'Etapa']].copy()
+    df_profiles = df_profiles.join(pd.DataFrame(columns=profile_dict.keys()), how="outer")
 
+    df_profiles_aux = df_all_profiles[['Etapa']].copy()
+    
     # iterate units and add scaled profiles
-
-    
-    import pdb; pdb.set_trace()
-    
+    for unit, profile_name in profile_dict.items():
+        df_profiles_aux['aux'] = df_all_profiles[profile_name]
+        # iterate rating factors
+        for _, row in df_rf[df_rf['Name'] == unit].iterrows():
+            df_profiles.loc[df_profiles['Etapa'] >= row['Initial_Eta'], unit] = \
+                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row['Initial_Eta'], 'aux'] * row['Value_MW']
+    # Make sure nan values are turned to 0
+    df_profiles = df_profiles.fillna(0)    
     return df_profiles
 
-def write_dat_file(df_scaled_profiles):
-
-    import pdb; pdb.set_trace()
+@timeit
+def write_dat_file(ernc_data, df_scaled_profiles):
     
-    return ''
+    unit_names = ernc_data['dict_max_capacity'].keys()
+    lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)',
+             '# numero de centrales con matenimientos',
+             ' %s ' % 9999]
+    for unit in unit_names:
+        #if 'RAPEL' in unit:
+        lines += ['# Nombre de la central']
+        lines += [unit]
+        lines += ['#   Numero de Bloques e Intervalos']
+        lines += ['  4068                 01']
+        lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
+        for _, row in df_scaled_profiles.iterrows():
+            lines += ['     %02d     %04d        1      0.0' % (row['Month'], row['Etapa']) + '{:>9}'.format(row[unit])]
+        #import pdb; pdb.set_trace()   
+    f = open('plpmance_test.dat', 'w')
+    f.write('\n'.join(lines))
+    f.close()
 
 
 @timeit
@@ -175,11 +205,10 @@ def main():
     df_rf = get_rating_factors(ernc_data, blo_eta)
 
     # Use RFs to scale profiles
-    df_scaled_profiles = get_scaled_profiles(df_all_profiles, df_rf)
+    df_scaled_profiles = get_scaled_profiles(ernc_data, df_all_profiles, df_rf)
 
     # Write data in .dat format
-    write_dat_file(df_scaled_profiles)
-
+    write_dat_file(ernc_data, df_scaled_profiles)
 
 
 if __name__ == "__main__":
