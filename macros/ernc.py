@@ -7,25 +7,15 @@ from utils import get_project_root, timeit
 from postpro.Filtro_PLP_Windows import process_etapas_blocks
 
 
-'''
-    # Archivo de mantenimientos de centrales (plpmance.dat)
-    # numero de centrales con matenimientos
-    301 
-    # Nombre de la central
-    'LMAULE'
-    #   Numero de Bloques e Intervalos
-    1344                 01
-    #   Mes    Bloque  NIntPot   PotMin   PotMax
-        06     0097        1      0.0      0.0
-'''
-
-
+PRINT_FILES = False
 
 MAX_CAPACITY_FILENAME = "ernc_MaxCapacity.csv"
 RATING_FACTOR_FILENAME = "ernc_RatingFactor.csv"
 H_PROFILES_FILENAME = "ernc_profiles_H.csv"
 HM_PROFILES_FILENAME = "ernc_profiles_HM.csv"
 M_PROFILES_FILENAME = "ernc_profiles_M.csv"
+
+OUTPUT_FILENAME = 'plpmance_ernc.dat'
 
 root = get_project_root()
 path_inputs = Path(root, 'macros', 'inputs')
@@ -69,12 +59,12 @@ def hour2block(df, block2day):
     df = df.drop(['Hour'], axis=1)
     
     # Build dictionary with functions to apply
-    # Get the first month (min) and sum all profiles
+    # Use mean to get Pmax across hours in each block
     agg_dict = {}
     colnames = df.columns.tolist()
     for colname in colnames:
         if 'fp_' in colname:
-            agg_dict[colname] = 'sum'
+            agg_dict[colname] = 'mean'
     if len(agg_dict) > 0:
         df = df.groupby(['Month', 'Block']).agg(agg_dict)
         # Reset index to get Block and Month as columns
@@ -105,11 +95,13 @@ def replicate_profiles(blo_eta, df, type= 'H'):
         sys.exit("Invalid type: %s" % type)
 
 @timeit
-def get_all_profiles(blo_eta, profiles_dict):
+def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
     df_out = blo_eta.copy()
     for type, df in profiles_dict.items():
         if len(df) > 0:
-            df_out = replicate_profiles(df_out, df, type=type)            
+            df_out = replicate_profiles(df_out, df, type=type)
+    if print_files:
+        df_out.to_csv('df_all_profiles.csv')         
     return df_out
 
 @timeit
@@ -120,7 +112,7 @@ def get_ini_date(blo_eta):
     return datetime(ini_year, ini_month, ini_day)
 
 @timeit
-def get_rating_factors(ernc_data, blo_eta):
+def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     ini_date = get_ini_date(blo_eta)
     df_rf = ernc_data['rating_factor']
     #df_rf['Profile'] = df_rf['Name'].map(ernc_data['dict_max_capacity'])
@@ -143,10 +135,13 @@ def get_rating_factors(ernc_data, blo_eta):
     # Simplify df_rf
     # remove repeated rows
 
+    if print_files:
+        df_rf.to_csv('df_rf.csv')
+
     return df_rf
 
 @timeit
-def get_scaled_profiles(ernc_data, df_all_profiles, df_rf):
+def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FILES):
 
     profile_dict = ernc_data['dict_max_capacity']
     # Base of output dataframe
@@ -163,30 +158,35 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf):
             df_profiles.loc[df_profiles['Etapa'] >= row['Initial_Eta'], unit] = \
                 df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row['Initial_Eta'], 'aux'] * row['Value_MW']
     # Make sure nan values are turned to 0
-    df_profiles = df_profiles.fillna(0)    
+    df_profiles = df_profiles.fillna(0)
+    # Print profiles to file
+    if print_files:
+        df_profiles.to_csv('ernc_profiles.csv')    
     return df_profiles
 
 @timeit
 def write_dat_file(ernc_data, df_scaled_profiles):
-    
+    num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
     lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)',
              '# numero de centrales con matenimientos',
              ' %s ' % 9999]
-    for unit in unit_names:
-        #if 'RAPEL' in unit:
-        lines += ['# Nombre de la central']
-        lines += [unit]
-        lines += ['#   Numero de Bloques e Intervalos']
-        lines += ['  4068                 01']
-        lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
-        for _, row in df_scaled_profiles.iterrows():
-            lines += ['     %02d     %04d        1      0.0' % (row['Month'], row['Etapa']) + '{:>9}'.format(row[unit])]
-        #import pdb; pdb.set_trace()   
-    f = open('plpmance_test.dat', 'w')
+    f = open(OUTPUT_FILENAME, 'w')
     f.write('\n'.join(lines))
     f.close()
-
+    for unit in unit_names:
+        lines = ['\n# Nombre de la central']
+        lines += ["'%s'" % unit]
+        lines += ['#   Numero de Bloques e Intervalos']
+        lines += ['  %04d                 01' % num_blo]
+        lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
+        for _, row in df_scaled_profiles.iterrows():
+            lines += ['      %02d     %04d        1      0.0   %6.1f' %
+                       (row['Month'], row['Etapa'], row[unit])]
+        # write data for current unit  
+        f = open(OUTPUT_FILENAME, 'a')
+        f.write('\n'.join(lines))
+        f.close()
 
 @timeit
 def main():
