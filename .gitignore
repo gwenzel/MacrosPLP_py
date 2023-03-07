@@ -130,9 +130,5 @@ dmypy.json
 
 # folders
 postpro/test/inputs/
-test.csv
-df_all_profiles.csv
-df_rf.csv
-ernc_profiles.csv
-~$ernc_profiles.xlsx
-ernc_profiles.xlsx
+*.csv
+*.xlsx
