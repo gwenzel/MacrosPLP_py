@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from utils import get_project_root, timeit
-from postpro.Filtro_PLP_Windows import process_etapas_blocks
+from utils import get_project_root, timeit, process_etapas_blocks
 from macros.read_write import read_ernc_files, write_dat_file
 from macros.shape_data import (get_profiles_blo,
                                get_all_profiles,
