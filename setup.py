@@ -19,7 +19,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "postpro = postpro.main:main"
+            "postpro = postpro.main:main",
+            "ernc: = macros.ernc:main"
         ]
     },
     classifiers=[
