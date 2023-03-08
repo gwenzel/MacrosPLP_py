@@ -2,6 +2,7 @@
 
 Module to store all transversal utility functions
 '''
+import os
 import pandas as pd
 from functools import wraps
 from pathlib import Path
@@ -81,3 +82,17 @@ def process_etapas_blocks(path_dat):
     blo_eta = blo_eta.sort_values(by=["Etapa"])
     tasa = plpetapas["Tasa"]
     return blo_eta, tasa, block2day
+
+@timeit
+def input_iplp_path():
+    file_path = input('Enter a file path: ')
+
+    # e.g. C:\Users\Bob\Desktop\example.txt
+    # or /home/Bob/Desktop/example.txt
+    print(file_path)
+
+    if os.path.exists(file_path):
+        print('The file %s exists' % file_path)
+    else:
+        print('The specified file does NOT exist')
+    return file_path

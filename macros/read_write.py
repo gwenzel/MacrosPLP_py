@@ -70,3 +70,30 @@ def write_dat_file(ernc_data, df_scaled_profiles):
         f = open(OUTPUT_FILENAME, 'a')
         f.write('\n'.join(lines))
         f.close()
+
+
+@timeit
+def generate_max_capacity_csv(iplp_path, path_inputs):
+    df = pd.read_excel(iplp_path, sheet_name ='ERNC', skiprows=13)
+    df = df[['Name','MaxCapacityFactor']].dropna()
+    df.to_csv(Path(path_inputs, MAX_CAPACITY_FILENAME), index=False)
+
+
+@timeit
+def generate_rating_factor_csv(iplp_path, path_inputs):
+    
+    df = pd.read_excel(iplp_path, sheet_name ='ERNC', skiprows=13)
+    df = df[['Name.1','DateFrom', 'Value [MW]']].dropna()
+    #df['DateFrom'] = df['DateFrom'].astype(str)
+    #df['DateFrom'] = df['DateFrom'].dt.strptime("%m/%d/%Y")
+    #df['DateFrom'] = pd.to_datetime(df['DateFrom'], format="%m/%d/%Y")
+    import pdb; pdb.set_trace()
+    df = df.rename(columns={'Name.1': 'Name'})
+    df.to_csv(Path(path_inputs, RATING_FACTOR_FILENAME), index=False)   
+
+
+@timeit
+def generate_profiles_csv(iplp_path, path_inputs):
+    #
+    return ''
+    

@@ -1,7 +1,11 @@
 from pathlib import Path
 
-from utils import get_project_root, timeit, process_etapas_blocks
-from macros.read_write import read_ernc_files, write_dat_file
+from utils import get_project_root, timeit, process_etapas_blocks, input_iplp_path
+from macros.read_write import (read_ernc_files,
+                               write_dat_file,
+                               generate_max_capacity_csv,
+                               generate_rating_factor_csv,
+                               generate_profiles_csv)
 from macros.shape_data import (get_profiles_blo,
                                get_all_profiles,
                                get_rating_factors,
@@ -17,6 +21,12 @@ def main():
     '''
     Main routine
     '''
+    # Generate csv files
+    iplp_path = input_iplp_path()
+
+    generate_max_capacity_csv(iplp_path, path_inputs)
+    generate_rating_factor_csv(iplp_path, path_inputs)
+    generate_profiles_csv(iplp_path, path_inputs)
 
     # Get inputs
     ernc_data = read_ernc_files(path_inputs)
