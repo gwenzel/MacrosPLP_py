@@ -131,7 +131,7 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FIL
         # iterate rating factors
         for _, row in df_rf[df_rf['Name'] == unit].iterrows():
             df_profiles.loc[df_profiles['Etapa'] >= row['Initial_Eta'], unit] = \
-                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row['Initial_Eta'], 'aux'] * row['Value_MW']
+                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row['Initial_Eta'], 'aux'] * row['Value [MW]']
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file

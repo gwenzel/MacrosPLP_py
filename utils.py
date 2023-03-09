@@ -84,8 +84,8 @@ def process_etapas_blocks(path_dat):
     return blo_eta, tasa, block2day
 
 @timeit
-def input_iplp_path():
-    file_path = input('Enter a file path: ')
+def input_path(file_descrption):
+    file_path = input('Enter a file path for %s: ' % file_descrption)
 
     # e.g. C:\Users\Bob\Desktop\example.txt
     # or /home/Bob/Desktop/example.txt
@@ -95,4 +95,9 @@ def input_iplp_path():
         print('The file %s exists' % file_path)
     else:
         print('The specified file does NOT exist')
-    return file_path
+    return Path(file_path)
+
+@timeit
+def check_is_file(path):
+    if not path.is_file():
+        os.exit("file %s does not exist" % path)

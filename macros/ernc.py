@@ -1,15 +1,22 @@
 from pathlib import Path
 
-from utils import get_project_root, timeit, process_etapas_blocks, input_iplp_path
-from macros.read_write import (read_ernc_files,
-                               write_dat_file,
-                               generate_max_capacity_csv,
-                               generate_rating_factor_csv,
-                               generate_profiles_csv)
-from macros.shape_data import (get_profiles_blo,
-                               get_all_profiles,
-                               get_rating_factors,
-                               get_scaled_profiles)
+from utils import (                 get_project_root,
+                                    timeit,
+                                    process_etapas_blocks,
+                                    input_path,
+                                    check_is_file
+)
+from macros.read_write import (     read_ernc_files,
+                                    write_dat_file,
+                                    generate_max_capacity_csv,
+                                    generate_rating_factor_csv,
+                                    generate_profiles_csv
+)
+from macros.shape_data import (     get_profiles_blo,
+                                    get_all_profiles,
+                                    get_rating_factors,
+                                    get_scaled_profiles
+)
 
 root = get_project_root()
 path_inputs = Path(root, 'macros', 'inputs')
@@ -21,9 +28,11 @@ def main():
     '''
     Main routine
     '''
+    # Get input file path
+    iplp_path = input_path("IPLP file")
+    check_is_file(iplp_path)
+    
     # Generate csv files
-    iplp_path = input_iplp_path()
-
     generate_max_capacity_csv(iplp_path, path_inputs)
     generate_rating_factor_csv(iplp_path, path_inputs)
     generate_profiles_csv(iplp_path, path_inputs)
@@ -45,7 +54,7 @@ def main():
     df_scaled_profiles = get_scaled_profiles(ernc_data, df_all_profiles, df_rf)
 
     # Write data in .dat format
-    write_dat_file(ernc_data, df_scaled_profiles)
+    write_dat_file(ernc_data, df_scaled_profiles, iplp_path)
 
 
 if __name__ == "__main__":
