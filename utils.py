@@ -2,7 +2,7 @@
 
 Module to store all transversal utility functions
 '''
-import os
+import sys
 import pandas as pd
 from functools import wraps
 from pathlib import Path
@@ -100,4 +100,4 @@ def input_path(file_descrption):
 @timeit
 def check_is_file(path):
     if not path.is_file():
-        os.exit("file %s does not exist" % path)
+        sys.exit("file %s does not exist" % path)
