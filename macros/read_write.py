@@ -11,7 +11,7 @@ RATING_FACTOR_FILENAME = "ernc_RatingFactor.csv"
 H_PROFILES_FILENAME = "ernc_profiles_H.csv"
 HM_PROFILES_FILENAME = "ernc_profiles_HM.csv"
 M_PROFILES_FILENAME = "ernc_profiles_M.csv"
-OUTPUT_FILENAME = 'plpmance_ernc.dat'
+OUTPUT_FILENAME = 'plpmance.dat'
 
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
 
