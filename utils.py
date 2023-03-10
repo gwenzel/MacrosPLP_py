@@ -2,7 +2,7 @@
 
 Module to store all transversal utility functions
 '''
-import sys
+import os, sys
 import pandas as pd
 from functools import wraps
 from pathlib import Path
