@@ -83,10 +83,10 @@ def process_etapas_blocks(path_dat):
     tasa = plpetapas["Tasa"]
     return blo_eta, tasa, block2day
 
-@timeit
+
 def input_path(file_descrption):
     file_path = input('Enter a file path for %s: ' % file_descrption)
-
+    file_path = file_path.replace('"','')
     # e.g. C:\Users\Bob\Desktop\example.txt
     # or /home/Bob/Desktop/example.txt
     print(file_path)
@@ -97,7 +97,14 @@ def input_path(file_descrption):
         print('The specified file does NOT exist')
     return Path(file_path)
 
-@timeit
+
 def check_is_file(path):
     if not path.is_file():
         sys.exit("file %s does not exist" % path)
+
+
+def is_valid_file(parser, arg):
+    if not os.path.exists(arg):
+        parser.error("The file %s does not exist!" % arg)
+    else:
+        return open(arg, 'r')  # return an open file handle

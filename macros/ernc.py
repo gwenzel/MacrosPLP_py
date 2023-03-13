@@ -1,10 +1,12 @@
+from argparse import ArgumentParser
 from pathlib import Path
 
 from utils import (                 get_project_root,
                                     timeit,
                                     process_etapas_blocks,
                                     input_path,
-                                    check_is_file
+                                    check_is_file,
+                                    is_valid_file
 )
 from macros.read_write import (     read_ernc_files,
                                     write_dat_file,
@@ -24,13 +26,28 @@ path_dat = Path(root, 'macros', 'inputs', 'Dat')
 
 
 @timeit
+def get_iplp_input_path():
+    parser = ArgumentParser(description="Get IPLP renewable energy profiles")
+    parser.add_argument('-f', dest='iplp_path', required=False,
+                        help='IPLP input file path', metavar="IPLP_FILE_PATH",
+                        type=lambda x: is_valid_file(parser, x))
+    args = parser.parse_args()
+
+    if args.iplp_path:
+        return args.iplp_path
+    # Else, get input file path from prompt
+    iplp_path = input_path("IPLP file")
+    check_is_file(iplp_path)
+    return iplp_path
+
+
+@timeit
 def main():
     '''
     Main routine
     '''
     # Get input file path
-    iplp_path = input_path("IPLP file")
-    check_is_file(iplp_path)
+    iplp_path = get_iplp_input_path()
     
     # Generate csv files
     generate_max_capacity_csv(iplp_path, path_inputs)
