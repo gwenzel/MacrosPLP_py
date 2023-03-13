@@ -131,7 +131,8 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
 
 
 @timeit
-def generate_profiles_csv(iplp_path, path_inputs):
-    #
-    return ''
-    
+def generate_profiles_csv(iplp_path, path_inputs, root):
+    profiles_source = Path(root, 'macros', 'inputs')
+    profile_filenames = [H_PROFILES_FILENAME, HM_PROFILES_FILENAME, M_PROFILES_FILENAME]
+    for filename in profile_filenames:
+        copy(profiles_source / filename, path_inputs / filename)

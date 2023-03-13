@@ -56,7 +56,8 @@ def main():
     # Generate csv files
     generate_max_capacity_csv(iplp_path, path_inputs)
     generate_rating_factor_csv(iplp_path, path_inputs)
-    generate_profiles_csv(iplp_path, path_inputs)
+    # (profiles are being copied from root folder)
+    generate_profiles_csv(iplp_path, path_inputs, root)
 
     # Get inputs
     ernc_data = read_ernc_files(path_inputs)
