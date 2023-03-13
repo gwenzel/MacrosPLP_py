@@ -103,6 +103,12 @@ def check_is_file(path):
         sys.exit("file %s does not exist" % path)
 
 
+def check_is_path(path):
+    if not path.exists():
+        sys.exit("Dat path is not valid: %s" % path)
+    return path
+
+
 def is_valid_file(parser, arg):
     if not os.path.exists(arg):
         parser.error("The file %s does not exist!" % arg)

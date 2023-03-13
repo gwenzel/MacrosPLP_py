@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from utils import (                 get_project_root,
                                     process_etapas_blocks,
                                     input_path,
                                     check_is_file,
+                                    check_is_path,
                                     is_valid_file
 )
 from macros.read_write import (     read_ernc_files,
@@ -21,8 +23,6 @@ from macros.shape_data import (     get_profiles_blo,
 )
 
 root = get_project_root()
-path_inputs = Path(root, 'macros', 'inputs')
-path_dat = Path(root, 'macros', 'inputs', 'Dat')
 
 
 @timeit
@@ -48,6 +48,10 @@ def main():
     '''
     # Get input file path
     iplp_path = get_iplp_input_path()
+    path_inputs = iplp_path / "Temp"
+    check_is_path(path_inputs)
+    path_dat = iplp_path / "Temp" / "Dat"
+    check_is_path(path_dat)
     
     # Generate csv files
     generate_max_capacity_csv(iplp_path, path_inputs)
