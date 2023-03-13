@@ -48,9 +48,9 @@ def main():
     '''
     # Get input file path
     iplp_path = get_iplp_input_path()
-    path_inputs = iplp_path / "Temp"
+    path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
-    path_dat = iplp_path / "Temp" / "Dat"
+    path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
     
     # Generate csv files
