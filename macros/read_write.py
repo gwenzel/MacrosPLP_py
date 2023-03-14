@@ -117,7 +117,6 @@ def generate_max_capacity_csv(iplp_path, path_inputs):
 
 @timeit
 def generate_rating_factor_csv(iplp_path, path_inputs):
-
     date_converter={
         'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
     }
