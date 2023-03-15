@@ -1,6 +1,4 @@
-import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
 from utils import (                 get_project_root,
                                     timeit,
