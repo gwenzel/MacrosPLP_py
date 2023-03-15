@@ -4,16 +4,11 @@ Module to generate renewable energy profiles in PLP format,
 modifying plpmance.dat file, which stores the maintenance of
 generation units
 '''
-
-from argparse import ArgumentParser
-
 from utils import (                 get_project_root,
                                     timeit,
                                     process_etapas_blocks,
-                                    input_path,
-                                    check_is_file,
-                                    check_is_path,
-                                    is_valid_file
+                                    get_iplp_input_path,
+                                    check_is_path
 )
 from macros.read_write import (     read_ernc_files,
                                     write_dat_file,
@@ -28,22 +23,6 @@ from macros.shape_data import (     get_profiles_blo,
 )
 
 root = get_project_root()
-
-
-@timeit
-def get_iplp_input_path():
-    parser = ArgumentParser(description="Get IPLP renewable energy profiles")
-    parser.add_argument('-f', dest='iplp_path', required=False,
-                        help='IPLP input file path', metavar="IPLP_FILE_PATH",
-                        type=lambda x: is_valid_file(parser, x))
-    args = parser.parse_args()
-
-    if args.iplp_path:
-        return args.iplp_path
-    # Else, get input file path from prompt
-    iplp_path = input_path("IPLP file")
-    check_is_file(iplp_path)
-    return iplp_path
 
 
 @timeit

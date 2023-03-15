@@ -7,6 +7,7 @@ import pandas as pd
 from functools import wraps
 from pathlib import Path
 from numpy import ceil
+from argparse import ArgumentParser
 import time
 
 
@@ -114,3 +115,19 @@ def is_valid_file(parser, arg):
         parser.error("The file %s does not exist!" % arg)
     else:
         return Path(arg)
+
+
+@timeit
+def get_iplp_input_path():
+    parser = ArgumentParser(description="Get IPLP renewable energy profiles")
+    parser.add_argument('-f', dest='iplp_path', required=False,
+                        help='IPLP input file path', metavar="IPLP_FILE_PATH",
+                        type=lambda x: is_valid_file(parser, x))
+    args = parser.parse_args()
+
+    if args.iplp_path:
+        return args.iplp_path
+    # Else, get input file path from prompt
+    iplp_path = input_path("IPLP file")
+    check_is_file(iplp_path)
+    return iplp_path
