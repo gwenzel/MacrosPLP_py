@@ -1,3 +1,10 @@
+'''ERNC
+
+Module to generate renewable energy profiles in PLP format,
+modifying plpmance.dat file, which stores the maintenance of
+generation units
+'''
+
 from argparse import ArgumentParser
 
 from utils import (                 get_project_root,
