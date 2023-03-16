@@ -12,10 +12,14 @@ Ouput files are:
 
 from utils import (     get_project_root,
                         get_iplp_input_path,
-                        check_is_path
+                        check_is_path,
+                        process_etapas_blocks
 )
 
 root = get_project_root()
+
+def dda_por_barra_to_row_format():
+    pass
 
 
 def main():
@@ -24,15 +28,18 @@ def main():
     '''
     # Get input file path
     iplp_path = get_iplp_input_path()
-    #path_inputs = iplp_path.parent / "Temp"
-    #check_is_path(path_inputs)
-    #path_dat = iplp_path.parent / "Temp" / "Dat"
-    #check_is_path(path_dat)
+    path_inputs = iplp_path.parent / "Temp"
+    check_is_path(path_inputs)
+    path_dat = iplp_path.parent / "Temp" / "Dat"
+    check_is_path(path_dat)
 
     # Get Hour-Blocks-Etapas definition
-
+    blo_eta, _, block2day = process_etapas_blocks(path_dat)
+    blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
     # Sheet "DdaPorBarra" to row format
+
+
 
 
     # Get mappings
