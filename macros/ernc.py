@@ -48,7 +48,7 @@ def main():
     generate_profiles_csv(iplp_path, path_inputs, root)
 
     # Get inputs
-    logger.info('Generating input csv files')
+    logger.info('Processing csv inputs')
     ernc_data = read_ernc_files(path_inputs)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
