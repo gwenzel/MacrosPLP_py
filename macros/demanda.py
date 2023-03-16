@@ -24,6 +24,24 @@ root = get_project_root()
 logger = create_logger('demanda')
 
 
+MONTH_2_NUMBER = {  
+    'ene': 1,
+    'feb': 2,
+    'mar': 3,
+    'abr': 4,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'ago': 8,
+    'sep': 9,
+    'oct': 10,
+    'nov': 11,
+    'dic': 11
+}
+
+HORA_DICT = {'H%s' % i: i for i in range(1, 25)}
+
+
 def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
     #print(df)
@@ -82,7 +100,7 @@ def get_monthly_demand(iplp_path):
     }
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia',
                        converters=date_converter)
-    # Clean Dataframe
+    # Clean data
     cols_to_drop = ['#', 'Coordinado.1', 'Cliente.1', 'Perfil',
                     'Clasificacion SEN', 'Clasificacion ENGIE']
     df = df.drop(cols_to_drop, axis=1)
@@ -96,6 +114,27 @@ def get_monthly_demand(iplp_path):
     # parse dates
     df['Date'] = pd.to_datetime(df['Date'], unit='d', origin='1899-12-30').dt.strftime("%m/%d/%Y")
     return df
+
+
+def get_hourly_profiles(iplp_path):
+    df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
+    # Clean data
+    cols_to_drop = ['#', 'Año', 'Verificador consumo']
+    df = df.drop(cols_to_drop, axis=1)
+    # Process data
+    profile_series = df.set_index(['Perfil día tipo', 'Mes']).stack()
+    profile_series.index.set_names(['Perfil día tipo', 'Mes','Hora'], inplace=True)
+    profile_series.name = 'PowerFactor'
+    df = profile_series.reset_index()
+    df = df.replace(to_replace={"Mes": MONTH_2_NUMBER, "Hora": HORA_DICT})
+    return df
+
+
+def get_all_profiles(map_cc_to_profile, map_ccb_to_cf, map_cc_to_barras,
+                     df_monthly_demand, df_hourly_profiles):
+    import pdb; pdb.set_trace()
+    pass
+
 
 def main():
     '''
@@ -125,15 +164,15 @@ def main():
     logger.info('Processing DdaEnergia sheet')
     df_monthly_demand = get_monthly_demand(iplp_path)
 
-    import pdb; pdb.set_trace()
-
-
     # Get hourly profiles from Sheet "PerfilesDDA"
     logger.info('Processing PerfilesDDA sheet')
-
+    df_hourly_profiles = get_hourly_profiles(iplp_path)
 
     # Generate dataframe with profiles per Etapa
     logger.info('Generating dataframes with profiles per Etapa per Barra')
+    df_all_profiles = get_all_profiles(
+        map_cc_to_profile, map_ccb_to_cf, map_cc_to_barras,
+        df_monthly_demand, df_hourly_profiles)
 
 
     # Print to plpdem and uni_plpdem
