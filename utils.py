@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 from numpy import ceil
 from argparse import ArgumentParser
+from shutil import copyfile
 import time
 import logging
 
@@ -149,3 +150,13 @@ def create_logger(logname):
     # add file handler to logger
     logger.addHandler(file_handler)
     return logger
+
+def remove_blank_lines(text_file):
+    temp_file = 'temp.txt'
+    # opening and creating new .txt file
+    with open(text_file, 'r') as r, open(temp_file, 'w') as o:
+        for line in r:
+            if line.strip():
+                o.write(line)
+    copyfile(temp_file, text_file)
+    os.remove(temp_file)

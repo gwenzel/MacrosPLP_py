@@ -3,7 +3,7 @@ from shutil import copy
 from pathlib import Path
 from datetime import datetime
 
-from utils import timeit, check_is_file
+from utils import timeit, check_is_file, remove_blank_lines
 
 
 MAX_CAPACITY_FILENAME = "ernc_MaxCapacity.csv"
@@ -66,6 +66,8 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     source = plpmance_ini_path
     dest = iplp_path.parent / 'Temp' / OUTPUT_FILENAME
     copy(source, dest)
+    # Remove blank lines in original file
+    remove_blank_lines(dest)
 
     num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
@@ -77,7 +79,7 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         lines += ['  %04d                 01' % num_blo]
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         for _, row in df_scaled_profiles.iterrows():
-            lines += ['      %02d     %04d        1      0.0   %6.1f' %
+            lines += ['     %02d      %04d        1      0.0   %6.1f' %
                        (row['Month'], row['Etapa'], row[unit])]
         # write data for current unit  
         f = open(dest, 'a')
@@ -95,7 +97,7 @@ def add_ernc_units(plpmance_file, new_units_number):
     file = open(plpmance_file, "r")
     lines = file.readlines()
     old_units_number = int(lines[2])
-    lines[2] = " %s \n" % (old_units_number + new_units_number)
+    lines[2] = "     %s\n" % (old_units_number + new_units_number)
     # close the file
     file.close()
 
