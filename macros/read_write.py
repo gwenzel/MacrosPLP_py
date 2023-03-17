@@ -66,8 +66,6 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     source = plpmance_ini_path
     dest = iplp_path.parent / 'Temp' / OUTPUT_FILENAME
     copy(source, dest)
-    # Remove blank lines in original file
-    remove_blank_lines(dest)
 
     num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
@@ -89,6 +87,8 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     # Modify number of units
     new_units_number = len(unit_names)
     add_ernc_units(dest, new_units_number)
+    # Make sure there are no blank lines
+    remove_blank_lines(dest)
     
 
 @timeit
