@@ -151,11 +151,14 @@ def create_logger(logname):
     logger.addHandler(file_handler)
     return logger
 
+
+@timeit
 def remove_blank_lines(text_file):
     temp_file = 'temp.txt'
     # opening and creating new .txt file
     with open(text_file, 'r') as r, open(temp_file, 'w') as o:
         for line in r:
+            # if line is not blank after stripping all spaces, keep line
             if line.strip():
                 o.write(line)
     copyfile(temp_file, text_file)
