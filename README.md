@@ -31,20 +31,24 @@ Please note that these scripts will ask for the path of the IPLP input file, whi
 
 Entry point "ernc" calls the script in macros/ernc.py.
 
+If there is no -f (file) argument, the program will ask for the location.
+
 ```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda activate plp
 cd PROJECT_DIRECTORY
-call python ernc
+call python ernc -f IPLP_FILENAME
 ```
 
 ### Demanda
 
 Entry point "dda" calls the script in macros/demanda.py.
 
+If there is no -f (file) argument, the program will ask for the location.
+
 ```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda activate plp
 cd PROJECT_DIRECTORY
-call python demanda
+call python dda -f IPLP_FILENAME
 ```
