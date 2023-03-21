@@ -27,28 +27,29 @@ The idea is to be able to call each script and have it create the required files
 
 Please note that these scripts will ask for the path of the IPLP input file, which must already have created a Temp folder with the files on the Dat subfolder.
 
-### ERNC
-
-Entry point "ernc" calls the script in macros/ernc.py.
-
-If there is no -f (file) argument, the program will ask for the location.
+Before running these scripts, make sure you have activated the previously created virtual environment.
 
 ```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda activate plp
-cd PROJECT_DIRECTORY
+```
+
+### ERNC
+
+Entry point _ernc_ calls the script in _macros/ernc.py_.
+
+If there is no -f (file) argument, the program will ask for the location.
+
+```
 call python ernc -f IPLP_FILENAME
 ```
 
 ### Demanda
 
-Entry point "dda" calls the script in macros/demanda.py.
+Entry point _dda_ calls the script in _macros/demanda.py_.
 
 If there is no -f (file) argument, the program will ask for the location.
 
 ```
-call %USERPROFILE%\Anaconda3\Scripts\activate
-call conda activate plp
-cd PROJECT_DIRECTORY
 call python dda -f IPLP_FILENAME
 ```
