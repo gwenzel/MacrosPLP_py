@@ -155,10 +155,12 @@ def main():
 
     # Sheet "DdaPorBarra" to row format
     logger.info('Processing DdaPorBarra sheet')
-    df_dda_por_barra = dda_por_barra_to_row_format(iplp_path, write_to_csv=True)
+    df_dda_por_barra = dda_por_barra_to_row_format(
+        iplp_path, write_to_csv=True)
 
     # Get mappings
-    map_cc_to_profile, map_ccb_to_cf, map_cc_to_barras = get_mappings(df_dda_por_barra)
+    map_cc_to_profile, map_ccb_to_cf, map_cc_to_barras = \
+        get_mappings(df_dda_por_barra)
 
     # Get monthly demand from Sheet "DdaEnergia"
     logger.info('Processing DdaEnergia sheet')
