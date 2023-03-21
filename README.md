@@ -8,18 +8,18 @@ The code is callable from different entry points, associated to each button of t
 
 From command line, run the following commands to create the virtual environment called plp
 
-´´´cmd
+```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda create -n plp Python=3.9
-´´´
+```
 
 Then, activate the environment, go to the project directory and install using the setup.py file. Mode, "develop" is chosen so that future changes can be easily integrated
 
-´´´cmd
+```
 call conda activate plp
 cd PROJECT_DIRECTORY
 call python setup.py develop
-´´´
+```
 
 ## How to use
 
@@ -31,20 +31,20 @@ Please note that these scripts will ask for the path of the IPLP input file, whi
 
 Entry point "ernc" calls the script in macros/ernc.py.
 
-´´´cmd
+```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda activate plp
 cd PROJECT_DIRECTORY
 call python ernc
-´´´
+```
 
 ### Demanda
 
 Entry point "dda" calls the script in macros/demanda.py.
 
-´´´cmd
+```
 call %USERPROFILE%\Anaconda3\Scripts\activate
 call conda activate plp
 cd PROJECT_DIRECTORY
 call python demanda
-´´´
+```
