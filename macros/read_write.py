@@ -1,4 +1,3 @@
-import sys
 import pandas as pd
 from shutil import copy
 from pathlib import Path
@@ -16,6 +15,13 @@ M_PROFILES_FILENAME = "ernc_profiles_M.csv"
 OUTPUT_FILENAME = 'plpmance.dat'
 
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
+formatters = {
+    "Month":    "     {:02d}".format,
+    "Etapa":    "     {:04d}".format,
+    "NIntPot":  "       {:01d}".format,
+    "Pmin":     "{:8.2f}".format,
+    "Pmax":     "{:8.2f}".format
+}
 
 
 @timeit
@@ -78,7 +84,7 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
     pmin = ernc_data['dict_min_capacity']
-    
+
     # Append ernc profiles
     for unit in unit_names:
         lines = ['\n# Nombre de la central']
@@ -86,10 +92,19 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         lines += ['#   Numero de Bloques e Intervalos']
         lines += ['  %04d                 01' % num_blo]
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
-        for _, row in df_scaled_profiles.iterrows():
-            lines += ['     %02d      %04d        1  %6.2f   %6.2f' %
-                       (row['Month'], row['Etapa'], min(pmin[unit], row[unit]), row[unit])]
-        #  write data for current unit  
+
+        # Format unit dataframe
+        pmin_aux = pmin[unit]
+        df_aux = df_scaled_profiles[['Month', 'Etapa', unit]]
+        df_aux = df_aux.rename(columns={unit: 'Pmax'})
+        df_aux['Pmin'] = df_aux.apply(lambda x: min(pmin_aux, x['Pmax']), axis=1)
+        df_aux['NIntPot'] = 1
+        df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
+
+        # Dataframe to string
+        lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
+        
+        #  write data for current unit
         f = open(dest, 'a')
         f.write('\n'.join(lines))
         f.close()
