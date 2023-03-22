@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 from shutil import copy
 from pathlib import Path
@@ -7,6 +8,7 @@ from utils import timeit, check_is_file, remove_blank_lines
 
 
 MAX_CAPACITY_FILENAME = "ernc_MaxCapacity.csv"
+MIN_CAPACITY_FILENAME = "ernc_MinCapacity.csv"
 RATING_FACTOR_FILENAME = "ernc_RatingFactor.csv"
 H_PROFILES_FILENAME = "ernc_profiles_H.csv"
 HM_PROFILES_FILENAME = "ernc_profiles_HM.csv"
@@ -24,7 +26,12 @@ def read_ernc_files(path_inputs):
     path_max_capacity = Path(path_inputs, MAX_CAPACITY_FILENAME)
     check_is_file(path_max_capacity)
     dict_max_capacity = pd.read_csv(
-        path_max_capacity,index_col='Name').to_dict()['MaxCapacityFactor']
+        path_max_capacity, index_col='Name').to_dict()['MaxCapacityFactor']
+    
+    path_min_capacity = Path(path_inputs, MIN_CAPACITY_FILENAME)
+    check_is_file(path_min_capacity)
+    dict_min_capacity = pd.read_csv(
+        path_min_capacity, index_col='Name').to_dict()['Pmin']
     
     path_rating_factor = Path(path_inputs, RATING_FACTOR_FILENAME)
     check_is_file(path_rating_factor)
@@ -47,6 +54,7 @@ def read_ernc_files(path_inputs):
     df_profiles_m = pd.read_csv(path_profiles_m).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
     ernc_data = {'dict_max_capacity': dict_max_capacity,
+                 'dict_min_capacity': dict_min_capacity,
                  'rating_factor': df_rating_factor,
                  'profiles_h': df_profiles_h,
                  'profiles_hm': df_profiles_hm,
@@ -69,6 +77,8 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
 
     num_blo = len(df_scaled_profiles)
     unit_names = ernc_data['dict_max_capacity'].keys()
+    pmin = ernc_data['dict_min_capacity']
+    
     # Append ernc profiles
     for unit in unit_names:
         lines = ['\n# Nombre de la central']
@@ -77,9 +87,9 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         lines += ['  %04d                 01' % num_blo]
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         for _, row in df_scaled_profiles.iterrows():
-            lines += ['     %02d      %04d        1      0.0   %6.2f' %
-                       (row['Month'], row['Etapa'], row[unit])]
-        # write data for current unit  
+            lines += ['     %02d      %04d        1  %6.2f   %6.2f' %
+                       (row['Month'], row['Etapa'], min(pmin[unit], row[unit]), row[unit])]
+        #  write data for current unit  
         f = open(dest, 'a')
         f.write('\n'.join(lines))
         f.close()
@@ -120,6 +130,20 @@ def generate_max_capacity_csv(iplp_path, path_inputs):
                        skiprows=13, usecols="A:B")
     df = df.dropna()
     df.to_csv(Path(path_inputs, MAX_CAPACITY_FILENAME), index=False)
+
+
+@timeit
+def generate_min_capacity_csv(iplp_path, path_inputs):
+    '''
+    Read iplp file, sheet Centrales, and extract pmin
+
+    Note: Only CSP units should have Pmin
+    '''
+    df = pd.read_excel(iplp_path, sheet_name ='Centrales',
+                       skiprows=4, usecols="B,AA")
+    df = df.dropna()
+    df = df.rename(columns={'CENTRALES': 'Name', 'Mínima.1': 'Pmin'})
+    df.to_csv(Path(path_inputs, MIN_CAPACITY_FILENAME), index=False)
 
 
 @timeit

@@ -14,6 +14,7 @@ from utils import (                 get_project_root,
 from macros.read_write import (     read_ernc_files,
                                     write_dat_file,
                                     generate_max_capacity_csv,
+                                    generate_min_capacity_csv,
                                     generate_rating_factor_csv,
                                     generate_profiles_csv
 )
@@ -43,6 +44,7 @@ def main():
     # Generate csv files
     logger.info('Generating input csv files')
     generate_max_capacity_csv(iplp_path, path_inputs)
+    generate_min_capacity_csv(iplp_path, path_inputs)
     generate_rating_factor_csv(iplp_path, path_inputs)
     # (profiles are being copied from root folder)
     generate_profiles_csv(iplp_path, path_inputs, root)
