@@ -77,7 +77,7 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         lines += ['  %04d                 01' % num_blo]
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         for _, row in df_scaled_profiles.iterrows():
-            lines += ['     %02d      %04d        1      0.0   %6.1f' %
+            lines += ['     %02d      %04d        1      0.0   %6.2f' %
                        (row['Month'], row['Etapa'], row[unit])]
         # write data for current unit  
         f = open(dest, 'a')
@@ -89,7 +89,9 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     add_ernc_units(dest, new_units_number)
     # Make sure there are no blank lines
     remove_blank_lines(dest)
-    
+    # Warning if there are repeated generation units
+    # check_plpmance(dest)
+
 
 @timeit
 def add_ernc_units(plpmance_file, new_units_number):
@@ -111,6 +113,9 @@ def add_ernc_units(plpmance_file, new_units_number):
 
 @timeit
 def generate_max_capacity_csv(iplp_path, path_inputs):
+    '''
+    Read iplp file, sheet ERNC, and extract max capacities
+    '''
     df = pd.read_excel(iplp_path, sheet_name ='ERNC',
                        skiprows=13, usecols="A:B")
     df = df.dropna()
@@ -119,6 +124,9 @@ def generate_max_capacity_csv(iplp_path, path_inputs):
 
 @timeit
 def generate_rating_factor_csv(iplp_path, path_inputs):
+    '''
+    Read iplp file, sheet ERNC, and extract rating factors
+    '''
     date_converter={
         'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
     }
@@ -133,6 +141,13 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
 
 @timeit
 def generate_profiles_csv(iplp_path, path_inputs, root):
+    '''
+    For the moment, it is copying directly the csv profiles from the
+    project folder.
+
+    A possible change could be to make it read the
+    iplp file, sheet ERNC, and extract the profiles directly
+    '''
     profiles_source = Path(root, 'macros', 'inputs')
     profile_filenames = [H_PROFILES_FILENAME, HM_PROFILES_FILENAME, M_PROFILES_FILENAME]
     for filename in profile_filenames:
