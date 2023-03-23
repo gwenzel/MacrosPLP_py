@@ -136,6 +136,7 @@ def get_all_profiles(map_cc_to_profile, map_ccb_to_cf, map_cc_to_barras,
     pass
 
 
+@timeit
 def main():
     '''
     Main routine
