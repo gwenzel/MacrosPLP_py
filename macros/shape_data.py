@@ -114,12 +114,14 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     return df_rf
 
 @timeit
-def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FILES):
+def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_type_dict, print_files=PRINT_FILES):
     '''
     Use all profiles data and rating factors to generate scaled profiles
     '''
-
+    # Get units from max capacity dict, excluding those with type 'X'
     profile_dict = ernc_data['dict_max_capacity']
+    units = [unit for unit in profile_dict.keys() if unit_type_dict[unit] != 'X']
+
     # Base of output dataframe
     df_profiles = df_all_profiles[['Month', 'Etapa']].copy()
     df_profiles = df_profiles.join(pd.DataFrame(columns=profile_dict.keys()), how="outer")
@@ -127,7 +129,8 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, print_files=PRINT_FIL
     df_profiles_aux = df_all_profiles[['Etapa']].copy()
     
     # iterate units and add scaled profiles
-    for unit, profile_name in profile_dict.items():
+    for unit in units:
+        profile_name = profile_dict[unit]
         df_profiles_aux['aux'] = df_all_profiles[profile_name]
         # iterate rating factors
         for _, row in df_rf[df_rf['Name'] == unit].iterrows():

@@ -147,7 +147,7 @@ def generate_max_capacity_csv(iplp_path, path_inputs):
 
 def generate_min_capacity_csv(iplp_path, path_inputs):
     '''
-    Read iplp file, sheet Centrales, and extract pmin
+    Read iplp file, sheet Centrales, and extract pmin for all units
 
     Note: Only CSP units should have Pmin
     '''
@@ -187,3 +187,15 @@ def generate_profiles_csv(iplp_path, path_inputs, root):
     profile_filenames = [H_PROFILES_FILENAME, HM_PROFILES_FILENAME, M_PROFILES_FILENAME]
     for filename in profile_filenames:
         copy(profiles_source / filename, path_inputs / filename)
+
+
+def get_unit_type(iplp_path):
+    '''
+    Read iplp file, sheet Centrales, and extract unit type
+    '''
+    df = pd.read_excel(iplp_path, sheet_name ='Centrales',
+                       skiprows=4, usecols="B,C")
+    df = df.dropna()
+    df = df.rename(columns={'CENTRALES': 'Name', 'Tipo de Central': 'Type'})
+    df = df.set_index('Name')
+    return df.to_dict()['Type']

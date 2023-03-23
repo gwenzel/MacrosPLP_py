@@ -16,7 +16,8 @@ from macros.read_write import (     read_ernc_files,
                                     generate_max_capacity_csv,
                                     generate_min_capacity_csv,
                                     generate_rating_factor_csv,
-                                    generate_profiles_csv
+                                    generate_profiles_csv,
+                                    get_unit_type
 )
 from macros.shape_data import (     get_profiles_blo,
                                     get_all_profiles,
@@ -54,6 +55,7 @@ def main():
     ernc_data = read_ernc_files(path_inputs)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
+    unit_type_dict = get_unit_type(iplp_path)
 
     # Convert hourly profiles to blocks
     logger.info('Converting hourly profiles to blocks')
@@ -69,7 +71,8 @@ def main():
 
     # Use RFs to scale profiles
     logger.info('Using rating factors to scaled profiles')
-    df_scaled_profiles = get_scaled_profiles(ernc_data, df_all_profiles, df_rf)
+    df_scaled_profiles = get_scaled_profiles(
+        ernc_data, df_all_profiles, df_rf, unit_type_dict)
 
     # Write data in .dat format
     logger.info('Writing profiles in .dat format')
