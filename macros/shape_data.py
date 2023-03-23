@@ -88,6 +88,10 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     '''
     ini_date = get_ini_date(blo_eta)
     df_rf = ernc_data['rating_factor']
+
+    # Make sure df is well sorted and remove duplicates
+    df_rf = df_rf.sort_values(by=['Name', 'DateFrom'])
+    df_rf = df_rf.drop_duplicates()
     
     # Replace all dates before ini_date to match with 1st block
     df_rf['DateFrom'] = df_rf['DateFrom']
@@ -103,9 +107,6 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     df_rf['Year-Month'] = df_rf.apply(lambda x: (x['Year'], x['Month']), axis=1)
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
-
-    # TO DO Simplify df_rf
-    # remove repeated rows
 
     if print_files:
         df_rf.to_csv('df_rf.csv')
