@@ -6,7 +6,7 @@ from utils import timeit
 
 PRINT_FILES = False
 
-@timeit
+
 def hour2block(df, block2day):
     '''
     Reshape dataframe to show energy per block
@@ -27,7 +27,7 @@ def hour2block(df, block2day):
         return df.reset_index()
     return df
 
-@timeit
+
 def get_profiles_blo(ernc_data, block2day):
     '''
     Get all hourly, hour-monthly and monthly profiles,
@@ -41,7 +41,7 @@ def get_profiles_blo(ernc_data, block2day):
                      'M': profiles_m_blo}
     return profiles_dict
 
-@timeit
+
 def replicate_profiles(blo_eta, df, type= 'H'):
     '''
     Use Merge left to match the generation on each block
@@ -57,7 +57,7 @@ def replicate_profiles(blo_eta, df, type= 'H'):
     else:
         sys.exit("Invalid type: %s" % type)
 
-@timeit
+
 def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
     '''
     Run the replicate_profiles function for all profiles and group data
@@ -71,7 +71,7 @@ def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
         df_out.to_csv('df_all_profiles.csv')         
     return df_out
 
-@timeit
+
 def get_ini_date(blo_eta):
     '''
     Get initial date
@@ -81,7 +81,7 @@ def get_ini_date(blo_eta):
     ini_day = 1
     return datetime(ini_year, ini_month, ini_day)
 
-@timeit
+
 def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     '''
     Return Rating Factors dataframe

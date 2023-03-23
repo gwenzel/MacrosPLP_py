@@ -60,7 +60,6 @@ def get_project_root() -> Path:
     return Path(__file__).parent
 
 
-@timeit
 def process_etapas_blocks(path_dat):
     '''
     Get blocks to etapas definition and tasa

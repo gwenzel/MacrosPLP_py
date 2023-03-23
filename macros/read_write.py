@@ -24,7 +24,6 @@ formatters = {
 }
 
 
-@timeit
 def read_ernc_files(path_inputs):
     '''
     Read all input csv files to generate ernc profiles
@@ -136,7 +135,6 @@ def add_ernc_units(plpmance_file, new_units_number):
     write_file.close()
 
 
-@timeit
 def generate_max_capacity_csv(iplp_path, path_inputs):
     '''
     Read iplp file, sheet ERNC, and extract max capacities
@@ -147,7 +145,6 @@ def generate_max_capacity_csv(iplp_path, path_inputs):
     df.to_csv(Path(path_inputs, MAX_CAPACITY_FILENAME), index=False)
 
 
-@timeit
 def generate_min_capacity_csv(iplp_path, path_inputs):
     '''
     Read iplp file, sheet Centrales, and extract pmin
@@ -178,7 +175,6 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
     df.to_csv(Path(path_inputs, RATING_FACTOR_FILENAME), index=False)   
 
 
-@timeit
 def generate_profiles_csv(iplp_path, path_inputs, root):
     '''
     For the moment, it is copying directly the csv profiles from the
