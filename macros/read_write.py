@@ -22,6 +22,12 @@ formatters = {
     "Pmin":     "{:8.2f}".format,
     "Pmax":     "{:8.2f}".format
 }
+month_to_hidromonth = {
+    1: 10, 2: 11, 3: 12,
+    4: 1, 5: 2, 6: 3,
+    7: 4, 8: 5, 9: 6,
+    10: 7, 11: 8, 12: 9
+}
 
 
 def read_ernc_files(path_inputs):
@@ -99,6 +105,9 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         df_aux['Pmin'] = df_aux.apply(lambda x: min(pmin_aux, x['Pmax']), axis=1)
         df_aux['NIntPot'] = 1
         df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
+
+        # Translate month to hidromonth
+        df_aux = df_aux.replace({'Month': month_to_hidromonth})
 
         # Dataframe to string
         lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
