@@ -41,6 +41,17 @@ MONTH_2_NUMBER = {
 
 HORA_DICT = {'H%s' % i: i for i in range(1, 25)}
 
+MONTH_TO_HIDROMONTH = {
+    1: 10, 2: 11, 3: 12,
+    4: 1, 5: 2, 6: 3,
+    7: 4, 8: 5, 9: 6,
+    10: 7, 11: 8, 12: 9
+}
+formatters = {
+    "Month":    "   {:02d}".format,
+    "Etapa":    "  {:03d}".format,
+    "Consumo":  "{:9.2f}".format
+}
 
 def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
@@ -123,30 +134,74 @@ def get_blockly_profiles(df_hourly_profiles, block2day):
 def get_all_profiles(blo_eta, block2day,
                      df_monthly_demand, df_hourly_profiles, df_dda_por_barra):
 
-    list_barras = df_dda_por_barra['Barra Consumo'].unique().tolist()
-
     # Turn hourly profiles to profiles by block
     df_blockly_profiles = get_blockly_profiles(df_hourly_profiles, block2day)
-
 
     # Add data to monthly demand df
     df_monthly_demand['Year'] = pd.to_datetime(df_monthly_demand['Date']).dt.year
     df_monthly_demand['Month'] = pd.to_datetime(df_monthly_demand['Date']).dt.month
+    df_monthly_demand['DaysInMonth'] = pd.to_datetime(df_monthly_demand['Date']).dt.daysinmonth
     df_monthly_demand = df_monthly_demand.drop(['Date'], axis=1)
 
     # Merge dataframes
     df = pd.merge(df_monthly_demand, df_dda_por_barra, on=['Coordinado','Cliente'])
     df = pd.merge(df, df_blockly_profiles, on=['Profile','Month'])
+    df = pd.merge(df, blo_eta, on=['Year','Month','Block'])
 
     # Calculate consumption, group by Barra and sum
-    df['Consumo'] = df.apply(lambda x: x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'], axis=1)
-    df = df.drop(['Demand', 'Factor Barra Consumo', 'PowerFactor'], axis=1)
-    df = df.groupby(['Year','Month','Block', 'Barra Consumo']).sum(numeric_only=True).reset_index()
-    df = df.sort_values(by=['Year','Month','Barra Consumo','Block'])
-
+    # Consumption is calculated as follows:
+    # [Monthly demand] * [% of demand in current bus] * [% of demand in current block] * 1000
+    # / ([Days in Month] * [Hours in current block])
     import pdb; pdb.set_trace()
-    pass
-    #return df_all_profiles
+    df['Consumo'] = df.apply(
+        lambda x: x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000 /
+                  (x['DaysInMonth'] * x['Block_Len']), axis=1)
+    
+    cols_to_drop = ['Demand', 'Factor Barra Consumo', 'PowerFactor', 'Block_Len', 'DaysInMonth']
+    df = df.drop(cols_to_drop, axis=1)
+    df = df.groupby(['Year','Month','Block','Etapa','Barra Consumo']).sum(numeric_only=True).reset_index()
+
+    # Reorder columns and sort
+    df = df[['Barra Consumo','Year','Month','Block','Etapa','Consumo']]
+    df = df.sort_values(by=['Barra Consumo','Year','Month','Block','Etapa']).reset_index(drop=True)
+    return df
+
+
+def write_plpdem_dat(df_all_profiles, iplp_path):
+
+    plpdem_path = iplp_path.parent / 'Temp' / 'plpdem.dat'
+
+    list_barras = df_all_profiles['Barra Consumo'].unique().tolist()
+
+    # Translate month to hidromonth
+    df_all_profiles = df_all_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    lines =  ['# Archivo de demandas por barra (plpdem.dat)']
+    lines += ['#  Numero de barras']
+    lines += ['%s' % len(list_barras)]
+
+    #  write data from scratch
+    f = open(plpdem_path, 'w')
+    f.write('\n'.join(lines))
+    f.close()
+
+    for barra in list_barras:
+        df_aux = df_all_profiles[df_all_profiles['Barra Consumo']==barra]
+        df_aux = df_aux[['Month','Etapa','Consumo']]
+
+        lines = ['\n# Nombre de la Barra']
+        lines += ["'%s'" % barra]
+        lines += ['# Numero de Demandas']
+        lines += ['%s' % len(df_aux)]
+        if len(df_aux) > 0:
+            lines += ['# Mes  Etapa   Demanda']
+            # Dataframe to string
+            lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
+        
+        #  write data for current barra
+        f = open(plpdem_path, 'a')
+        f.write('\n'.join(lines))
+        f.close()
 
 
 @timeit
@@ -189,6 +244,7 @@ def main():
 
     # Print to plpdem and uni_plpdem
     logger.info('Printing plpdem.dat and uni_plpdem.dat')
+    write_plpdem_dat(df_all_profiles, iplp_path)
 
 
     # Get failure units and generate plpfal.prn
