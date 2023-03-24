@@ -22,7 +22,7 @@ formatters = {
     "Pmin":     "{:8.2f}".format,
     "Pmax":     "{:8.2f}".format
 }
-month_to_hidromonth = {
+MONTH_TO_HIDROMONTH = {
     1: 10, 2: 11, 3: 12,
     4: 1, 5: 2, 6: 3,
     7: 4, 8: 5, 9: 6,
@@ -91,7 +91,7 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
     pmin = ernc_data['dict_min_capacity']
 
     # Translate month to hidromonth
-    df_scaled_profiles = df_scaled_profiles.replace({'Month': month_to_hidromonth})
+    df_scaled_profiles = df_scaled_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
 
     # Append ernc profiles
     for unit in unit_names:
