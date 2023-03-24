@@ -11,8 +11,8 @@ from utils import (                 get_project_root,
                                     check_is_path,
                                     create_logger
 )
-from macros.read_write import (     read_ernc_files,
-                                    write_dat_file,
+from macros.read_write_ernc import (read_ernc_files,
+                                    write_plpmance_ernc_dat,
                                     generate_max_capacity_csv,
                                     generate_min_capacity_csv,
                                     generate_rating_factor_csv,
@@ -76,7 +76,7 @@ def main():
 
     # Write data in .dat format
     logger.info('Writing profiles in .dat format')
-    write_dat_file(ernc_data, df_scaled_profiles, iplp_path)
+    write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path)
 
 
 if __name__ == "__main__":
