@@ -90,6 +90,9 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
     unit_names = ernc_data['dict_max_capacity'].keys()
     pmin = ernc_data['dict_min_capacity']
 
+    # Translate month to hidromonth
+    df_scaled_profiles = df_scaled_profiles.replace({'Month': month_to_hidromonth})
+
     # Append ernc profiles
     for unit in unit_names:
         lines = ['\n# Nombre de la central']
@@ -105,9 +108,6 @@ def write_dat_file(ernc_data, df_scaled_profiles, iplp_path):
         df_aux['Pmin'] = df_aux.apply(lambda x: min(pmin_aux, x['Pmax']), axis=1)
         df_aux['NIntPot'] = 1
         df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
-
-        # Translate month to hidromonth
-        df_aux = df_aux.replace({'Month': month_to_hidromonth})
 
         # Dataframe to string
         lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
