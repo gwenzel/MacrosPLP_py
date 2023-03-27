@@ -162,3 +162,10 @@ def remove_blank_lines(text_file):
                 o.write(line)
     copyfile(temp_file, text_file)
     os.remove(temp_file)
+
+
+@timeit
+def get_list_of_all_barras(iplp_path):
+    df = pd.read_excel(iplp_path, sheet_name="Barras",
+                       skiprows=4, usecols="B")
+    return df['BARRA'].tolist()

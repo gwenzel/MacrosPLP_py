@@ -17,7 +17,8 @@ from utils import (     get_project_root,
                         timeit,
                         get_iplp_input_path,
                         check_is_path,
-                        process_etapas_blocks
+                        process_etapas_blocks,
+                        get_list_of_all_barras
 )
 
 root = get_project_root()
@@ -36,7 +37,7 @@ MONTH_2_NUMBER = {
     'sep': 9,
     'oct': 10,
     'nov': 11,
-    'dic': 11
+    'dic': 12
 }
 
 HORA_DICT = {'H%s' % i: i for i in range(1, 25)}
@@ -53,18 +54,20 @@ formatters = {
     "Consumo":  "{:9.2f}".format
 }
 
+
+@timeit
 def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
-    #print(df)
     keys = ["Coordinado", "Cliente", "Profile",
             "Barra Consumo", "Factor Barra Consumo"]
     df_as_dict = df.to_dict()
-    #print(df_as_dict["Coordinado"][0] is np.nan)
     new_dict = {key:{} for key in keys}
     idx = 0
     #df.set_index(['#','Coordinado','Cliente','Perfil día tipo','Verificador consumo']).stack()
-    for i in range(len(df)):
-        for barra in range(1, 23+1):
+    N_MAX_BARRAS = 23
+    N_COORD_CLIENTE = len(df)
+    for i in range(N_COORD_CLIENTE):
+        for barra in range(1, N_MAX_BARRAS + 1):
             if df_as_dict["Barra Consumo %s" % barra][i] is not np.nan:
                 new_dict["Coordinado"][idx] = df_as_dict["Coordinado"][i]
                 new_dict["Cliente"][idx] = df_as_dict["Cliente"][i]
@@ -80,6 +83,7 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     return df_dda_por_barra
 
 
+@timeit
 def get_monthly_demand(iplp_path):
     date_converter={
         'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
@@ -87,15 +91,14 @@ def get_monthly_demand(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia',
                        converters=date_converter)
     
-    # Drop rows if column #, Coordinado or Cliente is nan
-    df = df.dropna(subset=['#', 'Coordinado', 'Cliente'], how='any')
-
+    # Drop rows if column # is nan
+    df = df.dropna(subset=['#'], how='any')
     # Clean data
     cols_to_drop = ['#', 'Coordinado.1', 'Cliente.1', 'Perfil',
                     'Clasificacion SEN', 'Clasificacion ENGIE']
     df = df.drop(cols_to_drop, axis=1)
     df = df.dropna(how='all', axis=1)
-    df['Coordinado'] = df['Coordinado'].fillna('NA')
+    df.loc[:,'Coordinado'] = df['Coordinado'].fillna('NA')  
     # Stack to get Demand series
     demand_series = df.set_index(['Coordinado','Cliente']).stack()
     demand_series.index.set_names(['Coordinado','Cliente','Date'], inplace=True)
@@ -106,6 +109,7 @@ def get_monthly_demand(iplp_path):
     return df
 
 
+@timeit
 def get_hourly_profiles(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
     # Clean data
@@ -127,10 +131,11 @@ def get_blockly_profiles(df_hourly_profiles, block2day):
                  'Hora': 'Hour'})
     df = pd.merge(df, block2day, on=['Month','Hour'], how='left')
     df = df.drop('Hour', axis=1)
-    df = df.groupby(['Profile','Month','Block']).mean().reset_index()
+    df = df.groupby(['Profile','Month','Block']).sum().reset_index()
     return df
 
 
+@timeit
 def get_all_profiles(blo_eta, block2day,
                      df_monthly_demand, df_hourly_profiles, df_dda_por_barra):
 
@@ -151,8 +156,7 @@ def get_all_profiles(blo_eta, block2day,
     # Calculate consumption, group by Barra and sum
     # Consumption is calculated as follows:
     # [Monthly demand] * [% of demand in current bus] * [% of demand in current block] * 1000
-    # / ([Days in Month] * [Hours in current block])
-    import pdb; pdb.set_trace()
+    # / ([Days in Month] * [Hours per day in current block])
     df['Consumo'] = df.apply(
         lambda x: x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000 /
                   (x['DaysInMonth'] * x['Block_Len']), axis=1)
@@ -167,37 +171,40 @@ def get_all_profiles(blo_eta, block2day,
     return df
 
 
+@timeit
 def write_plpdem_dat(df_all_profiles, iplp_path):
 
     plpdem_path = iplp_path.parent / 'Temp' / 'plpdem.dat'
 
-    list_barras = df_all_profiles['Barra Consumo'].unique().tolist()
+    list_all_barras = get_list_of_all_barras(iplp_path)
+    list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
 
     # Translate month to hidromonth
     df_all_profiles = df_all_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
 
     lines =  ['# Archivo de demandas por barra (plpdem.dat)']
     lines += ['#  Numero de barras']
-    lines += ['%s' % len(list_barras)]
+    lines += ['%s' % len(list_all_barras)]
 
     #  write data from scratch
     f = open(plpdem_path, 'w')
     f.write('\n'.join(lines))
     f.close()
 
-    for barra in list_barras:
-        df_aux = df_all_profiles[df_all_profiles['Barra Consumo']==barra]
-        df_aux = df_aux[['Month','Etapa','Consumo']]
-
+    for barra in list_all_barras:
         lines = ['\n# Nombre de la Barra']
         lines += ["'%s'" % barra]
         lines += ['# Numero de Demandas']
-        lines += ['%s' % len(df_aux)]
-        if len(df_aux) > 0:
-            lines += ['# Mes  Etapa   Demanda']
-            # Dataframe to string
-            lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
-        
+        if barra in list_dem_barras:
+            df_aux = df_all_profiles[df_all_profiles['Barra Consumo']==barra]
+            df_aux = df_aux[['Month','Etapa','Consumo']]
+            lines += ['%s' % len(df_aux)]
+            if len(df_aux) > 0:
+                lines += ['# Mes  Etapa   Demanda']
+                # Dataframe to string
+                lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
+        else:
+            lines += ['%s' % 0]
         #  write data for current barra
         f = open(plpdem_path, 'a')
         f.write('\n'.join(lines))
@@ -224,7 +231,7 @@ def main():
 
     # Sheet "DdaPorBarra" to row format
     logger.info('Processing DdaPorBarra sheet')
-    df_dda_por_barra = dda_por_barra_to_row_format(
+    df_dda_por_barra  = dda_por_barra_to_row_format(
         iplp_path, write_to_csv=True)
 
     # Get monthly demand from Sheet "DdaEnergia"
@@ -241,11 +248,9 @@ def main():
         blo_eta, block2day,
         df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
 
-
     # Print to plpdem and uni_plpdem
     logger.info('Printing plpdem.dat and uni_plpdem.dat')
     write_plpdem_dat(df_all_profiles, iplp_path)
-
 
     # Get failure units and generate plpfal.prn
     logger.info('Printing plpfal.prn')
