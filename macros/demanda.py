@@ -212,6 +212,16 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
 
 
 @timeit
+def write_uni_plpdem_dat(df_all_profiles, iplp_path):
+    pass
+
+
+@timeit
+def write_plpfal_prn(df_all_profiles, iplp_path):
+    pass
+
+
+@timeit
 def main():
     '''
     Main routine
@@ -251,10 +261,11 @@ def main():
     # Print to plpdem and uni_plpdem
     logger.info('Printing plpdem.dat and uni_plpdem.dat')
     write_plpdem_dat(df_all_profiles, iplp_path)
+    write_uni_plpdem_dat(df_all_profiles, iplp_path)
 
     # Get failure units and generate plpfal.prn
     logger.info('Printing plpfal.prn')
-
+    write_plpfal_prn(df_all_profiles, iplp_path)
 
 
 if __name__ == "__main__":
