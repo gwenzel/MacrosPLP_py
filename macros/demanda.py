@@ -215,6 +215,7 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
 def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     uni_plpdem_path = iplp_path.parent / 'Temp' / 'uni_plpdem.dat'
     
+    # Sum demand of all barras
     df_aggregated = df_all_profiles.groupby(['Year','Month','Block','Etapa']).sum()
     df_aggregated = df_aggregated.reset_index()
     df_aggregated = df_aggregated[['Month','Etapa','Consumo']]
@@ -222,6 +223,7 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     # Translate month to hidromonth
     df_aggregated = df_aggregated.replace({'Month': MONTH_TO_HIDROMONTH})
 
+    # Write lines
     lines =  ['# Archivo de demandas por barra (plpdem.dat)']
     lines += ['#  Numero de barras']
     lines += ['001']
@@ -232,7 +234,7 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     lines += ['# Mes  Etapa   Demanda']
     lines += [df_aggregated.to_string(index=False, header=False, formatters=formatters)]
     
-    #  write data from scratch
+    # Write data from scratch
     f = open(uni_plpdem_path, 'w')
     f.write('\n'.join(lines))
     f.close()
