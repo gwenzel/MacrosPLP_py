@@ -48,10 +48,19 @@ MONTH_TO_HIDROMONTH = {
     7: 4, 8: 5, 9: 6,
     10: 7, 11: 8, 12: 9
 }
-formatters = {
+
+formatters_plpdem = {
     "Month":    "   {:02d}".format,
     "Etapa":    "  {:03d}".format,
     "Consumo":  "{:9.2f}".format
+}
+
+formatters_plpfal = {
+    "Month":    "     {:02d}".format,
+    "Etapa":    "   {:04d}".format,
+    "NIntPot":  "{:9.2f}".format,
+    "PotMin":   "{:8.2f}".format,
+    "PotMax":   "{:8.2f}".format
 }
 
 
@@ -202,7 +211,8 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
             if len(df_aux) > 0:
                 lines += ['# Mes  Etapa   Demanda']
                 # Dataframe to string
-                lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
+                lines += [df_aux.to_string(
+                    index=False, header=False, formatters=formatters_plpdem)]
         else:
             lines += ['%s' % 0]
         #  write data for current barra
@@ -216,7 +226,7 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     uni_plpdem_path = iplp_path.parent / 'Temp' / 'uni_plpdem.dat'
     
     # Sum demand of all barras
-    df_aggregated = df_all_profiles.groupby(['Year','Month','Block','Etapa']).sum()
+    df_aggregated = df_all_profiles.groupby(['Year','Month','Block','Etapa']).sum(numeric_only=True)
     df_aggregated = df_aggregated.reset_index()
     df_aggregated = df_aggregated[['Month','Etapa','Consumo']]
 
@@ -228,11 +238,12 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     lines += ['#  Numero de barras']
     lines += ['001']
     lines += ['# Nombre de la Barra']
-    lines += ["'UNINODAL"]
+    lines += ["'UNINODAL'"]
     lines += ['# Numero de Demandas']
     lines += ['%s' % len(df_aggregated)]
     lines += ['# Mes  Etapa   Demanda']
-    lines += [df_aggregated.to_string(index=False, header=False, formatters=formatters)]
+    lines += [df_aggregated.to_string(
+        index=False, header=False, formatters=formatters_plpdem)]
     
     # Write data from scratch
     f = open(uni_plpdem_path, 'w')
@@ -241,8 +252,52 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
 
 
 @timeit
-def write_plpfal_prn(df_all_profiles, iplp_path):
-    pass
+def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
+    plpfal_path = iplp_path.parent / 'Temp' / 'plpfal.prn'
+
+    list_all_barras = get_list_of_all_barras(iplp_path)
+    list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
+
+    # Build df with zero-consumption barras
+    df_zero_demand = blo_eta[['Month','Etapa']]
+    df_zero_demand['NIntPot'] = 1
+    df_zero_demand['PotMin'] = 0.0
+    df_zero_demand['PotMax'] = 0.0
+    
+    # Transform df
+    df_all_profiles['NIntPot'] = 1
+    df_all_profiles['PotMin'] = 0.0
+    df_all_profiles = df_all_profiles.rename(columns={'Consumo': 'PotMax'})
+    df_all_profiles = df_all_profiles[['Barra Consumo','Month','Etapa','NIntPot','PotMin','PotMax']]
+
+    # Translate month to hidromonth
+    df_all_profiles = df_all_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_zero_demand = df_zero_demand.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    lines =  ['# Archivo de maximos de centrales de falla (plpfal.prn)']
+    #  write data from scratch
+    f = open(plpfal_path, 'w')
+    f.write('\n'.join(lines))
+    f.close()
+
+    for idx, barra in enumerate(list_all_barras, 1):
+        lines = ['\n# Nombre de la central']
+        lines += ["'Falla_%s'" % idx]
+        lines += ['#   Numero de Etapas e Intervalos']
+        if barra in list_dem_barras:
+            df_aux = df_all_profiles[df_all_profiles['Barra Consumo']==barra]
+            df_aux = df_aux.drop('Barra Consumo', axis=1)
+        else:
+            df_aux = df_zero_demand
+        lines += ['  %s                 01' % len(df_aux)]
+        lines += ['#   Mes    Etapa  NIntPot   PotMin   PotMax']
+        lines += [df_aux.to_string(
+            index=False, header=False, formatters=formatters_plpfal)]
+
+        #  write data for current barra
+        f = open(plpfal_path, 'a')
+        f.write('\n'.join(lines))
+        f.close()
 
 
 @timeit
@@ -289,7 +344,7 @@ def main():
 
     # Get failure units and generate plpfal.prn
     logger.info('Printing plpfal.prn')
-    write_plpfal_prn(df_all_profiles, iplp_path)
+    write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
 
 
 if __name__ == "__main__":
