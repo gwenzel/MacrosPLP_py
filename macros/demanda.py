@@ -116,8 +116,8 @@ def get_hourly_profiles(iplp_path):
     cols_to_drop = ['#', 'Año', 'Verificador consumo']
     df = df.drop(cols_to_drop, axis=1)
     # Process data
-    profile_series = df.set_index(['Perfil día tipo', 'Mes']).stack()
-    profile_series.index.set_names(['Perfil día tipo', 'Mes','Hora'], inplace=True)
+    profile_series = df.set_index(['Perfil día tipo','Mes']).stack()
+    profile_series.index.set_names(['Perfil día tipo','Mes','Hora'], inplace=True)
     profile_series.name = 'PowerFactor'
     df = profile_series.reset_index()
     df = df.replace(to_replace={"Mes": MONTH_2_NUMBER, "Hora": HORA_DICT})
@@ -213,7 +213,29 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
 
 @timeit
 def write_uni_plpdem_dat(df_all_profiles, iplp_path):
-    pass
+    uni_plpdem_path = iplp_path.parent / 'Temp' / 'uni_plpdem.dat'
+    
+    df_aggregated = df_all_profiles.groupby(['Year','Month','Block','Etapa']).sum()
+    df_aggregated = df_aggregated.reset_index()
+    df_aggregated = df_aggregated[['Month','Etapa','Consumo']]
+
+    # Translate month to hidromonth
+    df_aggregated = df_aggregated.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    lines =  ['# Archivo de demandas por barra (plpdem.dat)']
+    lines += ['#  Numero de barras']
+    lines += ['001']
+    lines += ['# Nombre de la Barra']
+    lines += ["'UNINODAL"]
+    lines += ['# Numero de Demandas']
+    lines += ['%s' % len(df_aggregated)]
+    lines += ['# Mes  Etapa   Demanda']
+    lines += [df_aggregated.to_string(index=False, header=False, formatters=formatters)]
+    
+    #  write data from scratch
+    f = open(uni_plpdem_path, 'w')
+    f.write('\n'.join(lines))
+    f.close()
 
 
 @timeit
