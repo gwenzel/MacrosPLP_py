@@ -88,7 +88,7 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df_dda_por_barra = pd.DataFrame(new_dict).reset_index(drop=True)
     df_dda_por_barra['Coordinado'] = df_dda_por_barra['Coordinado'].fillna("NA")
     if write_to_csv:
-        df_dda_por_barra.to_csv(iplp_path.parent / 'DdaPorBarra_rows.csv')
+        df_dda_por_barra.to_csv(iplp_path.parent / 'Temp' / 'DdaPorBarra_rows.csv')
     return df_dda_por_barra
 
 
