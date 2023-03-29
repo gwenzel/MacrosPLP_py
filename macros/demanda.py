@@ -24,7 +24,6 @@ from utils import (     get_project_root,
 root = get_project_root()
 logger = create_logger('demanda')
 
-
 MONTH_2_NUMBER = {  
     'ene': 1,
     'feb': 2,
@@ -72,7 +71,6 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df_as_dict = df.to_dict()
     new_dict = {key:{} for key in keys}
     idx = 0
-    #df.set_index(['#','Coordinado','Cliente','Perfil día tipo','Verificador consumo']).stack()
     N_MAX_BARRAS = 23
     N_COORD_CLIENTE = len(df)
     for i in range(N_COORD_CLIENTE):
@@ -260,13 +258,13 @@ def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
 
     # Build df with zero-consumption barras
     df_zero_demand = blo_eta[['Month','Etapa']]
-    df_zero_demand['NIntPot'] = 1
-    df_zero_demand['PotMin'] = 0.0
-    df_zero_demand['PotMax'] = 0.0
+    df_zero_demand['NIntPot'] = [1] * len(df_zero_demand)
+    df_zero_demand['PotMin'] = [0.0] * len(df_zero_demand)
+    df_zero_demand['PotMax'] = [0.0] * len(df_zero_demand)
     
     # Transform df
-    df_all_profiles['NIntPot'] = 1
-    df_all_profiles['PotMin'] = 0.0
+    df_all_profiles['NIntPot'] = [1] * len(df_all_profiles)
+    df_all_profiles['PotMin'] = [0.0] * len(df_all_profiles)
     df_all_profiles = df_all_profiles.rename(columns={'Consumo': 'PotMax'})
     df_all_profiles = df_all_profiles[['Barra Consumo','Month','Etapa','NIntPot','PotMin','PotMax']]
 
