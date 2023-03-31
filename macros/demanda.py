@@ -93,11 +93,7 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
 
 @timeit
 def get_monthly_demand(iplp_path):
-    #date_converter={
-    #    'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
-    #}
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
-    df['DateFrom'] = df['DateFrom'].apply(from_excel)
     # Drop rows if column # is nan
     df = df.dropna(subset=['#'], how='any')
     # Clean data
@@ -112,7 +108,7 @@ def get_monthly_demand(iplp_path):
     demand_series.name = 'Demand'
     df = demand_series.reset_index()
     # parse dates
-    df['Date'] = pd.to_datetime(df['Date'], unit='d', origin='1899-12-30').dt.strftime("%m/%d/%Y")
+    df['Date'] = df['Date'].apply(from_excel)
     return df
 
 
