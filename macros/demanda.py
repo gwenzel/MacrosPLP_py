@@ -11,6 +11,7 @@ Ouput files are:
 '''
 import pandas as pd
 import numpy as np
+from openpyxl.utils.datetime import from_excel
 
 from utils import (     get_project_root,
                         create_logger,
@@ -92,12 +93,11 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
 
 @timeit
 def get_monthly_demand(iplp_path):
-    date_converter={
-        'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
-    }
-    df = pd.read_excel(iplp_path, sheet_name='DdaEnergia',
-                       converters=date_converter)
-    
+    #date_converter={
+    #    'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
+    #}
+    df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
+    df['DateFrom'] = df['DateFrom'].apply(from_excel)
     # Drop rows if column # is nan
     df = df.dropna(subset=['#'], how='any')
     # Clean data

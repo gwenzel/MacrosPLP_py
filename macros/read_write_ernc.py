@@ -2,6 +2,7 @@ import pandas as pd
 from shutil import copy
 from pathlib import Path
 from datetime import datetime
+from openpyxl.utils.datetime import from_excel
 
 from utils import timeit, check_is_file, remove_blank_lines
 
@@ -172,12 +173,12 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
     '''
     Read iplp file, sheet ERNC, and extract rating factors
     '''
-    date_converter={
-        'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
-    }
+    #date_converter={
+    #    'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
+    #}
     df = pd.read_excel(iplp_path, sheet_name ='ERNC',
-                       skiprows=13, usecols="E:G",
-                       converters=date_converter)
+                       skiprows=13, usecols="E:G")
+    df['DateFrom'] = df['DateFrom'].apply(from_excel)
     df = df.dropna()
     df = df.rename(columns={'Name.1': 'Name'})
     df['DateFrom'] = df['DateFrom'].dt.strftime("%m/%d/%Y")
