@@ -103,10 +103,10 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
 
         # Format unit dataframe
-        pmin_aux = pmin[unit]
         df_aux = df_scaled_profiles[['Month', 'Etapa', unit]]
         df_aux = df_aux.rename(columns={unit: 'Pmax'})
-        df_aux['Pmin'] = df_aux.apply(lambda x: min(pmin_aux, x['Pmax']), axis=1)
+        df_aux['Pmin'] = pmin[unit]
+        df_aux['Pmin'] = df_aux.apply(lambda x: min(x['Pmin'], x['Pmax']), axis=1)
         df_aux['NIntPot'] = 1
         df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
 
