@@ -74,7 +74,6 @@ def read_ernc_files(path_inputs):
     return ernc_data
 
 
-@timeit
 def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
     '''
     Write dat file in PLP format
@@ -127,7 +126,6 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
     # check_plpmance(dest)
 
 
-@timeit
 def add_ernc_units(plpmance_file, new_units_number):
     # open file in read mode
     file = open(plpmance_file, "r")
@@ -168,7 +166,6 @@ def generate_min_capacity_csv(iplp_path, path_inputs):
     df.to_csv(Path(path_inputs, MIN_CAPACITY_FILENAME), index=False)
 
 
-@timeit
 def generate_rating_factor_csv(iplp_path, path_inputs):
     '''
     Read iplp file, sheet ERNC, and extract rating factors

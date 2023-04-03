@@ -113,7 +113,7 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
 
     return df_rf
 
-@timeit
+
 def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_type_dict, print_files=PRINT_FILES):
     '''
     Use all profiles data and rating factors to generate scaled profiles

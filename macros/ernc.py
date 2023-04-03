@@ -78,6 +78,8 @@ def main():
     logger.info('Writing profiles in .dat format')
     write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path)
 
+    logger.info('Process finished')
+
 
 if __name__ == "__main__":
     main()
