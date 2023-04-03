@@ -64,7 +64,6 @@ formatters_plpfal = {
 }
 
 
-@timeit
 def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
     keys = ["Coordinado", "Cliente", "Profile",
@@ -91,7 +90,6 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     return df_dda_por_barra
 
 
-@timeit
 def get_monthly_demand(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
     # Drop rows if column # is nan
@@ -112,7 +110,6 @@ def get_monthly_demand(iplp_path):
     return df
 
 
-@timeit
 def get_hourly_profiles(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
     # Clean data
@@ -138,7 +135,6 @@ def get_blockly_profiles(df_hourly_profiles, block2day):
     return df
 
 
-@timeit
 def get_all_profiles(blo_eta, block2day,
                      df_monthly_demand, df_hourly_profiles, df_dda_por_barra):
 
@@ -174,7 +170,6 @@ def get_all_profiles(blo_eta, block2day,
     return df
 
 
-@timeit
 def write_plpdem_dat(df_all_profiles, iplp_path):
 
     plpdem_path = iplp_path.parent / 'Temp' / 'plpdem.dat'
@@ -215,7 +210,6 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
         f.close()
 
 
-@timeit
 def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     uni_plpdem_path = iplp_path.parent / 'Temp' / 'uni_plpdem.dat'
     
@@ -245,7 +239,6 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     f.close()
 
 
-@timeit
 def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
     plpfal_path = iplp_path.parent / 'Temp' / 'plpfal.prn'
 
@@ -253,7 +246,7 @@ def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
     list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
 
     # Build df with zero-consumption barras
-    df_zero_demand = blo_eta[['Month','Etapa']]
+    df_zero_demand = blo_eta[['Month','Etapa']].copy()
     df_zero_demand['NIntPot'] = [1] * len(df_zero_demand)
     df_zero_demand['PotMin'] = [0.0] * len(df_zero_demand)
     df_zero_demand['PotMax'] = [0.0] * len(df_zero_demand)
@@ -339,6 +332,8 @@ def main():
     # Get failure units and generate plpfal.prn
     logger.info('Printing plpfal.prn')
     write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
+
+    logger.info('Process finished')
 
 
 if __name__ == "__main__":

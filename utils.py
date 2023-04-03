@@ -118,7 +118,6 @@ def is_valid_file(parser, arg):
         return Path(arg)
 
 
-@timeit
 def get_iplp_input_path():
     parser = ArgumentParser(description="Get IPLP renewable energy profiles")
     parser.add_argument('-f', dest='iplp_path', required=False,
@@ -141,17 +140,22 @@ def create_logger(logname):
     # set log level
     logger.setLevel(logging.INFO)
 
-    # define file handler and set formatter
-    file_handler = logging.FileHandler('logfile_%s.log' % logname, mode='w')
+    # set formatter
     formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+
+    # define file and stream handlers
+    file_handler = logging.FileHandler('logfile_%s.log' % logname, mode='w')
     file_handler.setFormatter(formatter)
 
-    # add file handler to logger
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    # add file and handler to logger
     logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
     return logger
 
 
-@timeit
 def remove_blank_lines(text_file):
     temp_file = 'temp.txt'
     # opening and creating new .txt file
@@ -164,7 +168,6 @@ def remove_blank_lines(text_file):
     os.remove(temp_file)
 
 
-@timeit
 def get_list_of_all_barras(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name="Barras",
                        skiprows=4, usecols="B")
