@@ -9,7 +9,8 @@ from utils import (                 get_project_root,
                                     process_etapas_blocks,
                                     get_iplp_input_path,
                                     check_is_path,
-                                    create_logger
+                                    create_logger,
+                                    get_scenarios
 )
 from macros.read_write_ernc import (read_ernc_files,
                                     write_plpmance_ernc_dat,
@@ -17,7 +18,8 @@ from macros.read_write_ernc import (read_ernc_files,
                                     generate_min_capacity_csv,
                                     generate_rating_factor_csv,
                                     generate_profiles_csv,
-                                    get_unit_type
+                                    get_unit_type,
+                                    define_input_names
 )
 from macros.shape_data import (     get_profiles_blo,
                                     get_all_profiles,
@@ -41,18 +43,24 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+
+    # Get ERNC scenario and input file names
+    logger.info('Getting scenarios and input names')
+    scenario_data = get_scenarios(iplp_path)
+    ernc_scenario = scenario_data['Eolico']
+    input_names = define_input_names(ernc_scenario)
     
     # Generate csv files
     logger.info('Generating input csv files')
-    generate_max_capacity_csv(iplp_path, path_inputs)
-    generate_min_capacity_csv(iplp_path, path_inputs)
-    generate_rating_factor_csv(iplp_path, path_inputs)
+    generate_max_capacity_csv(iplp_path, path_inputs, input_names)
+    generate_min_capacity_csv(iplp_path, path_inputs, input_names)
+    generate_rating_factor_csv(iplp_path, path_inputs, input_names)
     # (profiles are being copied from root folder)
-    generate_profiles_csv(iplp_path, path_inputs, root)
+    generate_profiles_csv(iplp_path, path_inputs, root, input_names)
 
     # Get inputs
     logger.info('Processing csv inputs')
-    ernc_data = read_ernc_files(path_inputs)
+    ernc_data = read_ernc_files(path_inputs, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
     unit_type_dict = get_unit_type(iplp_path)

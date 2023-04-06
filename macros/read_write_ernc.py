@@ -7,12 +7,6 @@ from openpyxl.utils.datetime import from_excel
 from utils import check_is_file, remove_blank_lines
 
 
-MAX_CAPACITY_FILENAME = "ernc_MaxCapacity.csv"
-MIN_CAPACITY_FILENAME = "ernc_MinCapacity.csv"
-RATING_FACTOR_FILENAME = "ernc_RatingFactor.csv"
-H_PROFILES_FILENAME = "ernc_profiles_H.csv"
-HM_PROFILES_FILENAME = "ernc_profiles_HM.csv"
-M_PROFILES_FILENAME = "ernc_profiles_M.csv"
 OUTPUT_FILENAME = 'plpmance.dat'
 
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
@@ -32,41 +26,73 @@ MONTH_TO_HIDROMONTH = {
     10: 7, 11: 8, 12: 9
 }
 
+def define_input_names(ernc_scenario):
+    '''
+    Define input csv files to use
+    ernc_scenario should be "Base", "WindHigh" or "WindLow"
+    '''
+    suffix_dict = {
+        "Base": "",
+        "WindHigh": "_High",
+        "WindLow": "_Low"
+    }
+    suffix = suffix_dict[ernc_scenario]
 
-def read_ernc_files(path_inputs):
+    names = {
+        "MAX_CAPACITY_FILENAME": "ernc_MaxCapacity.csv",
+        "MIN_CAPACITY_FILENAME": "ernc_MinCapacity.csv",
+        "RATING_FACTOR_FILENAME": "ernc_RatingFactor.csv",
+        "H_PROFILES_FILENAME": "ernc_profiles_H%s.csv" % suffix,
+        "HM_PROFILES_FILENAME": "ernc_profiles_HM%s.csv" % suffix,
+        "M_PROFILES_FILENAME": "ernc_profiles_M%s.csv" % suffix
+    }
+    return names
+
+
+def read_ernc_files(path_inputs, input_names):
     '''
     Read all input csv files to generate ernc profiles
     '''
-    path_max_capacity = Path(path_inputs, MAX_CAPACITY_FILENAME)
+    # Capacity and rating factor files
+    path_max_capacity = Path(
+        path_inputs, input_names["MAX_CAPACITY_FILENAME"])
     check_is_file(path_max_capacity)
     dict_max_capacity = pd.read_csv(
         path_max_capacity, index_col='Name').to_dict()['MaxCapacityFactor']
     
-    path_min_capacity = Path(path_inputs, MIN_CAPACITY_FILENAME)
+    path_min_capacity = Path(
+        path_inputs, input_names["MIN_CAPACITY_FILENAME"])
     check_is_file(path_min_capacity)
     dict_min_capacity = pd.read_csv(
         path_min_capacity, index_col='Name').to_dict()['Pmin']
     
-    path_rating_factor = Path(path_inputs, RATING_FACTOR_FILENAME)
+    path_rating_factor = Path(
+        path_inputs, input_names["RATING_FACTOR_FILENAME"])
     check_is_file(path_rating_factor)
     df_rating_factor = pd.read_csv(
         path_rating_factor, parse_dates=['DateFrom'],
         date_parser=custom_date_parser)
     
-    path_profiles_h = Path(path_inputs, H_PROFILES_FILENAME)
+    # Profile files    
+    path_profiles_h = Path(
+        path_inputs, input_names["H_PROFILES_FILENAME"])
     check_is_file(path_profiles_h)
     df_profiles_h = pd.read_csv(path_profiles_h).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
     
-    path_profiles_hm = Path(path_inputs, HM_PROFILES_FILENAME)
+    path_profiles_hm = Path(
+        path_inputs, input_names["HM_PROFILES_FILENAME"])
     check_is_file(path_profiles_hm) 
     df_profiles_hm = pd.read_csv(path_profiles_hm).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
 
-    path_profiles_m = Path(path_inputs, M_PROFILES_FILENAME)
+    path_profiles_m = Path(
+        path_inputs, input_names["M_PROFILES_FILENAME"])
     check_is_file(path_profiles_m)   
     df_profiles_m = pd.read_csv(path_profiles_m).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
+    
+    # Build output dict
     ernc_data = {'dict_max_capacity': dict_max_capacity,
                  'dict_min_capacity': dict_min_capacity,
                  'rating_factor': df_rating_factor,
@@ -144,17 +170,17 @@ def add_ernc_units(plpmance_file, new_units_number):
     write_file.close()
 
 
-def generate_max_capacity_csv(iplp_path, path_inputs):
+def generate_max_capacity_csv(iplp_path, path_inputs, input_names):
     '''
     Read iplp file, sheet ERNC, and extract max capacities
     '''
     df = pd.read_excel(iplp_path, sheet_name ='ERNC',
                        skiprows=13, usecols="A:B")
     df = df.dropna()
-    df.to_csv(Path(path_inputs, MAX_CAPACITY_FILENAME), index=False)
+    df.to_csv(Path(path_inputs, input_names["MAX_CAPACITY_FILENAME"]), index=False)
 
 
-def generate_min_capacity_csv(iplp_path, path_inputs):
+def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
     '''
     Read iplp file, sheet Centrales, and extract pmin for all units
 
@@ -164,10 +190,10 @@ def generate_min_capacity_csv(iplp_path, path_inputs):
                        skiprows=4, usecols="B,AA")
     df = df.dropna()
     df = df.rename(columns={'CENTRALES': 'Name', 'Mínima.1': 'Pmin'})
-    df.to_csv(Path(path_inputs, MIN_CAPACITY_FILENAME), index=False)
+    df.to_csv(Path(path_inputs, input_names["MIN_CAPACITY_FILENAME"]), index=False)
 
 
-def generate_rating_factor_csv(iplp_path, path_inputs):
+def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
     '''
     Read iplp file, sheet ERNC, and extract rating factors
     '''
@@ -177,10 +203,10 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
     df = df.dropna()
     df = df.rename(columns={'Name.1': 'Name'})
     df['DateFrom'] = df['DateFrom'].dt.strftime("%m/%d/%Y")
-    df.to_csv(Path(path_inputs, RATING_FACTOR_FILENAME), index=False)   
+    df.to_csv(Path(path_inputs, input_names["RATING_FACTOR_FILENAME"]), index=False)   
 
 
-def generate_profiles_csv(iplp_path, path_inputs, root):
+def generate_profiles_csv(iplp_path, path_inputs, root, input_names):
     '''
     For the moment, it is copying directly the csv profiles from the
     project folder.
@@ -189,7 +215,11 @@ def generate_profiles_csv(iplp_path, path_inputs, root):
     iplp file, sheet ERNC, and extract the profiles directly
     '''
     profiles_source = Path(root, 'macros', 'inputs')
-    profile_filenames = [H_PROFILES_FILENAME, HM_PROFILES_FILENAME, M_PROFILES_FILENAME]
+    profile_filenames = [
+        input_names["H_PROFILES_FILENAME"],
+        input_names["HM_PROFILES_FILENAME"],
+        input_names["M_PROFILES_FILENAME"]
+        ]
     for filename in profile_filenames:
         copy(profiles_source / filename, path_inputs / filename)
 
