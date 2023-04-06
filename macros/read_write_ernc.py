@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from openpyxl.utils.datetime import from_excel
 
-from utils import timeit, check_is_file, remove_blank_lines
+from utils import check_is_file, remove_blank_lines
 
 
 MAX_CAPACITY_FILENAME = "ernc_MaxCapacity.csv"
@@ -16,6 +16,7 @@ M_PROFILES_FILENAME = "ernc_profiles_M.csv"
 OUTPUT_FILENAME = 'plpmance.dat'
 
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
+
 formatters = {
     "Month":    "     {:02d}".format,
     "Etapa":    "     {:04d}".format,
@@ -23,6 +24,7 @@ formatters = {
     "Pmin":     "{:8.2f}".format,
     "Pmax":     "{:8.2f}".format
 }
+
 MONTH_TO_HIDROMONTH = {
     1: 10, 2: 11, 3: 12,
     4: 1, 5: 2, 6: 3,
@@ -111,7 +113,7 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
 
         # Dataframe to string
         lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
-        
+
         #  write data for current unit
         f = open(dest, 'a')
         f.write('\n'.join(lines))
@@ -134,7 +136,6 @@ def add_ernc_units(plpmance_file, new_units_number):
     lines[2] = "     %s\n" % (old_units_number + new_units_number)
     # close the file
     file.close()
-
     # Open file in write mode
     write_file = open(plpmance_file, "w")
     # overwriting the old file contents with the new/replaced content
@@ -170,9 +171,6 @@ def generate_rating_factor_csv(iplp_path, path_inputs):
     '''
     Read iplp file, sheet ERNC, and extract rating factors
     '''
-    #date_converter={
-    #    'DateFrom': lambda x: pd.to_datetime(x, unit='d', origin='1899-12-30')
-    #}
     df = pd.read_excel(iplp_path, sheet_name ='ERNC',
                        skiprows=13, usecols="E:G")
     df['DateFrom'] = df['DateFrom'].apply(from_excel)
