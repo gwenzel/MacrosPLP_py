@@ -172,3 +172,18 @@ def get_list_of_all_barras(iplp_path):
     df = pd.read_excel(iplp_path, sheet_name="Barras",
                        skiprows=4, usecols="B")
     return df['BARRA'].tolist()
+
+
+def get_scenarios(iplp_path):
+    '''
+    Return dictionary with scenario data
+    - Demanda: Base, DemHigh, DemLow, Risk_1, Risk_2
+    - Combustible: Base, ComHigh, ComLow, Risk_1, Risk_2
+    - Eolico: Base, WindLow, WindHigh
+    '''
+    df = pd.read_excel(iplp_path, sheet_name="Path",
+                       skiprows=6, usecols="C:D",
+                       header=None)
+    df = df.dropna()
+    scenario_data = df.set_index(2).to_dict()[3]
+    return scenario_data
