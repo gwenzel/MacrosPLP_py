@@ -12,7 +12,7 @@ from utils import (                 get_project_root,
                                     create_logger,
                                     get_scenarios
 )
-from macros.read_write_ernc import (read_ernc_files,
+from macros.ernc_read_write import (read_ernc_files,
                                     write_plpmance_ernc_dat,
                                     generate_max_capacity_csv,
                                     generate_min_capacity_csv,
@@ -21,7 +21,7 @@ from macros.read_write_ernc import (read_ernc_files,
                                     get_unit_type,
                                     define_input_names
 )
-from macros.shape_data import (     get_profiles_blo,
+from macros.ernc_shape_data import (     get_profiles_blo,
                                     get_all_profiles,
                                     get_rating_factors,
                                     get_scaled_profiles
