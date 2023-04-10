@@ -5,23 +5,6 @@ from utils import (                 get_project_root,
                                     get_list_of_all_barras
 )
 import pandas as pd
-'''
-# Archivo con definicion de barras (plpbar.dat)
-# Numero de Barras
-     577
-# Numero       Nombre
-       1       'Arica_066'
-       2       'Arica_110'
-       3       'CD_Arica_066'
-
-# Archivo con definicion de barras (plpbar_full.dat)
-# Numero de Barras
-     577
-# Numero       Nombre                                       Tension   FL FI
-       1       'Arica_066'                                       66   1   0
-       2       'Arica_110'                                      110   1   1
-
-'''
 
 root = get_project_root()
 logger = create_logger('barras')
