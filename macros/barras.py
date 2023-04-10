@@ -1,8 +1,7 @@
 from utils import (                 get_project_root,
                                     get_iplp_input_path,
                                     check_is_path,
-                                    create_logger,
-                                    get_list_of_all_barras
+                                    create_logger
 )
 import pandas as pd
 
