@@ -25,6 +25,8 @@ setup(
             "ernc = macros.ernc:main",
             "dda = macros.demanda:main",
             "bar = macros.barras:main",
+            "mantcen = macros.mantcen:main",
+            "cvar = macros.cvariable:main"
         ]
     },
     classifiers=[
