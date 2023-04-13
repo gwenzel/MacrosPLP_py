@@ -145,7 +145,7 @@ def create_logger(logname):
 
     # define file and stream handlers
     root = get_project_root()
-    filepath = root / 'log_%s.log' % logname
+    filepath = root / ('log_%s.log' % logname)
     file_handler = logging.FileHandler(filepath, mode='w')
     file_handler.setFormatter(formatter)
 
