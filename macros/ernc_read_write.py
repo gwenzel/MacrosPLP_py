@@ -102,7 +102,7 @@ def read_ernc_files(path_inputs, input_names):
     return ernc_data
 
 
-def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
+def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names, iplp_path):
     '''
     Write dat file in PLP format
     '''
@@ -115,7 +115,6 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, iplp_path):
     copy(source, dest)
 
     num_blo = len(df_scaled_profiles)
-    unit_names = ernc_data['dict_max_capacity'].keys()
     pmin = ernc_data['dict_min_capacity']
 
     # Translate month to hidromonth
@@ -234,3 +233,11 @@ def get_unit_type(iplp_path):
     df = df.rename(columns={'CENTRALES': 'Name', 'Tipo de Central': 'Type'})
     df = df.set_index('Name')
     return df.to_dict()['Type']
+
+
+def get_valid_unit_names(ernc_data, iplp_path):
+    '''
+    Return list of units with type different than X
+    '''
+    unit_type_dict = get_unit_type(iplp_path)
+    return [unit for unit in ernc_data['dict_max_capacity'].keys() if unit_type_dict[unit] != 'X']
