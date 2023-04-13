@@ -58,7 +58,7 @@ def validate_mantcen(df_centrales, df_mantcen):
             logger.error('Name of unit %s in MantCEN not valid' % name)
             sys.exit('Name of unit %s in MantCEN not valid' % name)
     # Values
-    # PENDING
+    # TODO PENDING
     logger.info('Validation process for MantCEN successful')
 
 
