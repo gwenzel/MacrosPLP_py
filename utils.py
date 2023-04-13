@@ -141,10 +141,12 @@ def create_logger(logname):
     logger.setLevel(logging.INFO)
 
     # set formatter
-    formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+    formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 
     # define file and stream handlers
-    file_handler = logging.FileHandler('logfile_%s.log' % logname, mode='w')
+    root = get_project_root()
+    filepath = root / 'log_%s.log' % logname
+    file_handler = logging.FileHandler(filepath, mode='w')
     file_handler.setFormatter(formatter)
 
     stream_handler = logging.StreamHandler()
