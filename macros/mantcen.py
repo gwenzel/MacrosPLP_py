@@ -134,10 +134,6 @@ def main():
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
-    # LlenadoMantConvenc
-    # Read directly from MantenimientosIM and add to df_mantcen before generating output
-    # No cíclicos, cíclicos, restricciones de gas, genmin
-
     # Read Centrales and get PnomMax and PnomMin
     logger.info('Reading data from sheet Centrales')
     df_centrales = get_pmin_pmax(iplp_path)
@@ -146,6 +142,10 @@ def main():
     # Check which units have maintenance, and validate their names
     df_mantcen = get_mantcen_input(iplp_path)
     validate_mantcen(df_centrales, df_mantcen)
+
+    # LlenadoMantConvenc
+    # Read directly from MantenimientosIM and add to df_mantcen before generating output
+    # No cíclicos, cíclicos, restricciones de gas, genmin
 
     # Generate arrays with pmin/pmax data
     df_pmin, df_pmax = get_mantcen_output(blo_eta, df_mantcen, df_centrales)
