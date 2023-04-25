@@ -276,7 +276,7 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
     renewable energy profiles and generate the definitive
     plpmance.dat file
     '''
-    plpmance_path = iplp_path.parent / 'Temp' / 'plpmance_ini_test.dat'
+    plpmance_path = iplp_path.parent / 'Temp' / 'plpmance_ini.dat'
 
     list_mantcen = list(df_pmin.columns)
     num_blo = len(df_pmin)
