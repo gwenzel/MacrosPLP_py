@@ -96,51 +96,47 @@ def validate_mantcen(df_centrales, df_mantcen):
     logger.info('Validation process for MantCEN successful')
 
 
-@timeit
+def shape_extra_mant_no_gas(df, description='NA'):
+    df['INICIAL'] = df['INICIAL'].apply(from_excel)
+    df['FINAL'] = df['FINAL'].apply(from_excel)
+    df['Description'] = description
+    df['Pmin'] = 0
+    reordered_cols = ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
+    return df[reordered_cols]
+
+
 def read_extra_mant_no_ciclicos(iplp_path):
     # No ciclicos
     df_no_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="B:F").dropna(how='any')
-    df_no_ciclicos['Fecha Inicio'] = \
-        df_no_ciclicos['Fecha Inicio'].apply(from_excel)
-    df_no_ciclicos['Fecha Término'] = \
-        df_no_ciclicos['Fecha Término'].apply(from_excel)
+        skiprows=1, usecols="B:D,F")
+    df_no_ciclicos = df_no_ciclicos.dropna(how='any')
     df_no_ciclicos = df_no_ciclicos.rename(
         columns={'Unidad':'Nombre',
                  'Fecha Inicio': 'INICIAL',
                  'Fecha Término': 'FINAL',
                  'Potencia Maxima': 'Pmax'}
     )
-    df_no_ciclicos['Description'] = "No Cíclicos"
-    df_no_ciclicos['Pmin'] = 0
-    df_no_ciclicos = df_no_ciclicos[
-        ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
-    ]
+    df_no_ciclicos = shape_extra_mant_no_gas(
+        df_no_ciclicos, description='No Cíclicos')
     return df_no_ciclicos
 
 
-@timeit
 def read_extra_mant_ciclicos(iplp_path, blo_eta):
     # Ciclicos
     df_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="H:M").dropna(how='any')
-    df_ciclicos['Fecha Inicio.1'] = \
-        df_ciclicos['Fecha Inicio.1'].apply(from_excel)
-    df_ciclicos['Fecha Término.1'] = \
-        df_ciclicos['Fecha Término.1'].apply(from_excel)
+        skiprows=1, usecols="I:K,M")
+    df_ciclicos = df_ciclicos.dropna(how='any')
     df_ciclicos = df_ciclicos.rename(
         columns={'Unidad.1':'Nombre',
                  'Fecha Inicio.1': 'INICIAL',
                  'Fecha Término.1': 'FINAL',
                  'Potencia Maxima.1': 'Pmax'}
     )
-    df_ciclicos['Description'] = "Cíclicos"
-    df_ciclicos['Pmin'] = 0
-    df_ciclicos = df_ciclicos[
-        ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
-    ]
+    df_ciclicos = shape_extra_mant_no_gas(
+        df_ciclicos, description='Cíclicos')
+    
     # Repeat yearly, making sure all years are covered
     ini_year = df_ciclicos['INICIAL'].min().year
     end_year = blo_eta.iloc[-1]['Year']
@@ -156,7 +152,6 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     return df_ciclicos
 
 
-@timeit
 def read_extra_mant_gas(iplp_path, blo_eta):
     month2number = {
         'Ene': 1, 'Feb': 2, 'Mar': 3,
@@ -168,7 +163,8 @@ def read_extra_mant_gas(iplp_path, blo_eta):
     # Gas
     df_gas = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="O:AC", index_col=0).dropna(how='any')
+        skiprows=1, usecols="O:AC", index_col=0)
+    df_gas = df_gas.dropna(how='any')
     df_gas = df_gas.replace('*', str(end_year))
     dict_out = {'Nombre': [], 'INICIAL': [], 'FINAL': [],
                 'Pmin': [], 'Pmax': []}
@@ -263,7 +259,18 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     return df_pmin, df_pmax
 
 
-def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path):
+def build_df_aux(df_pmin, df_pmax, unit):
+    df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
+    df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
+    df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
+    df_aux_pmax = df_aux_pmax.rename(columns={unit: 'Pmax'})
+    df_aux = pd.merge(df_aux_pmin, df_aux_pmax)
+    df_aux['NIntPot'] = 1
+    # Reorder columns
+    return df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
+
+
+def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
     '''
     Write plpmance_ini.dat file, which will be used later to add the
     renewable energy profiles and generate the definitive
@@ -279,8 +286,13 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path):
     df_pmin = df_pmin.reset_index()
 
     # Translate month to hidromonth
-    df_pmin = df_pmin.replace({'Month': MONTH_TO_HIDROMONTH})
     df_pmax = df_pmax.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_pmin = df_pmin.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    # Print data if requested
+    if printdata:
+        df_pmax.to_csv(iplp_path.parent / 'Temp' / 'mantcen_pmax.csv')
+        df_pmin.to_csv(iplp_path.parent / 'Temp' / 'mantcen_pmin.csv')
 
     lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
     lines += ['# numero de centrales con matenimientos']
@@ -291,24 +303,18 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path):
     f.write('\n'.join(lines))
     f.close()
 
-    for _, unit in enumerate(list_mantcen, 1):
+    for unit in list_mantcen:
         lines = ['\n# Nombre de la central']
         lines += ["'%s'" % unit]
         lines += ['#   Numero de Bloques e Intervalos']
         lines += ['  %04d                 01' % num_blo]
-        lines += ['#   Mes    Etapa  NIntPot   PotMin   PotMax']
+        lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         # Build df_aux from both dataframes, for each unit
-        df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
-        df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
-        df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
-        df_aux_pmax = df_aux_pmax.rename(columns={unit: 'Pmax'})
-        df_aux = pd.merge(df_aux_pmin, df_aux_pmax)
-        df_aux['NIntPot'] = 1
-        df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
+        df_aux = build_df_aux(df_pmin, df_pmax, unit)
         # Add data as string using predefined format
         lines += [df_aux.to_string(
             index=False, header=False, formatters=formatters_plpmance)]
-        #  write data for current barra
+        # Write data for current unit
         f = open(plpmance_path, 'a')
         f.write('\n'.join(lines))
         f.close()
@@ -363,7 +369,7 @@ def main():
 
     # Write data
     logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path)
+    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False)
 
     logger.info('Process finished successfully')
 
