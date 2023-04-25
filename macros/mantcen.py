@@ -2,7 +2,8 @@
 import pandas as pd
 import sys
 from openpyxl.utils.datetime import from_excel
-from datetime import datetime
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 from utils import ( get_project_root,
                     get_iplp_input_path,
@@ -94,8 +95,11 @@ def read_extra_mant_no_ciclicos(iplp_path):
                  'Fecha Término': 'FINAL',
                  'Potencia Maxima': 'Pmax'}
     )
+    df_no_ciclicos['Description'] = "No Cíclicos"
     df_no_ciclicos['Pmin'] = 0
-    df_no_ciclicos = df_no_ciclicos[['Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']]
+    df_no_ciclicos = df_no_ciclicos[
+        ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
+    ]
     return df_no_ciclicos
 
 
@@ -114,8 +118,11 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
                  'Fecha Término.1': 'FINAL',
                  'Potencia Maxima.1': 'Pmax'}
     )
+    df_ciclicos['Description'] = "Cíclicos"
     df_ciclicos['Pmin'] = 0
-    df_ciclicos = df_ciclicos[['Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']]
+    df_ciclicos = df_ciclicos[
+        ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
+    ]
     # Repeat yearly, making sure all years are covered
     ini_year = df_ciclicos['INICIAL'].min().year
     end_year = blo_eta.iloc[-1]['Year']
@@ -131,14 +138,35 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     return df_ciclicos
 
 
-def read_extra_mant_gas(iplp_path):
+def read_extra_mant_gas(iplp_path, blo_eta):
+    month2number = {
+        'Ene': 1, 'Feb': 2, 'Mar': 3,
+        'Abr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Ago': 8, 'Sep': 9,
+        'Oct': 10, 'Nov': 11, 'Dic':12
+    }
+    end_year = blo_eta.iloc[-1]['Year']
     # Gas
     df_gas = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="O:AC").dropna(how='any')
-    # TODO convert format
+        skiprows=1, usecols="O:AC", index_col=0).dropna(how='any')
+    df_gas = df_gas.replace('*', str(end_year))
+    dict_out = {'Nombre': [], 'INICIAL': [], 'FINAL': [],
+                'Pmin': [], 'Pmax': []}
+    for idx_unit, row in df_gas.iterrows():
+        for year in range(int(row['AnoInic']), int(row['AnoFinal']) + 1):
+            for month, monthnum in month2number.items():
+                date_ini = datetime(year, monthnum, 1)
+                date_end = date_ini + relativedelta(months=+1) - timedelta(days=1)
+                dict_out['Nombre'].append(idx_unit)
+                dict_out['INICIAL'].append(date_ini)
+                dict_out['FINAL'].append(date_end)
+                dict_out['Pmin'].append(0)
+                dict_out['Pmax'].append(row[month])
+    df_out = pd.DataFrame.from_dict(dict_out)
+    df_out['Description'] = 'Gas'
+    return df_out
 
-    return df_gas
 
 def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
     '''
@@ -148,11 +176,10 @@ def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
     '''
     df_no_ciclicos = read_extra_mant_no_ciclicos(iplp_path)
     df_ciclicos = read_extra_mant_ciclicos(iplp_path, blo_eta)
-    #df_gas = read_extra_mant_gas(iplp_path)
+    df_gas = read_extra_mant_gas(iplp_path, blo_eta)
 
     # Append new dataframes to df_mantcen
-    #list_of_dfs = [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]
-    list_of_dfs = [df_mantcen, df_no_ciclicos, df_ciclicos]
+    list_of_dfs = [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]
     df_mantcen = pd.concat(list_of_dfs, ignore_index=True)
     
     return df_mantcen
@@ -256,8 +283,6 @@ def main():
     # Generate arrays with pmin/pmax data
     df_pmin, df_pmax = get_mantcen_output(blo_eta, df_mantcen, df_centrales)
     import pdb; pdb.set_trace()
-
-    # Update units with maintenance
 
     # translate to Etapas/Bloques with HidroMonths
 
