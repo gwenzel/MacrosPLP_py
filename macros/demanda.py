@@ -333,7 +333,7 @@ def main():
     logger.info('Printing plpfal.prn')
     write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
 
-    logger.info('Process finished')
+    logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

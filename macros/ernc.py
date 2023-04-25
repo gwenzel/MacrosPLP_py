@@ -88,7 +88,7 @@ def main():
     write_plpmance_ernc_dat(
         ernc_data, df_scaled_profiles, valid_unit_names, iplp_path)
 
-    logger.info('Process finished')
+    logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":
