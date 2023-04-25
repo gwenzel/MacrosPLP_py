@@ -1,7 +1,16 @@
 import ernc
+import mantcen
+import demanda
+import barras
+
+from utils import timeit
 
 
+@timeit
 def main():
+    barras.main()
+    demanda.main()
+    mantcen.main()
     ernc.main()
 
 
