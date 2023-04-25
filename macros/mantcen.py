@@ -9,12 +9,28 @@ from utils import ( get_project_root,
                     get_iplp_input_path,
                     check_is_path,
                     create_logger,
-                    process_etapas_blocks
+                    process_etapas_blocks, timeit
 )
 
 
 root = get_project_root()
 logger = create_logger('mantcen')
+
+
+MONTH_TO_HIDROMONTH = {
+    1: 10, 2: 11, 3: 12,
+    4: 1, 5: 2, 6: 3,
+    7: 4, 8: 5, 9: 6,
+    10: 7, 11: 8, 12: 9
+}
+
+formatters_plpmance = {
+    "Month":    "     {:02d}".format,
+    "Etapa":    "     {:04d}".format,
+    "NIntPot":  "       {:01d}".format,
+    "Pmin":     "{:8.2f}".format,
+    "Pmax":     "{:8.2f}".format
+}
 
 
 def get_centrales(iplp_path):
@@ -80,6 +96,7 @@ def validate_mantcen(df_centrales, df_mantcen):
     logger.info('Validation process for MantCEN successful')
 
 
+@timeit
 def read_extra_mant_no_ciclicos(iplp_path):
     # No ciclicos
     df_no_ciclicos = pd.read_excel(
@@ -103,6 +120,7 @@ def read_extra_mant_no_ciclicos(iplp_path):
     return df_no_ciclicos
 
 
+@timeit
 def read_extra_mant_ciclicos(iplp_path, blo_eta):
     # Ciclicos
     df_ciclicos = pd.read_excel(
@@ -128,8 +146,8 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     end_year = blo_eta.iloc[-1]['Year']
     period_length = end_year - ini_year + 1
     # Build list of df and concat all in one
-    list_of_dfs = [df_ciclicos.copy()]
-    for offset in range(1, period_length):
+    list_of_dfs = []
+    for offset in range(period_length):
         df_offset = df_ciclicos.copy()
         df_offset['INICIAL'] += pd.offsets.DateOffset(years=offset)
         df_offset['FINAL'] += pd.offsets.DateOffset(years=offset)
@@ -138,6 +156,7 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     return df_ciclicos
 
 
+@timeit
 def read_extra_mant_gas(iplp_path, blo_eta):
     month2number = {
         'Ene': 1, 'Feb': 2, 'Mar': 3,
@@ -244,6 +263,58 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     return df_pmin, df_pmax
 
 
+def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path):
+    '''
+    Write plpmance_ini.dat file, which will be used later to add the
+    renewable energy profiles and generate the definitive
+    plpmance.dat file
+    '''
+    plpmance_path = iplp_path.parent / 'Temp' / 'plpmance_ini_test.dat'
+
+    list_mantcen = list(df_pmin.columns)
+    num_blo = len(df_pmin)
+
+    # Get []'Etapa','Year','Month','Block'] as columns
+    df_pmax = df_pmax.reset_index()
+    df_pmin = df_pmin.reset_index()
+
+    # Translate month to hidromonth
+    df_pmin = df_pmin.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_pmax = df_pmax.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
+    lines += ['# numero de centrales con matenimientos']
+    lines += ['  %s' % len(list_mantcen)]
+
+    # Write dat file from scratch
+    f = open(plpmance_path, 'w')
+    f.write('\n'.join(lines))
+    f.close()
+
+    for _, unit in enumerate(list_mantcen, 1):
+        lines = ['\n# Nombre de la central']
+        lines += ["'%s'" % unit]
+        lines += ['#   Numero de Bloques e Intervalos']
+        lines += ['  %04d                 01' % num_blo]
+        lines += ['#   Mes    Etapa  NIntPot   PotMin   PotMax']
+        # Build df_aux from both dataframes, for each unit
+        df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
+        df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
+        df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
+        df_aux_pmax = df_aux_pmax.rename(columns={unit: 'Pmax'})
+        df_aux = pd.merge(df_aux_pmin, df_aux_pmax)
+        df_aux['NIntPot'] = 1
+        df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
+        # Add data as string using predefined format
+        lines += [df_aux.to_string(
+            index=False, header=False, formatters=formatters_plpmance)]
+        #  write data for current barra
+        f = open(plpmance_path, 'a')
+        f.write('\n'.join(lines))
+        f.close()
+
+
+@timeit
 def main():
     '''
     Main routine
@@ -258,41 +329,44 @@ def main():
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
-    blo_eta, _, block2day = process_etapas_blocks(path_dat)
+    blo_eta, _, _ = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
     # Read Centrales and get PnomMax and PnomMin
     logger.info('Reading data from sheet Centrales')
     df_centrales = get_centrales(iplp_path)
+    
+    logger.info('Validating list of centrales')
     validate_centrales(df_centrales)
 
-    # Check which units have maintenance
+    # Get initial mantcen dataframe
+    logger.info('Getting initial mantcen')
     df_mantcen = get_mantcen_input(iplp_path)
 
     # LlenadoMantConvenc
     # Read directly from MantenimientosIM and add to df_mantcen before generating output
     # No cíclicos, cíclicos, restricciones de gas, genmin
+    logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
     df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
 
     # Add time info
+    logger.info('Adding time info')
     df_mantcen = add_time_info(df_mantcen)
 
     # Validate mantcen
+    logger.info('Validating mantcen data')
     validate_mantcen(df_centrales, df_mantcen)
 
     # Generate arrays with pmin/pmax data
+    logger.info('Generating pmin and pmax data')
     df_pmin, df_pmax = get_mantcen_output(blo_eta, df_mantcen, df_centrales)
-    import pdb; pdb.set_trace()
 
-    # translate to Etapas/Bloques with HidroMonths
+    # Write data
+    logger.info('Writing data to plpmance_ini.dat file')
+    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path)
 
-    # count Etapas with maintenance
+    logger.info('Process finished successfully')
 
-    # write dat file
-
-    # Write report in sheet (?)
-
-    pass
 
 if __name__ == "__main__":
     main()
