@@ -82,6 +82,7 @@ def process_etapas_blocks(path_dat):
     )
     blo_eta = pd.merge(plpetapas, block_len, on=["Month", "Block"])
     blo_eta = blo_eta.sort_values(by=["Etapa"])
+    blo_eta = blo_eta.reset_index(drop=True)
     tasa = plpetapas["Tasa"]
     return blo_eta, tasa, block2day
 
