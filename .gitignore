@@ -135,3 +135,5 @@ macros/inputs/Dat
 macros/test/
 *.csv
 *.xlsx
+dist/
+build/
