@@ -215,3 +215,15 @@ def get_scenarios(iplp_path: Path) -> ScenarioData:
     scenario_data = df.set_index(2).to_dict()[3]
     scenario_data.pop('N° Iteraciones')
     return scenario_data
+
+
+def write_lines_from_scratch(lines, filepath):
+    f = open(filepath, 'w')
+    f.write('\n'.join(lines))
+    f.close()
+
+
+def write_lines_appending(lines, filepath):
+    f = open(filepath, 'a')
+    f.write('\n'.join(lines))
+    f.close()

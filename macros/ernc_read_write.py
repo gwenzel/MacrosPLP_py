@@ -4,7 +4,10 @@ from pathlib import Path
 from datetime import datetime
 from openpyxl.utils.datetime import from_excel
 
-from utils import check_is_file, remove_blank_lines
+from utils import (check_is_file,
+                   remove_blank_lines,
+                   write_lines_appending
+)
 
 
 OUTPUT_FILENAME = 'plpmance.dat'
@@ -140,9 +143,7 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names, iplp_path
         lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
 
         #  write data for current unit
-        f = open(dest, 'a')
-        f.write('\n'.join(lines))
-        f.close()
+        write_lines_appending(lines, dest)
 
     # Modify number of units
     new_units_number = len(unit_names)

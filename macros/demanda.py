@@ -19,7 +19,9 @@ from utils import (     create_logger,
                         get_iplp_input_path,
                         check_is_path,
                         process_etapas_blocks,
-                        get_list_of_all_barras
+                        get_list_of_all_barras,
+                        write_lines_from_scratch,
+                        write_lines_appending
 )
 
 logger = create_logger('demanda')
@@ -183,10 +185,8 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
     lines += ['#  Numero de barras']
     lines += ['%s' % len(list_all_barras)]
 
-    #  write data from scratch
-    f = open(plpdem_path, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    #  Write data from scratch
+    write_lines_from_scratch(lines, plpdem_path)
 
     for barra in list_all_barras:
         lines = ['\n# Nombre de la Barra']
@@ -204,9 +204,7 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
         else:
             lines += ['%s' % 0]
         #  write data for current barra
-        f = open(plpdem_path, 'a')
-        f.write('\n'.join(lines))
-        f.close()
+        write_lines_appending(lines, plpdem_path)
 
 
 def write_uni_plpdem_dat(df_all_profiles, iplp_path):
@@ -233,9 +231,7 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
         index=False, header=False, formatters=formatters_plpdem)]
     
     # Write data from scratch
-    f = open(uni_plpdem_path, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    write_lines_from_scratch(lines, uni_plpdem_path)
 
 
 def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
@@ -261,10 +257,9 @@ def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
     df_zero_demand = df_zero_demand.replace({'Month': MONTH_TO_HIDROMONTH})
 
     lines =  ['# Archivo de maximos de centrales de falla (plpfal.prn)']
-    #  write data from scratch
-    f = open(plpfal_path, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    
+    # Write data from scratch
+    write_lines_from_scratch(lines, plpfal_path)
 
     for idx, barra in enumerate(list_all_barras, 1):
         lines = ['\n# Nombre de la central']
@@ -281,9 +276,7 @@ def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
             index=False, header=False, formatters=formatters_plpfal)]
 
         #  write data for current barra
-        f = open(plpfal_path, 'a')
-        f.write('\n'.join(lines))
-        f.close()
+        write_lines_appending(lines, plpfal_path)
 
 
 @timeit

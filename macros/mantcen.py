@@ -14,7 +14,10 @@ from utils import ( define_arg_parser,
                     get_iplp_input_path,
                     check_is_path,
                     create_logger,
-                    process_etapas_blocks, timeit
+                    process_etapas_blocks,
+                    write_lines_from_scratch,
+                    write_lines_appending,
+                    timeit
 )
 
 
@@ -303,9 +306,7 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
     lines += ['  %s' % len(list_mantcen)]
 
     # Write dat file from scratch
-    f = open(plpmance_path, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    write_lines_from_scratch(lines, plpmance_path)
 
     for unit in list_mantcen:
         lines = ['\n# Nombre de la central']
@@ -319,9 +320,7 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
         lines += [df_aux.to_string(
             index=False, header=False, formatters=formatters_plpmance)]
         # Write data for current unit
-        f = open(plpmance_path, 'a')
-        f.write('\n'.join(lines))
-        f.close()
+        write_lines_appending(lines, plpmance_path)
 
 
 @timeit

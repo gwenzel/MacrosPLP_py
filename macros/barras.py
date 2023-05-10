@@ -8,7 +8,8 @@ Module to generate:
 from utils import ( define_arg_parser,
                     get_iplp_input_path,
                     check_is_path,
-                    create_logger
+                    create_logger,
+                    write_lines_from_scratch
 )
 import pandas as pd
 
@@ -36,9 +37,8 @@ def print_uni_plpbar(path_inputs):
     lines += ['       1']
     lines += ['# Numero       Nombre']
     lines += ["       1       'UNINODAL'"]
-    f = open(path_uni_plpbar, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+
+    write_lines_from_scratch(lines, path_uni_plpbar)
 
 
 def print_plpbar(path_inputs, df_barras):
@@ -54,10 +54,8 @@ def print_plpbar(path_inputs, df_barras):
     lines += ['# Numero       Nombre']
     lines += [df_aux.to_string(
             index=False, header=False, formatters=formatter_plpbar)]
-        
-    f = open(path_plpbar, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    
+    write_lines_from_scratch(lines, path_plpbar)
 
 
 def print_plpbar_full(path_inputs, df_barras):
@@ -76,10 +74,8 @@ def print_plpbar_full(path_inputs, df_barras):
     lines += ['# Numero                    Nombre  Tension       FL       FI']
     lines += [df_aux.to_string(
         index=False, header=False, formatters=formatter_plpbar_full)]
-        
-    f = open(path_plpbar_full, 'w')
-    f.write('\n'.join(lines))
-    f.close()
+    
+    write_lines_from_scratch(lines, path_plpbar_full)
 
 
 def get_barras_info(iplp_path):
