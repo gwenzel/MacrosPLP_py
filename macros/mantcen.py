@@ -116,8 +116,7 @@ def read_extra_mant_no_ciclicos(iplp_path):
     # No ciclicos
     df_no_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="B:D,F")
-    df_no_ciclicos = df_no_ciclicos.dropna(how='any')
+        skiprows=1, usecols="B:D,F").dropna(how='any')
     df_no_ciclicos = df_no_ciclicos.rename(
         columns={'Unidad':'Nombre',
                  'Fecha Inicio': 'INICIAL',
@@ -247,21 +246,18 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     df_pmin, df_pmax = build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales)
     # 2. Add df_mantcen data in row-by-row order
     # Note that filters have a daily resolution
-    for _, row in df_mantcen.iterrows():
-        mantcen_date_ini = datetime(row['YearIni'], row['MonthIni'], row['DayIni'])
-        mantcen_date_end = datetime(row['YearEnd'], row['MonthEnd'], row['DayEnd'])
-        pmax_mask_ini = mantcen_date_ini <= df_pmax['Date']
-        pmax_mask_end = mantcen_date_end >= df_pmax['Date']
-        pmin_mask_ini = mantcen_date_ini <= df_pmin['Date']
-        pmin_mask_end = mantcen_date_end >= df_pmin['Date']
-        df_pmax.loc[pmax_mask_ini & pmax_mask_end, row['Nombre']] = row['Pmax']
-        df_pmin.loc[pmin_mask_ini & pmin_mask_end, row['Nombre']] = row['Pmin']
+    mantcen_dates_ini = pd.to_datetime(df_mantcen[['YearIni', 'MonthIni', 'DayIni']])
+    mantcen_dates_end = pd.to_datetime(df_mantcen[['YearEnd', 'MonthEnd', 'DayEnd']])
+    for i in range(len(mantcen_dates_ini)):
+        pmax_mask_ini = mantcen_dates_ini.iloc[i] <= df_pmax['Date']
+        pmax_mask_end = mantcen_dates_end.iloc[i] >= df_pmax['Date']
+        pmin_mask_ini = mantcen_dates_ini.iloc[i] <= df_pmin['Date']
+        pmin_mask_end = mantcen_dates_end.iloc[i] >= df_pmin['Date']
+        df_pmax.loc[pmax_mask_ini & pmax_mask_end, df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmax']
+        df_pmin.loc[pmin_mask_ini & pmin_mask_end, df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
     # 3. Average per Etapa
-    blo_eta = blo_eta.drop('Block_Len', axis=1)
-    df_pmax = df_pmax.drop(['Date','Day'], axis=1)
-    df_pmin = df_pmin.drop(['Date','Day'], axis=1)
-    df_pmax = pd.merge(blo_eta, df_pmax, how='left').groupby(['Etapa','Year','Month','Block']).mean()
-    df_pmin = pd.merge(blo_eta, df_pmin, how='left').groupby(['Etapa','Year','Month','Block']).mean()
+    df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=['Block', 'Month', 'Year', 'Etapa']).groupby(['Etapa','Year','Month','Block']).mean()
+    df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=['Block', 'Month', 'Year', 'Etapa']).groupby(['Etapa','Year','Month','Block']).mean()
 
     return df_pmin, df_pmax
 
