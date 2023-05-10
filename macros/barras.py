@@ -1,3 +1,10 @@
+'''Barras
+
+Module to generate:
+- plpbar.dat
+- uni_plpbar.dat
+- plpbar_full.dat
+'''
 from utils import ( define_arg_parser,
                     get_iplp_input_path,
                     check_is_path,

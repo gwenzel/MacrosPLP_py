@@ -1,12 +1,16 @@
+'''Mantcen
 
+Module to generate 'plpmance_ini.dat', which will be used later 
+to add the renewable energy profiles and generate the definitive
+plpmance.dat file
+'''
 import pandas as pd
 import sys
 from openpyxl.utils.datetime import from_excel
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-from utils import ( get_project_root,
-                    define_arg_parser,
+from utils import ( define_arg_parser,
                     get_iplp_input_path,
                     check_is_path,
                     create_logger,
@@ -14,7 +18,6 @@ from utils import ( get_project_root,
 )
 
 
-root = get_project_root()
 logger = create_logger('mantcen')
 
 
