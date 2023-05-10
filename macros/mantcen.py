@@ -10,14 +10,14 @@ from openpyxl.utils.datetime import from_excel
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-from utils import ( define_arg_parser,
-                    get_iplp_input_path,
-                    check_is_path,
-                    create_logger,
-                    process_etapas_blocks,
-                    write_lines_from_scratch,
-                    write_lines_appending,
-                    timeit
+from utils.utils import (   define_arg_parser,
+                            get_iplp_input_path,
+                            check_is_path,
+                            create_logger,
+                            process_etapas_blocks,
+                            write_lines_from_scratch,
+                            write_lines_appending,
+                            timeit
 )
 
 

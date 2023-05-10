@@ -4,7 +4,7 @@ Module to generate renewable energy profiles in PLP format,
 modifying plpmance.dat file, which stores the maintenance of
 generation units
 '''
-from utils import (                 timeit,
+from utils.utils import (           timeit,
                                     process_etapas_blocks,
                                     define_arg_parser,
                                     get_iplp_input_path,

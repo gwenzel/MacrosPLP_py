@@ -13,15 +13,15 @@ import pandas as pd
 import numpy as np
 from openpyxl.utils.datetime import from_excel
 
-from utils import (     create_logger,
-                        timeit,
-                        define_arg_parser,
-                        get_iplp_input_path,
-                        check_is_path,
-                        process_etapas_blocks,
-                        get_list_of_all_barras,
-                        write_lines_from_scratch,
-                        write_lines_appending
+from utils.utils import (   create_logger,
+                            timeit,
+                            define_arg_parser,
+                            get_iplp_input_path,
+                            check_is_path,
+                            process_etapas_blocks,
+                            get_list_of_all_barras,
+                            write_lines_from_scratch,
+                            write_lines_appending
 )
 
 logger = create_logger('demanda')

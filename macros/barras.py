@@ -5,11 +5,11 @@ Module to generate:
 - uni_plpbar.dat
 - plpbar_full.dat
 '''
-from utils import ( define_arg_parser,
-                    get_iplp_input_path,
-                    check_is_path,
-                    create_logger,
-                    write_lines_from_scratch
+from utils.utils import (   define_arg_parser,
+                            get_iplp_input_path,
+                            check_is_path,
+                            create_logger,
+                            write_lines_from_scratch
 )
 import pandas as pd
 

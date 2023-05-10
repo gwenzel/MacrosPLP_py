@@ -3,7 +3,7 @@ import mantcen
 import demanda
 import barras
 
-from utils import timeit
+from utils.utils import timeit
 
 
 @timeit

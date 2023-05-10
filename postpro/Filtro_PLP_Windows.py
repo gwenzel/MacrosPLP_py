@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 
-from utils import timeit, process_etapas_blocks
+from utils.utils import timeit, process_etapas_blocks
 from postpro.marginal_costs import marginal_costs_converter
 from postpro.generation import generation_converter
 from postpro.transmission import transmission_converter

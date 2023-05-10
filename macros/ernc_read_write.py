@@ -4,9 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from openpyxl.utils.datetime import from_excel
 
-from utils import (check_is_file,
-                   remove_blank_lines,
-                   write_lines_appending
+from utils.utils import (   check_is_file,
+                            remove_blank_lines,
+                            write_lines_appending
 )
 
 
@@ -208,7 +208,7 @@ def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
 
 def generate_profiles_csv(ext_inputs_path, path_inputs, input_names):
     '''
-    Read csv profiles from external inputs path
+    Read csv profiles from external inputs path and copy to path_inputs folder
     '''
     copy(src=ext_inputs_path / input_names["H_PROFILES_FILENAME"],
          dst=path_inputs     / input_names["H_PROFILES_FILENAME"])

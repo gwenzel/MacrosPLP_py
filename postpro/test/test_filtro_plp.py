@@ -2,7 +2,7 @@ import unittest
 import os
 
 from pathlib import Path
-from utils import get_project_root, process_etapas_blocks
+from utils.utils import get_project_root, process_etapas_blocks
 
 
 root = get_project_root()

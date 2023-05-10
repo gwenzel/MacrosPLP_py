@@ -2,8 +2,6 @@ import sys
 import pandas as pd
 from datetime import datetime
 
-from utils import timeit
-
 PRINT_FILES = False
 
 
