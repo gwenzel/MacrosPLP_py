@@ -18,7 +18,6 @@ from macros.ernc_read_write import (read_ernc_files,
                                     generate_min_capacity_csv,
                                     generate_rating_factor_csv,
                                     generate_profiles_csv,
-                                    get_unit_type,
                                     get_valid_unit_names,
                                     define_input_names
 )
