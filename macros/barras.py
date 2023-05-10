@@ -1,11 +1,10 @@
-from utils import ( get_project_root,
+from utils import ( define_arg_parser,
                     get_iplp_input_path,
                     check_is_path,
                     create_logger
 )
 import pandas as pd
 
-root = get_project_root()
 logger = create_logger('barras')
 
 formatter_plpbar = {
@@ -87,7 +86,8 @@ def main():
     '''
     # Get input file path
     logger.info('Getting input file path')
-    iplp_path = get_iplp_input_path()
+    parser = define_arg_parser()
+    iplp_path = get_iplp_input_path(parser)
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"

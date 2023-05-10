@@ -205,22 +205,16 @@ def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
     df.to_csv(Path(path_inputs, input_names["RATING_FACTOR_FILENAME"]), index=False)   
 
 
-def generate_profiles_csv(iplp_path, path_inputs, root, input_names):
+def generate_profiles_csv(ext_inputs_path, path_inputs, input_names):
     '''
-    For the moment, it is copying directly the csv profiles from the
-    project folder.
-
-    A possible change could be to make it read the
-    iplp file, sheet ERNC, and extract the profiles directly
+    Read csv profiles from external inputs path
     '''
-    profiles_source = Path(root, 'macros', 'inputs')
-    profile_filenames = [
-        input_names["H_PROFILES_FILENAME"],
-        input_names["HM_PROFILES_FILENAME"],
-        input_names["M_PROFILES_FILENAME"]
-        ]
-    for filename in profile_filenames:
-        copy(profiles_source / filename, path_inputs / filename)
+    copy(src=ext_inputs_path / input_names["H_PROFILES_FILENAME"],
+         dst=path_inputs     / input_names["H_PROFILES_FILENAME"])
+    copy(src=ext_inputs_path / input_names["HM_PROFILES_FILENAME"],
+         dst=path_inputs     / input_names["HM_PROFILES_FILENAME"])
+    copy(src=ext_inputs_path / input_names["M_PROFILES_FILENAME"],
+         dst=path_inputs     / input_names["M_PROFILES_FILENAME"])
 
 
 def get_unit_type(iplp_path):

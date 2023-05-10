@@ -13,16 +13,15 @@ import pandas as pd
 import numpy as np
 from openpyxl.utils.datetime import from_excel
 
-from utils import (     get_project_root,
-                        create_logger,
+from utils import (     create_logger,
                         timeit,
+                        define_arg_parser,
                         get_iplp_input_path,
                         check_is_path,
                         process_etapas_blocks,
                         get_list_of_all_barras
 )
 
-root = get_project_root()
 logger = create_logger('demanda')
 
 MONTH_2_NUMBER = {  
@@ -294,7 +293,8 @@ def main():
     '''
     # Get input file path
     logger.info('Getting input file path')
-    iplp_path = get_iplp_input_path()
+    parser = define_arg_parser()
+    iplp_path = get_iplp_input_path(parser)
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"

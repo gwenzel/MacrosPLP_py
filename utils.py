@@ -3,6 +3,7 @@
 Module to store all transversal utility functions
 '''
 import os, sys
+from typing import TypedDict
 import pandas as pd
 from functools import wraps
 from pathlib import Path
@@ -60,7 +61,7 @@ def get_project_root() -> Path:
     return Path(__file__).parent
 
 
-def process_etapas_blocks(path_dat):
+def process_etapas_blocks(path_dat: Path):
     '''
     Get blocks to etapas definition and tasa
     '''
@@ -87,54 +88,70 @@ def process_etapas_blocks(path_dat):
     return blo_eta, tasa, block2day
 
 
-def input_path(file_descrption):
-    file_path = input('Enter a file path for %s: ' % file_descrption)
+def input_path(file_descrption: str) -> Path:
+    file_path = input('Enter a file/path for %s: ' % file_descrption)
     file_path = file_path.replace('"','')
     # e.g. C:\Users\Bob\Desktop\example.txt
     # or /home/Bob/Desktop/example.txt
     print(file_path)
 
     if os.path.exists(file_path):
-        print('The file %s exists' % file_path)
+        print('The file/path %s exists' % file_path)
     else:
-        print('The specified file does NOT exist')
+        print('The specified file/path does NOT exist')
     return Path(file_path)
 
 
-def check_is_file(path):
+def check_is_file(path: Path):
     if not path.is_file():
         sys.exit("file %s does not exist" % path)
 
 
-def check_is_path(path):
+def check_is_path(path: Path):
     if not path.exists():
         sys.exit("Dat path is not valid: %s" % path)
-    return path
 
 
-def is_valid_file(parser, arg):
+def is_valid_file(parser: ArgumentParser, arg: str):
     if not os.path.exists(arg):
-        parser.error("The file %s does not exist!" % arg)
+        parser.error("The file or path %s does not exist!" % arg)
     else:
         return Path(arg)
 
 
-def get_iplp_input_path():
-    parser = ArgumentParser(description="Get IPLP renewable energy profiles")
+def define_arg_parser(ext: bool = False) -> ArgumentParser:
+    parser = ArgumentParser(description="Get PLP input filepaths")
     parser.add_argument('-f', dest='iplp_path', required=False,
                         help='IPLP input file path', metavar="IPLP_FILE_PATH",
                         type=lambda x: is_valid_file(parser, x))
-    args = parser.parse_args()
+    if ext:
+        parser.add_argument('-e', dest='ext_path', required=False,
+                            help='External inputs path', metavar="EXT_INPUTS_PATH",
+                            type=lambda x: is_valid_file(parser, x))
+    return parser
 
+
+def get_iplp_input_path(parser: ArgumentParser) -> Path:
+    args = parser.parse_args()
     if args.iplp_path:
         return args.iplp_path
-    # Else, get input file path from prompt
+    # Else, get input file from prompt
     iplp_path = input_path("IPLP file")
     check_is_file(iplp_path)
     return iplp_path
 
 
-def create_logger(logname):
+def get_ext_inputs_path(parser: ArgumentParser) -> Path:
+    args = parser.parse_args()
+    if args.ext_path:
+        return args.ext_path
+    # Else, get external inputs path from prompt
+    ext_path = input_path("External inputs path")
+    check_is_path(ext_path)
+    return ext_path
+
+
+def create_logger(logname: str):
     # Gets or creates a logger
     logger = logging.getLogger(logname)  
 
@@ -171,22 +188,30 @@ def remove_blank_lines(text_file):
     os.remove(temp_file)
 
 
-def get_list_of_all_barras(iplp_path):
+def get_list_of_all_barras(iplp_path: Path) -> list:
     df = pd.read_excel(iplp_path, sheet_name="Barras",
                        skiprows=4, usecols="B")
     return df['BARRA'].tolist()
 
 
-def get_scenarios(iplp_path):
+class ScenarioData(TypedDict):
+        Demanda: str
+        Combustible: str
+        Eolico: str
+
+
+def get_scenarios(iplp_path: Path) -> ScenarioData:
     '''
     Return dictionary with scenario data
     - Demanda: Base, DemHigh, DemLow, Risk_1, Risk_2
     - Combustible: Base, ComHigh, ComLow, Risk_1, Risk_2
     - Eolico: Base, WindLow, WindHigh
     '''
+
     df = pd.read_excel(iplp_path, sheet_name="Path",
                        skiprows=6, usecols="C:D",
                        header=None)
     df = df.dropna()
     scenario_data = df.set_index(2).to_dict()[3]
+    scenario_data.pop('N° Iteraciones')
     return scenario_data
