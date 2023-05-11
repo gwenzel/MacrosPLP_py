@@ -40,18 +40,18 @@ def get_profiles_blo(ernc_data, block2day):
     return profiles_dict
 
 
-def replicate_profiles(blo_eta, df, type= 'H'):
+def replicate_profiles(df_left, df_right, type= 'H'):
     '''
     Use Merge left to match the generation on each block
     '''
     if type == 'H':
-        df = df.drop(['Month'], axis=1)
-        return pd.merge(blo_eta, df, how='left', on=['Block'])
+        df_right = df_right.drop(['Month'], axis=1)
+        return pd.merge(df_left, df_right, how='left', on=['Block'])
     elif type =='HM':
-        return pd.merge(blo_eta, df, how='left', on=['Month', 'Block'])
+        return pd.merge(df_left, df_right, how='left', on=['Month', 'Block'])
     elif type == 'M':
-        df = df.drop(['Block'], axis=1)
-        return pd.merge(blo_eta, df, how='left', on=['Month'])
+        df_right = df_right.drop(['Block'], axis=1)
+        return pd.merge(df_left, df_right, how='left', on=['Month'])
     else:
         sys.exit("Invalid type: %s" % type)
 
