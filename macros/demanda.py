@@ -21,7 +21,8 @@ from utils.utils import (   create_logger,
                             process_etapas_blocks,
                             get_list_of_all_barras,
                             write_lines_from_scratch,
-                            write_lines_appending
+                            write_lines_appending,
+                            translate_to_hydromonth
 )
 
 logger = create_logger('demanda')
@@ -42,13 +43,6 @@ MONTH_2_NUMBER = {
 }
 
 HORA_DICT = {'H%s' % i: i for i in range(1, 25)}
-
-MONTH_TO_HIDROMONTH = {
-    1: 10, 2: 11, 3: 12,
-    4: 1, 5: 2, 6: 3,
-    7: 4, 8: 5, 9: 6,
-    10: 7, 11: 8, 12: 9
-}
 
 formatters_plpdem = {
     "Month":    "   {:02d}".format,
@@ -179,7 +173,7 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
     list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
 
     # Translate month to hidromonth
-    df_all_profiles = df_all_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_all_profiles = translate_to_hydromonth(df_all_profiles)
 
     lines =  ['# Archivo de demandas por barra (plpdem.dat)']
     lines += ['#  Numero de barras']
@@ -216,7 +210,7 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     df_aggregated = df_aggregated[['Month','Etapa','Consumo']]
 
     # Translate month to hidromonth
-    df_aggregated = df_aggregated.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_aggregated = translate_to_hydromonth(df_aggregated)
 
     # Write lines
     lines =  ['# Archivo de demandas por barra (plpdem.dat)']
@@ -253,8 +247,9 @@ def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
     df_all_profiles = df_all_profiles[['Barra Consumo','Month','Etapa','NIntPot','PotMin','PotMax']]
 
     # Translate month to hidromonth
-    df_all_profiles = df_all_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
-    df_zero_demand = df_zero_demand.replace({'Month': MONTH_TO_HIDROMONTH})
+
+    df_all_profiles = translate_to_hydromonth(df_all_profiles)
+    df_zero_demand = translate_to_hydromonth(df_zero_demand)
 
     lines =  ['# Archivo de maximos de centrales de falla (plpfal.prn)']
     

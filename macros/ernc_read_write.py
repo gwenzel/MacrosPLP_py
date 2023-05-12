@@ -6,7 +6,8 @@ from openpyxl.utils.datetime import from_excel
 
 from utils.utils import (   check_is_file,
                             remove_blank_lines,
-                            write_lines_appending
+                            write_lines_appending,
+                            translate_to_hydromonth
 )
 
 
@@ -22,12 +23,6 @@ formatters = {
     "Pmax":     "{:8.2f}".format
 }
 
-MONTH_TO_HIDROMONTH = {
-    1: 10, 2: 11, 3: 12,
-    4: 1, 5: 2, 6: 3,
-    7: 4, 8: 5, 9: 6,
-    10: 7, 11: 8, 12: 9
-}
 
 def define_input_names(ernc_scenario):
     '''
@@ -121,7 +116,7 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names, iplp_path
     pmin = ernc_data['dict_min_capacity']
 
     # Translate month to hidromonth
-    df_scaled_profiles = df_scaled_profiles.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_scaled_profiles = translate_to_hydromonth(df_scaled_profiles)
 
     # Append ernc profiles
     for unit in unit_names:

@@ -17,19 +17,12 @@ from utils.utils import (   define_arg_parser,
                             process_etapas_blocks,
                             write_lines_from_scratch,
                             write_lines_appending,
+                            translate_to_hydromonth,
                             timeit
 )
 
 
 logger = create_logger('mantcen')
-
-
-MONTH_TO_HIDROMONTH = {
-    1: 10, 2: 11, 3: 12,
-    4: 1, 5: 2, 6: 3,
-    7: 4, 8: 5, 9: 6,
-    10: 7, 11: 8, 12: 9
-}
 
 MONTH2NUMBER = {
         'Ene': 1, 'Feb': 2, 'Mar': 3,
@@ -298,8 +291,8 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
     df_pmin = df_pmin.reset_index()
 
     # Translate month to hidromonth
-    df_pmax = df_pmax.replace({'Month': MONTH_TO_HIDROMONTH})
-    df_pmin = df_pmin.replace({'Month': MONTH_TO_HIDROMONTH})
+    df_pmax = translate_to_hydromonth(df_pmax)
+    df_pmin = translate_to_hydromonth(df_pmin)
 
     # Print data if requested
     if printdata:

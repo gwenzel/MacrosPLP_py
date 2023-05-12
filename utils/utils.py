@@ -40,6 +40,13 @@ BLO2DAY_HOURS = [
     "7", "8", "9", "10", "11", "12"
 ]
 
+MONTH_TO_HIDROMONTH = {
+    1: 10, 2: 11, 3: 12,
+    4: 1, 5: 2, 6: 3,
+    7: 4, 8: 5, 9: 6,
+    10: 7, 11: 8, 12: 9
+}
+
 
 def timeit(func):
     '''
@@ -227,3 +234,7 @@ def write_lines_appending(lines, filepath):
     f = open(filepath, 'a')
     f.write('\n'.join(lines))
     f.close()
+
+
+def translate_to_hydromonth(df):
+    return df.replace({'Month': MONTH_TO_HIDROMONTH})
