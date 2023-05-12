@@ -31,6 +31,13 @@ MONTH_TO_HIDROMONTH = {
     10: 7, 11: 8, 12: 9
 }
 
+MONTH2NUMBER = {
+        'Ene': 1, 'Feb': 2, 'Mar': 3,
+        'Abr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Ago': 8, 'Sep': 9,
+        'Oct': 10, 'Nov': 11, 'Dic':12
+    }
+
 formatters_plpmance = {
     "Month":    "     {:02d}".format,
     "Etapa":    "     {:04d}".format,
@@ -132,8 +139,7 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     # Ciclicos
     df_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="I:K,M")
-    df_ciclicos = df_ciclicos.dropna(how='any')
+        skiprows=1, usecols="I:K,M").dropna(how='any')
     df_ciclicos = df_ciclicos.rename(
         columns={'Unidad.1':'Nombre',
                  'Fecha Inicio.1': 'INICIAL',
@@ -159,24 +165,17 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
 
 
 def read_extra_mant_gas(iplp_path, blo_eta):
-    month2number = {
-        'Ene': 1, 'Feb': 2, 'Mar': 3,
-        'Abr': 4, 'May': 5, 'Jun': 6,
-        'Jul': 7, 'Ago': 8, 'Sep': 9,
-        'Oct': 10, 'Nov': 11, 'Dic':12
-    }
     end_year = blo_eta.iloc[-1]['Year']
     # Gas
     df_gas = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="O:AC", index_col=0)
-    df_gas = df_gas.dropna(how='any')
+        skiprows=1, usecols="O:AC", index_col=0).dropna(how='any')
     df_gas = df_gas.replace('*', str(end_year))
     dict_out = {'Nombre': [], 'INICIAL': [], 'FINAL': [],
                 'Pmin': [], 'Pmax': []}
     for idx_unit, row in df_gas.iterrows():
         for year in range(int(row['AnoInic']), int(row['AnoFinal']) + 1):
-            for month, monthnum in month2number.items():
+            for month, monthnum in MONTH2NUMBER.items():
                 date_ini = datetime(year, monthnum, 1)
                 date_end = date_ini + relativedelta(months=+1) - timedelta(days=1)
                 dict_out['Nombre'].append(idx_unit)
