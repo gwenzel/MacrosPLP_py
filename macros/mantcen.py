@@ -294,7 +294,7 @@ def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
     list_mantcen = list(df_pmin.columns)
     num_blo = len(df_pmin)
 
-    # Get []'Etapa','Year','Month','Block'] as columns
+    # Get ['Etapa','Year','Month','Block'] as columns
     df_pmax = df_pmax.reset_index()
     df_pmin = df_pmin.reset_index()
 
