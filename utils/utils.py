@@ -183,7 +183,7 @@ def create_logger(logname: str):
     return logger
 
 
-def remove_blank_lines(text_file):
+def remove_blank_lines(text_file: Path):
     temp_file = 'temp.txt'
     # opening and creating new .txt file
     with open(text_file, 'r') as r, open(temp_file, 'w') as o:
@@ -224,17 +224,17 @@ def get_scenarios(iplp_path: Path) -> ScenarioData:
     return scenario_data
 
 
-def write_lines_from_scratch(lines, filepath):
+def write_lines_from_scratch(lines: str, filepath: Path):
     f = open(filepath, 'w')
     f.write('\n'.join(lines))
     f.close()
 
 
-def write_lines_appending(lines, filepath):
+def write_lines_appending(lines:str, filepath: Path):
     f = open(filepath, 'a')
     f.write('\n'.join(lines))
     f.close()
 
 
-def translate_to_hydromonth(df):
+def translate_to_hydromonth(df: pd.DataFrame) -> pd.DataFrame:
     return df.replace({'Month': MONTH_TO_HIDROMONTH})
