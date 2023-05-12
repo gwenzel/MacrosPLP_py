@@ -206,6 +206,10 @@ def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
     return df_mantcen
 
 
+def filter_df_mantcen(df_mantcen, df_centrales):
+    return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
+
+
 def get_pmin_pmax_dict(df_centrales):
     centrales_dict = df_centrales.set_index('Nombre').to_dict()
     return centrales_dict['Pmin'], centrales_dict['Pmax']
@@ -247,9 +251,9 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     # 2. Add df_mantcen data in row-by-row order
     # Note that filters have a daily resolution
     mantcen_dates_ini = pd.to_datetime(
-        df_mantcen[['YearIni', 'MonthIni', 'DayIni']])
+        df_mantcen[['YearIni', 'MonthIni', 'DayIni']].rename(columns={'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
     mantcen_dates_end = pd.to_datetime(
-        df_mantcen[['YearEnd', 'MonthEnd', 'DayEnd']])
+        df_mantcen[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
     for i in range(len(mantcen_dates_ini)):
         pmax_mask_ini = mantcen_dates_ini.iloc[i] <= df_pmax['Date']
         pmax_mask_end = mantcen_dates_end.iloc[i] >= df_pmax['Date']
@@ -261,9 +265,9 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
     # 3. Average per Etapa
     df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=[
-                       'Block', 'Month', 'Year', 'Etapa']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean()
+                       'Month', 'Year']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean(numeric_only=True)
     df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=[
-                       'Block', 'Month', 'Year', 'Etapa']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean()
+                       'Month', 'Year']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean(numeric_only=True)
 
     return df_pmin, df_pmax
 
@@ -360,6 +364,8 @@ def main():
     # No cíclicos, cíclicos, restricciones de gas, genmin
     logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
     df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
+
+    df_mantcen = filter_df_mantcen(df_mantcen, df_centrales)
 
     # Add time info
     logger.info('Adding time info')
