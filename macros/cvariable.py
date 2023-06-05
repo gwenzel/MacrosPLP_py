@@ -37,6 +37,12 @@ def main():
     # Get Hour-Blocks-Etapas definition
     blo_eta = get_inputs(path_dat)
 
+    # Llenado Costo Variable - IM_to_CostoVariable
+    # Diesel, coal & gas
+
+
+    # PLPCOSCE.dat + CO2 tax * emissions factor
+
 
 
 
