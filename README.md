@@ -47,6 +47,10 @@ call conda activate plp
 call pip install [wheel_file_path]
 ```
 
+Example name of wheel_file_path: "D:\Python_wheels\macros_plp-0.0.2-py3-none-any.whl"
+
+To avoid having conflicting packages on the same environment, new wheel files are being installed in new environments, labeled in the same way. For example, version 0.0.2 was installed in the environment "plp_v02".
+
 ## How to use
 
 The idea is to be able to call each script and have it create the required files on the Temp folder.
