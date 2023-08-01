@@ -21,6 +21,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
+            "main = macros.main:main",
             "filt = macros.filter_files:main",
             "postpro = postpro.main:main",
             "ernc = macros.ernc:main",
