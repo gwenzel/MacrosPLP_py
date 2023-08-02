@@ -34,17 +34,74 @@ def get_blo_eta(path_dat):
 def read_fuel_price(ext_inputs_path, fuel, scen):
     df_fuel_price = pd.read_csv(
         ext_inputs_path / ('%s_%s.csv' % (fuel, scen)),
-        header=[0,1], index_col=[0,1], encoding='latin1')
-    # TODO: validate names and format
+        header=[0, 1], index_col=[0, 1], encoding='latin1')
     return df_fuel_price
 
+
+def validate_fuel_price(df_fuel_price):
+    # TODO validate names and values
+    pass
+
+
 def read_all_fuel_prices(ext_inputs_path, scen='Base'):
-    # Carbon USD/ton, Gas USD/MMBtu, Diesel USD/ton
+    '''
+    Build dictionary of dataframes with fuel price info
+    for Carbon USD/ton, Gas USD/MMBtu, Diesel USD/ton
+    '''
     fuel_prices = {}
-    for fuel in ['coal', 'gas', 'diesel']:
+    fuels_list = ['coal', 'gas', 'diesel']
+    for fuel in fuels_list:
         fuel_prices[fuel] = read_fuel_price(
             ext_inputs_path, fuel=fuel, scen=scen)
+        validate_fuel_price(fuel_prices[fuel])
     return fuel_prices
+
+
+def read_unit_emissions_mapping(iplp_path):
+    df = pd.read_excel(iplp_path, sheet_name='Centrales',
+                       usecols='B,BY', skiprows=4,
+                       index_col='CENTRALES')
+    return df.to_dict()['Factor Emisiones CO2  TonCO2/MWh']
+
+
+def read_rend_and_unit_fuel_mapping(iplp_path):
+    '''
+    Build dictionaries for performance (rend) and fuel price name
+    Rend values: for Carbon ton/MWh, Gas MMBtu/MWh, Diesel ton/MWh
+    '''
+    df = pd.read_excel(iplp_path, sheet_name='Rendimientos y CVarNcomb',
+                       usecols='B,D:E', index_col='Central')
+    dict_unit_rend = df.to_dict()['Rendimiento']
+    dict_unit_fuel_price_name = df.to_dict()['Combustible OSE']
+    return dict_unit_rend, dict_unit_fuel_price_name
+
+
+def read_year_co2_tax(iplp_path):
+    df = pd.read_excel(iplp_path, sheet_name='CVariable',
+                       usecols='J:K', skiprows=4,
+                       index_col='Year').dropna(how='any')
+    return df.to_dict()['CO2 Tax in USD/TonCO2']
+
+
+def calculate_cvar(blo_eta, fuel_prices, dict_unit_rend,
+                   dict_unit_fuel_price_name):
+
+    df_coal_prices = fuel_prices['coal']
+    df_gas_prices = fuel_prices['gas']
+    df_diesel_prices = fuel_prices['diesel']
+
+    year_ini = blo_eta.loc[0, 'Year']
+    month_ini = blo_eta.loc[0, 'Month']
+
+    year_end = blo_eta.loc[len(blo_eta) - 1, 'Year']
+    month_end = blo_eta.loc[len(blo_eta) - 1, 'Month']
+
+    for unit, rend in dict_unit_rend.items():
+        fuel_price = dict_unit_fuel_price_name[unit]
+
+
+    df_unit_cvar = pd.DataFrame()
+    return df_unit_cvar
 
 
 @timeit
@@ -62,39 +119,32 @@ def main():
         read_all_fuel_prices(ext_inputs_path, scen='Base')
     
     # leer rendimientos y mapeo central-combustible
+    dict_unit_rend, dict_unit_fuel_price_name =\
+        read_rend_and_unit_fuel_mapping(iplp_path)
 
     # leer mapeo central - factor de emisiones
+    dict_unit_emissions =\
+        read_unit_emissions_mapping(iplp_path)
 
     # leer mapeo año - impuesto emisiones
+    dict_year_co2_tax = read_year_co2_tax(iplp_path)
+
+    import pdb; pdb.set_trace()
 
     # crear matriz de centrales - costos variables
 
-    # crear matriz con impuestos
+    df_unit_cvar = calculate_cvar(blo_eta, fuel_prices, dict_unit_rend, dict_unit_fuel_price_name)
 
-    # imprimir en csv
+    # crear matriz sumando impuestos
+
+    # imprimir matrices en csv
+
+    # convertir a etapas y considerar resolución diaria
 
     # escribir en formato .dat
-
     
-    import pdb; pdb.set_trace()
-
-
-
-    # centrales,rendimientos y combustible asociado
-
-    # Escribir Costos variables en formato IPLP de carbón
-
-    # Escribir Costos variables en formato IPLP de Diesel
-
-    # Escribir Costos variables en formato IPLP de GNL
-
-    # formulas para impuesto CO2
-
-    # formatos
-
-    ##  PLPCOSCE.dat + CO2 tax * emissions factor
-
-
+    # Mantener datos en IPLP? 
+    # Escribir Costos variables en formato IPLP de carbón, diésel y GNL?
 
 
 if __name__ == "__main__":
