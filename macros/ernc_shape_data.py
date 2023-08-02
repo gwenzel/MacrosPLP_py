@@ -40,7 +40,7 @@ def get_profiles_blo(ernc_data, block2day):
     return profiles_dict
 
 
-def replicate_profiles(df_left, df_right, type= 'H'):
+def replicate_profiles(df_left, df_right, type='H'):
     '''
     Use Merge left to match the generation on each block
     '''
@@ -90,16 +90,16 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     # Make sure df is well sorted and remove duplicates
     df_rf = df_rf.sort_values(by=['Name', 'DateFrom'])
     df_rf = df_rf.drop_duplicates()
-    
+
     # Replace all dates before ini_date to match with 1st block
     df_rf['DateFrom'] = df_rf['DateFrom']
     mask = (df_rf['DateFrom'] <  ini_date)
     df_rf.loc[mask, 'DateFrom'] = ini_date
-    
+
     # Get Month, Year
     df_rf['Year'] = df_rf['DateFrom'].dt.year
     df_rf['Month'] = df_rf['DateFrom'].dt.month
-    
+
     blo_eta = blo_eta.drop(['Block', 'Block_Len'], axis=1)
     # Get initial etapa of each year-month
     df_rf['Year-Month'] = df_rf.apply(lambda x: (x['Year'], x['Month']), axis=1)
@@ -121,10 +121,11 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names, print_fil
 
     # Base of output dataframe
     df_profiles = df_all_profiles[['Month', 'Etapa']].copy()
-    df_profiles = df_profiles.join(pd.DataFrame(columns=profile_dict.keys()), how="outer")
+    df_profiles = df_profiles.join(
+        pd.DataFrame(columns=profile_dict.keys()), how="outer")
 
     df_profiles_aux = df_all_profiles[['Etapa']].copy()
-    
+
     # iterate units and add scaled profiles
     for unit in unit_names:
         profile_name = profile_dict[unit]
