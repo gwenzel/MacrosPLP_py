@@ -138,5 +138,5 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names, print_fil
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file
     if print_files:
-        df_profiles.to_csv('ernc_profiles.csv')    
+        df_profiles.to_csv('ernc_profiles.csv')
     return df_profiles
