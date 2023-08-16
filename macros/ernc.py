@@ -4,14 +4,13 @@ Module to generate renewable energy profiles in PLP format,
 modifying plpmance.dat file, which stores the maintenance of
 generation units
 '''
-from utils.utils import (           timeit,
-                                    process_etapas_blocks,
-                                    define_arg_parser,
-                                    get_iplp_input_path,
-                                    check_is_path,
-                                    create_logger,
-                                    get_scenarios
-)
+from utils.utils import (timeit,
+                         process_etapas_blocks,
+                         define_arg_parser,
+                         get_iplp_input_path,
+                         check_is_path,
+                         create_logger,
+                         get_scenarios)
 from macros.ernc_read_write import (read_ernc_files,
                                     write_plpmance_ernc_dat,
                                     generate_max_capacity_csv,
@@ -19,13 +18,11 @@ from macros.ernc_read_write import (read_ernc_files,
                                     generate_rating_factor_csv,
                                     generate_profiles_csv,
                                     get_valid_unit_names,
-                                    define_input_names
-)
+                                    define_input_names)
 from macros.ernc_shape_data import (get_profiles_blo,
                                     get_all_profiles,
                                     get_rating_factors,
-                                    get_scaled_profiles
-)
+                                    get_scaled_profiles)
 
 logger = create_logger('ernc')
 
@@ -130,4 +127,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
