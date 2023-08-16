@@ -4,16 +4,15 @@ from pathlib import Path
 from datetime import datetime
 from openpyxl.utils.datetime import from_excel
 
-from utils.utils import (   check_is_file,
-                            remove_blank_lines,
-                            write_lines_appending,
-                            translate_to_hydromonth
-)
-
+from utils.utils import (check_is_file,
+                         remove_blank_lines,
+                         write_lines_appending,
+                         translate_to_hydromonth)
 
 OUTPUT_FILENAME = 'plpmance.dat'
 
 custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
+
 
 formatters = {
     "Month":    "     {:02d}".format,
@@ -57,13 +56,13 @@ def read_ernc_files(path_inputs, input_names):
     check_is_file(path_max_capacity)
     dict_max_capacity = pd.read_csv(
         path_max_capacity, index_col='Name').to_dict()['MaxCapacityFactor']
-    
+
     path_min_capacity = Path(
         path_inputs, input_names["MIN_CAPACITY_FILENAME"])
     check_is_file(path_min_capacity)
     dict_min_capacity = pd.read_csv(
         path_min_capacity, index_col='Name').to_dict()['Pmin']
-    
+
     path_rating_factor = Path(
         path_inputs, input_names["RATING_FACTOR_FILENAME"])
     check_is_file(path_rating_factor)
@@ -71,7 +70,7 @@ def read_ernc_files(path_inputs, input_names):
         path_rating_factor, parse_dates=['DateFrom'],
         date_parser=custom_date_parser)
 
-    # Profile files    
+    # Profile files
     path_profiles_h = Path(
         path_inputs, input_names["H_PROFILES_FILENAME"])
     check_is_file(path_profiles_h)
@@ -80,7 +79,7 @@ def read_ernc_files(path_inputs, input_names):
 
     path_profiles_hm = Path(
         path_inputs, input_names["HM_PROFILES_FILENAME"])
-    check_is_file(path_profiles_hm) 
+    check_is_file(path_profiles_hm)
     df_profiles_hm = pd.read_csv(path_profiles_hm).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
 
@@ -124,12 +123,14 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names,
         df_aux = df_scaled_profiles[['Month', 'Etapa', unit]]
         df_aux = df_aux.rename(columns={unit: 'Pmax'})
         df_aux['Pmin'] = pmin[unit]
-        df_aux['Pmin'] = df_aux.apply(lambda x: min(x['Pmin'], x['Pmax']), axis=1)
+        df_aux['Pmin'] = df_aux.apply(lambda x: min(x['Pmin'], x['Pmax']),
+                                      axis=1)
         df_aux['NIntPot'] = 1
         df_aux = df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
 
         # Dataframe to string
-        lines += [df_aux.to_string(index=False, header=False, formatters=formatters)]
+        lines += [df_aux.to_string(index=False, header=False,
+                                   formatters=formatters)]
 
         #  write data for current unit
         write_lines_appending(lines, dest)
@@ -179,7 +180,8 @@ def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
                        skiprows=4, usecols="B,AA")
     df = df.dropna()
     df = df.rename(columns={'CENTRALES': 'Name', 'Mínima.1': 'Pmin'})
-    df.to_csv(Path(path_inputs, input_names["MIN_CAPACITY_FILENAME"]), index=False)
+    df.to_csv(Path(path_inputs, input_names["MIN_CAPACITY_FILENAME"]),
+              index=False)
 
 
 def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
