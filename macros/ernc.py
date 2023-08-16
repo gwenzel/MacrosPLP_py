@@ -79,7 +79,7 @@ def get_profiles_and_rating_factors(ernc_data, blo_eta, block2day):
 
 
 def scale_profiles(ernc_data, df_all_profiles, df_rf, valid_unit_names):
-    logger.info('Using rating factors to scaled profiles')
+    logger.info('Using rating factors to scale profiles')
     return get_scaled_profiles(
         ernc_data, df_all_profiles, df_rf, valid_unit_names)
 
