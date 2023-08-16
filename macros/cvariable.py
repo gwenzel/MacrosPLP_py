@@ -96,8 +96,11 @@ def calculate_cvar(blo_eta, fuel_prices, dict_unit_rend,
     year_end = blo_eta.loc[len(blo_eta) - 1, 'Year']
     month_end = blo_eta.loc[len(blo_eta) - 1, 'Month']
 
+    # Merge dfs to keep the units we want
+    
     for unit, rend in dict_unit_rend.items():
         fuel_price = dict_unit_fuel_price_name[unit]
+        #stacked_fuel_price = fuel_prices['coal'].stack(level=[0, 1])
 
 
     df_unit_cvar = pd.DataFrame()
@@ -117,7 +120,7 @@ def main():
     # borrar datos
     fuel_prices =\
         read_all_fuel_prices(ext_inputs_path, scen='Base')
-    
+
     # leer rendimientos y mapeo central-combustible
     dict_unit_rend, dict_unit_fuel_price_name =\
         read_rend_and_unit_fuel_mapping(iplp_path)
@@ -133,7 +136,8 @@ def main():
 
     # crear matriz de centrales - costos variables
 
-    df_unit_cvar = calculate_cvar(blo_eta, fuel_prices, dict_unit_rend, dict_unit_fuel_price_name)
+    df_unit_cvar = calculate_cvar(blo_eta, fuel_prices, dict_unit_rend,
+                                  dict_unit_fuel_price_name)
 
     # crear matriz sumando impuestos
 

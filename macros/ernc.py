@@ -8,7 +8,6 @@ from utils.utils import (           timeit,
                                     process_etapas_blocks,
                                     define_arg_parser,
                                     get_iplp_input_path,
-                                    get_ext_inputs_path,
                                     check_is_path,
                                     create_logger,
                                     get_scenarios
@@ -39,9 +38,7 @@ def get_input_paths():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
-    ext_inputs_path = get_ext_inputs_path(parser)
-    check_is_path(ext_inputs_path)
-    return iplp_path, path_inputs, path_dat, ext_inputs_path
+    return iplp_path, path_inputs, path_dat
 
 
 def get_input_names(iplp_path):
@@ -52,12 +49,12 @@ def get_input_names(iplp_path):
     return input_names
 
 
-def generate_csv_files(iplp_path, path_inputs, input_names, ext_inputs_path):
+def generate_csv_files(iplp_path, path_inputs, input_names):
     logger.info('Generating input csv files')
     generate_max_capacity_csv(iplp_path, path_inputs, input_names)
     generate_min_capacity_csv(iplp_path, path_inputs, input_names)
     generate_rating_factor_csv(iplp_path, path_inputs, input_names)
-    generate_profiles_csv(ext_inputs_path, path_inputs, input_names)
+    generate_profiles_csv(iplp_path, path_inputs, input_names)
 
 
 def get_inputs(iplp_path, path_inputs, path_dat, input_names):
@@ -102,15 +99,15 @@ def main():
     Main routine
     '''
     # Get input file path
-    iplp_path, path_inputs, path_dat, ext_inputs_path =\
+    iplp_path, path_inputs, path_dat =\
         get_input_paths()
 
     # Get ERNC scenario and input file names
     input_names = get_input_names(iplp_path)
-    
+
     # Generate csv files
     generate_csv_files(
-        iplp_path, path_inputs, input_names, ext_inputs_path)
+        iplp_path, path_inputs, input_names)
 
     # Get inputs
     ernc_data, blo_eta, block2day, valid_unit_names =\

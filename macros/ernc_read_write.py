@@ -30,9 +30,9 @@ def define_input_names(ernc_scenario):
     ernc_scenario should be "Base", "WindHigh" or "WindLow"
     '''
     suffix_dict = {
-        "Base": "",
-        "WindHigh": "_High",
-        "WindLow": "_Low"
+        "Base": "mid",
+        "WindHigh": "high",
+        "WindLow": "low"
     }
     suffix = suffix_dict[ernc_scenario]
 
@@ -40,9 +40,9 @@ def define_input_names(ernc_scenario):
         "MAX_CAPACITY_FILENAME": "ernc_MaxCapacity.csv",
         "MIN_CAPACITY_FILENAME": "ernc_MinCapacity.csv",
         "RATING_FACTOR_FILENAME": "ernc_RatingFactor.csv",
-        "H_PROFILES_FILENAME": "ernc_profiles_H%s.csv" % suffix,
-        "HM_PROFILES_FILENAME": "ernc_profiles_HM%s.csv" % suffix,
-        "M_PROFILES_FILENAME": "ernc_profiles_M%s.csv" % suffix
+        "H_PROFILES_FILENAME": "ernc_profiles_H_%s.csv" % suffix,
+        "HM_PROFILES_FILENAME": "ernc_profiles_HM_%s.csv" % suffix,
+        "SCENARIO": suffix
     }
     return names
 
@@ -70,37 +70,31 @@ def read_ernc_files(path_inputs, input_names):
     df_rating_factor = pd.read_csv(
         path_rating_factor, parse_dates=['DateFrom'],
         date_parser=custom_date_parser)
-    
+
     # Profile files    
     path_profiles_h = Path(
         path_inputs, input_names["H_PROFILES_FILENAME"])
     check_is_file(path_profiles_h)
     df_profiles_h = pd.read_csv(path_profiles_h).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
-    
+
     path_profiles_hm = Path(
         path_inputs, input_names["HM_PROFILES_FILENAME"])
     check_is_file(path_profiles_hm) 
     df_profiles_hm = pd.read_csv(path_profiles_hm).rename(
             columns={'MES': 'Month', 'PERIODO': 'Hour'})
 
-    path_profiles_m = Path(
-        path_inputs, input_names["M_PROFILES_FILENAME"])
-    check_is_file(path_profiles_m)   
-    df_profiles_m = pd.read_csv(path_profiles_m).rename(
-            columns={'MES': 'Month', 'PERIODO': 'Hour'})
-    
     # Build output dict
     ernc_data = {'dict_max_capacity': dict_max_capacity,
                  'dict_min_capacity': dict_min_capacity,
                  'rating_factor': df_rating_factor,
                  'profiles_h': df_profiles_h,
-                 'profiles_hm': df_profiles_hm,
-                 'profiles_m': df_profiles_m}
+                 'profiles_hm': df_profiles_hm}
     return ernc_data
 
 
-def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names, iplp_path):
+def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names,
+                            iplp_path):
     '''
     Write dat file in PLP format
     '''
@@ -169,10 +163,10 @@ def generate_max_capacity_csv(iplp_path, path_inputs, input_names):
     '''
     Read iplp file, sheet ERNC, and extract max capacities
     '''
-    df = pd.read_excel(iplp_path, sheet_name ='ERNC',
-                       skiprows=13, usecols="A:B")
+    df = pd.read_excel(iplp_path, sheet_name='ERNC', usecols="A:B")
     df = df.dropna()
-    df.to_csv(Path(path_inputs, input_names["MAX_CAPACITY_FILENAME"]), index=False)
+    df.to_csv(Path(path_inputs, input_names["MAX_CAPACITY_FILENAME"]),
+              index=False)
 
 
 def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
@@ -181,7 +175,7 @@ def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
 
     Note: Only CSP units should have Pmin
     '''
-    df = pd.read_excel(iplp_path, sheet_name ='Centrales',
+    df = pd.read_excel(iplp_path, sheet_name='Centrales',
                        skiprows=4, usecols="B,AA")
     df = df.dropna()
     df = df.rename(columns={'CENTRALES': 'Name', 'Mínima.1': 'Pmin'})
@@ -192,25 +186,27 @@ def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
     '''
     Read iplp file, sheet ERNC, and extract rating factors
     '''
-    df = pd.read_excel(iplp_path, sheet_name ='ERNC',
-                       skiprows=13, usecols="E:G")
+    df = pd.read_excel(iplp_path, sheet_name='ERNC', usecols="E:G")
     df['DateFrom'] = df['DateFrom'].apply(from_excel)
     df = df.dropna()
     df = df.rename(columns={'Name.1': 'Name'})
     df['DateFrom'] = df['DateFrom'].dt.strftime("%m/%d/%Y")
-    df.to_csv(Path(path_inputs, input_names["RATING_FACTOR_FILENAME"]), index=False)   
+    df.to_csv(Path(path_inputs, input_names["RATING_FACTOR_FILENAME"]),
+              index=False)   
 
 
-def generate_profiles_csv(ext_inputs_path, path_inputs, input_names):
+def generate_profiles_csv(iplp_path, path_inputs, input_names):
     '''
     Read csv profiles from external inputs path and copy to path_inputs folder
     '''
-    copy(src=ext_inputs_path / input_names["H_PROFILES_FILENAME"],
-         dst=path_inputs     / input_names["H_PROFILES_FILENAME"])
-    copy(src=ext_inputs_path / input_names["HM_PROFILES_FILENAME"],
-         dst=path_inputs     / input_names["HM_PROFILES_FILENAME"])
-    copy(src=ext_inputs_path / input_names["M_PROFILES_FILENAME"],
-         dst=path_inputs     / input_names["M_PROFILES_FILENAME"])
+    h_sheetname = 'ernc_H_%s' % input_names["SCENARIO"]
+    hm_sheetname = 'ernc_MH_%s' % input_names["SCENARIO"]
+    df_h = pd.read_excel(iplp_path, sheet_name=h_sheetname)
+    df_h.to_csv(Path(path_inputs, input_names["H_PROFILES_FILENAME"]),
+                index=False, header=True)
+    df_hm = pd.read_excel(iplp_path, sheet_name=hm_sheetname)
+    df_hm.to_csv(Path(path_inputs, input_names["HM_PROFILES_FILENAME"]),
+                 index=False, header=True)
 
 
 def get_unit_type(iplp_path):

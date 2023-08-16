@@ -33,10 +33,8 @@ def get_profiles_blo(ernc_data, block2day):
     '''
     profiles_h_blo = hour2block(ernc_data['profiles_h'], block2day)
     profiles_hm_blo = hour2block(ernc_data['profiles_hm'], block2day)
-    profiles_m_blo = hour2block(ernc_data['profiles_m'], block2day)
     profiles_dict = {'H': profiles_h_blo,
-                     'HM': profiles_hm_blo,
-                     'M': profiles_m_blo}
+                     'HM': profiles_hm_blo}
     return profiles_dict
 
 
@@ -66,7 +64,7 @@ def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
         if len(df) > 0:
             df_out = replicate_profiles(df_out, df, type=type)
     if print_files:
-        df_out.to_csv('df_all_profiles.csv')         
+        df_out.to_csv('df_all_profiles.csv')
     return df_out
 
 
