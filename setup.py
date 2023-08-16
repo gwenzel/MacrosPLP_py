@@ -4,7 +4,8 @@ requirements = [
     'pandas',
     'numpy',
     'pyxlsb',
-    'openpyxl'
+    'openpyxl',
+    'enlighten'
 ]
 
 setup(
