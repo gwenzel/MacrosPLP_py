@@ -192,7 +192,7 @@ def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
     df = df.rename(columns={'Name.1': 'Name'})
     df['DateFrom'] = df['DateFrom'].dt.strftime("%m/%d/%Y")
     df.to_csv(Path(path_inputs, input_names["RATING_FACTOR_FILENAME"]),
-              index=False)   
+              index=False)
 
 
 def generate_profiles_csv(iplp_path, path_inputs, input_names):
@@ -213,7 +213,7 @@ def get_unit_type(iplp_path):
     '''
     Read iplp file, sheet Centrales, and extract unit type
     '''
-    df = pd.read_excel(iplp_path, sheet_name ='Centrales',
+    df = pd.read_excel(iplp_path, sheet_name='Centrales',
                        skiprows=4, usecols="B,C")
     df = df.dropna()
     df = df.rename(columns={'CENTRALES': 'Name', 'Tipo de Central': 'Type'})
@@ -226,4 +226,5 @@ def get_valid_unit_names(ernc_data, iplp_path):
     Return list of units with type different than X
     '''
     unit_type_dict = get_unit_type(iplp_path)
-    return [unit for unit in ernc_data['dict_max_capacity'].keys() if unit_type_dict[unit] != 'X']
+    return [unit for unit in ernc_data['dict_max_capacity'].keys()
+            if unit_type_dict[unit] != 'X']

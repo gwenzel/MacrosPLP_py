@@ -97,6 +97,8 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     # Get Month, Year
     df_rf['Year'] = df_rf['DateFrom'].dt.year
     df_rf['Month'] = df_rf['DateFrom'].dt.month
+    df_rf['Day'] = df_rf['DateFrom'].dt.day
+    df_rf['DaysInMonth'] = df_rf['DateFrom'].dt.days_in_month
 
     blo_eta = blo_eta.drop(['Block', 'Block_Len'], axis=1)
     # Get initial etapa of each year-month
@@ -105,10 +107,56 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
+    df_rf = process_semi_months(df_rf)
+
     if print_files:
         df_rf.to_csv('df_rf.csv')
 
     return df_rf
+
+
+def process_semi_months(df_rf):
+    '''
+    There are some lines in the rating factor list that do not
+    start on the 1st of the month.
+    Each one of those lines should be split in two: one with
+    the proportional power for the present month, and the next with
+    the actual power.
+    The only fields that will be used are 'Initial_Eta' and 'Value [MW]',
+    so the other fields are not modified.
+    '''
+    new_df_rf = pd.DataFrame(columns=df_rf.columns)
+    previous_row = ''
+    previous_value = 0
+
+    for idx, row in df_rf.iterrows():
+        if row['Day'] == 1:
+            new_df_rf = pd.concat([new_df_rf, pd.DataFrame(row).T])
+        else:
+            fraction_before = row['Day'] / row['DaysInMonth']
+            fraction_after = 1 - fraction_before
+
+            if (idx >= 1):
+                if (previous_row['Name'] == row['Name']):
+                    previous_value = previous_row['Value [MW]']
+            # Replace current row
+            new_row1 = row.copy()
+            new_row1['Value [MW]'] = \
+                (row['Value [MW]'] * fraction_after) + \
+                (previous_value * fraction_before)
+            # Insert new row
+            new_row2 = row.copy()
+            new_row2['Initial_Eta'] = row['Initial_Eta'] + 1
+            # Concat all
+            list_to_concat = [
+                new_df_rf.iloc[:idx],
+                pd.DataFrame(new_row1).T,
+                pd.DataFrame(new_row2).T
+            ]
+            new_df_rf = pd.concat(list_to_concat)
+        previous_row = row
+        previous_value = 0
+    return new_df_rf.reset_index(drop=True)
 
 
 def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
@@ -126,16 +174,17 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
 
     df_profiles_aux = df_all_profiles[['Etapa']].copy()
 
-    # iterate units and add scaled profiles
+    # iterate units and add scaled profiles, overlapping previous rows
     for unit in unit_names:
         profile_name = profile_dict[unit]
         df_profiles_aux['aux'] = df_all_profiles[profile_name]
         # iterate rating factors
         for _, row in df_rf[df_rf['Name'] == unit].iterrows():
-            df_profiles.loc[
-                df_profiles['Etapa'] >= row['Initial_Eta'], unit] =\
-                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row[
-                    'Initial_Eta'], 'aux'] * row['Value [MW]']
+            etapas = (df_profiles['Etapa'] >= row['Initial_Eta'])
+            etapas_aux = (df_profiles_aux['Etapa'] >= row['Initial_Eta'])
+            df_profiles.loc[etapas, unit] =\
+                df_profiles_aux.loc[etapas_aux, 'aux'] * row['Value [MW]']
+
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file

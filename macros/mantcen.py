@@ -1,6 +1,6 @@
 '''Mantcen
 
-Module to generate 'plpmance_ini.dat', which will be used later 
+Module to generate 'plpmance_ini.dat', which will be used later
 to add the renewable energy profiles and generate the definitive
 plpmance.dat file
 '''
@@ -10,26 +10,26 @@ from openpyxl.utils.datetime import from_excel
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-from utils.utils import (   define_arg_parser,
-                            get_iplp_input_path,
-                            check_is_path,
-                            create_logger,
-                            process_etapas_blocks,
-                            write_lines_from_scratch,
-                            write_lines_appending,
-                            translate_to_hydromonth,
-                            timeit
-)
+from utils.utils import (define_arg_parser,
+                         get_iplp_input_path,
+                         check_is_path,
+                         create_logger,
+                         process_etapas_blocks,
+                         write_lines_from_scratch,
+                         write_lines_appending,
+                         translate_to_hydromonth,
+                         timeit
+                         )
 
 
 logger = create_logger('mantcen')
 
 MONTH2NUMBER = {
-        'Ene': 1, 'Feb': 2, 'Mar': 3,
-        'Abr': 4, 'May': 5, 'Jun': 6,
-        'Jul': 7, 'Ago': 8, 'Sep': 9,
-        'Oct': 10, 'Nov': 11, 'Dic':12
-    }
+    'Ene': 1, 'Feb': 2, 'Mar': 3,
+    'Abr': 4, 'May': 5, 'Jun': 6,
+    'Jul': 7, 'Ago': 8, 'Sep': 9,
+    'Oct': 10, 'Nov': 11, 'Dic': 12
+}
 
 formatters_plpmance = {
     "Month":    "     {:02d}".format,
@@ -46,7 +46,7 @@ def get_centrales(iplp_path):
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
     df = df.rename(columns={
-        'CENTRALES': 'Nombre','Mínima.1': 'Pmin','Máxima.1': 'Pmax'})
+        'CENTRALES': 'Nombre', 'Mínima.1': 'Pmin', 'Máxima.1': 'Pmax'})
     df = df[['Nombre', 'Pmin', 'Pmax']]
     return df
 
@@ -108,7 +108,8 @@ def shape_extra_mant_no_gas(df, description='NA'):
     df['FINAL'] = df['FINAL'].apply(from_excel)
     df['Description'] = description
     df['Pmin'] = 0
-    reordered_cols = ['Description', 'Nombre', 'INICIAL', 'FINAL', 'Pmin', 'Pmax']
+    reordered_cols = ['Description', 'Nombre',
+                      'INICIAL', 'FINAL', 'Pmin', 'Pmax']
     return df[reordered_cols]
 
 
@@ -118,7 +119,7 @@ def read_extra_mant_no_ciclicos(iplp_path):
         iplp_path, sheet_name="MantenimientosIM",
         skiprows=1, usecols="B:D,F").dropna(how='any')
     df_no_ciclicos = df_no_ciclicos.rename(
-        columns={'Unidad':'Nombre',
+        columns={'Unidad': 'Nombre',
                  'Fecha Inicio': 'INICIAL',
                  'Fecha Término': 'FINAL',
                  'Potencia Maxima': 'Pmax'}
@@ -134,14 +135,13 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
         iplp_path, sheet_name="MantenimientosIM",
         skiprows=1, usecols="I:K,M").dropna(how='any')
     df_ciclicos = df_ciclicos.rename(
-        columns={'Unidad.1':'Nombre',
+        columns={'Unidad.1': 'Nombre',
                  'Fecha Inicio.1': 'INICIAL',
                  'Fecha Término.1': 'FINAL',
                  'Potencia Maxima.1': 'Pmax'}
     )
     df_ciclicos = shape_extra_mant_no_gas(
         df_ciclicos, description='Cíclicos')
-    
     # Repeat yearly, making sure all years are covered
     ini_year = df_ciclicos['INICIAL'].min().year
     end_year = blo_eta.iloc[-1]['Year']
@@ -170,7 +170,8 @@ def read_extra_mant_gas(iplp_path, blo_eta):
         for year in range(int(row['AnoInic']), int(row['AnoFinal']) + 1):
             for month, monthnum in MONTH2NUMBER.items():
                 date_ini = datetime(year, monthnum, 1)
-                date_end = date_ini + relativedelta(months=+1) - timedelta(days=1)
+                date_end = date_ini + \
+                    relativedelta(months=+1) - timedelta(days=1)
                 dict_out['Nombre'].append(idx_unit)
                 dict_out['INICIAL'].append(date_ini)
                 dict_out['FINAL'].append(date_end)
@@ -183,22 +184,23 @@ def read_extra_mant_gas(iplp_path, blo_eta):
 
 def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
     '''
-    Read directly from MantenimientosIM and add to 
+    Read directly from MantenimientosIM and add to
     df_mantcen before generating output:
     No cíclicos, cíclicos, restricciones de gas, genmin
     '''
     df_no_ciclicos = read_extra_mant_no_ciclicos(iplp_path)
     df_ciclicos = read_extra_mant_ciclicos(iplp_path, blo_eta)
     df_gas = read_extra_mant_gas(iplp_path, blo_eta)
-
     # Append new dataframes to df_mantcen
     list_of_dfs = [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]
     df_mantcen = pd.concat(list_of_dfs, ignore_index=True)
-    
     return df_mantcen
 
 
 def filter_df_mantcen(df_mantcen, df_centrales):
+    '''
+    Filter out rows with non-existent Unit names
+    '''
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
@@ -211,7 +213,7 @@ def get_daily_indexed_df(blo_eta):
     ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
     end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
     index = pd.date_range(start=ini_date, end=end_date, freq='D')
-    df = pd.DataFrame(index=index, columns=['Year','Month','Day'])
+    df = pd.DataFrame(index=index, columns=['Year', 'Month', 'Day'])
     df['Year'] = df.index.year
     df['Month'] = df.index.month
     df['Day'] = df.index.day
@@ -221,19 +223,25 @@ def get_daily_indexed_df(blo_eta):
 
 
 def build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales):
-    # Get unit names
+    '''
+    Build matrix with all pmin/pmax info in mantcen sheet
+    '''
+    # Get  unit names
     mantcen_unit_names = df_mantcen['Nombre'].unique().tolist()
     # Get pmin/pmax dictionaries
     pmin_dict, pmax_dict = get_pmin_pmax_dict(df_centrales)
     # Get base dataframes
     df_pmin = get_daily_indexed_df(blo_eta)
     # Add empty columns
-    df_pmin = df_pmin.reindex(columns=df_pmin.columns.tolist() + mantcen_unit_names)
+    df_pmin = df_pmin.reindex(
+        columns=df_pmin.columns.tolist() + mantcen_unit_names)
     # Create df_pmax as copy of empty df_pmin
     df_pmax = df_pmin.copy()
     # Add default values
-    df_pmin[mantcen_unit_names] = [pmin_dict[unit] for unit in mantcen_unit_names]
-    df_pmax[mantcen_unit_names] = [pmax_dict[unit] for unit in mantcen_unit_names]
+    df_pmin[mantcen_unit_names] = [
+        pmin_dict[unit] for unit in mantcen_unit_names]
+    df_pmax[mantcen_unit_names] = [
+        pmax_dict[unit] for unit in mantcen_unit_names]
     return df_pmin, df_pmax
 
 
@@ -243,9 +251,11 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     # 2. Add df_mantcen data in row-by-row order
     # Note that filters have a daily resolution
     mantcen_dates_ini = pd.to_datetime(
-        df_mantcen[['YearIni', 'MonthIni', 'DayIni']].rename(columns={'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
+        df_mantcen[['YearIni', 'MonthIni', 'DayIni']].rename(columns={
+            'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
     mantcen_dates_end = pd.to_datetime(
-        df_mantcen[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
+        df_mantcen[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
+            'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
     for i in range(len(mantcen_dates_ini)):
         pmax_mask_ini = mantcen_dates_ini.iloc[i] <= df_pmax['Date']
         pmax_mask_end = mantcen_dates_end.iloc[i] >= df_pmax['Date']
@@ -255,12 +265,17 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmax']
         df_pmin.loc[pmin_mask_ini & pmin_mask_end,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
-    # 3. Average per Etapa
+    # 3. Average per Etapa and drop Day column
     df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=[
-                       'Month', 'Year']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean(numeric_only=True)
+                       'Month', 'Year']).groupby([
+                           'Etapa', 'Year', 'Month', 'Block']).mean(
+                                numeric_only=True)
+    df_pmax = df_pmax.drop(['Day'], axis=1)
     df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=[
-                       'Month', 'Year']).groupby(['Etapa', 'Year', 'Month', 'Block']).mean(numeric_only=True)
-
+                       'Month', 'Year']).groupby([
+                           'Etapa', 'Year', 'Month', 'Block']).mean(
+                                numeric_only=True)
+    df_pmin = df_pmin.drop(['Day'], axis=1)
     return df_pmin, df_pmax
 
 
@@ -343,7 +358,7 @@ def main():
     # Read Centrales and get PnomMax and PnomMin
     logger.info('Reading data from sheet Centrales')
     df_centrales = get_centrales(iplp_path)
-    
+
     logger.info('Validating list of centrales')
     validate_centrales(df_centrales)
 
@@ -352,7 +367,8 @@ def main():
     df_mantcen = get_mantcen_input(iplp_path)
 
     # LlenadoMantConvenc
-    # Read directly from MantenimientosIM and add to df_mantcen before generating output
+    # Read directly from MantenimientosIM and add to df_mantcen before
+    # generating output
     # No cíclicos, cíclicos, restricciones de gas, genmin
     logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
     df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
@@ -373,7 +389,7 @@ def main():
 
     # Write data
     logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False)
+    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=True)
 
     logger.info('Process finished successfully')
 
