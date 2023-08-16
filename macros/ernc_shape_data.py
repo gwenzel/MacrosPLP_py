@@ -11,7 +11,7 @@ def hour2block(df, block2day):
     '''
     df = pd.merge(df, block2day, on=['Month', 'Hour'])
     df = df.drop(['Hour'], axis=1)
-    
+
     # Build dictionary with functions to apply
     # Use mean to get Pmax across hours in each block
     agg_dict = {}
@@ -45,7 +45,7 @@ def replicate_profiles(df_left, df_right, type='H'):
     if type == 'H':
         df_right = df_right.drop(['Month'], axis=1)
         return pd.merge(df_left, df_right, how='left', on=['Block'])
-    elif type =='HM':
+    elif type == 'HM':
         return pd.merge(df_left, df_right, how='left', on=['Month', 'Block'])
     elif type == 'M':
         df_right = df_right.drop(['Block'], axis=1)
@@ -91,7 +91,7 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
 
     # Replace all dates before ini_date to match with 1st block
     df_rf['DateFrom'] = df_rf['DateFrom']
-    mask = (df_rf['DateFrom'] <  ini_date)
+    mask = (df_rf['DateFrom'] < ini_date)
     df_rf.loc[mask, 'DateFrom'] = ini_date
 
     # Get Month, Year
@@ -100,7 +100,8 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
 
     blo_eta = blo_eta.drop(['Block', 'Block_Len'], axis=1)
     # Get initial etapa of each year-month
-    df_rf['Year-Month'] = df_rf.apply(lambda x: (x['Year'], x['Month']), axis=1)
+    df_rf['Year-Month'] = df_rf.apply(lambda x: (x['Year'], x['Month']),
+                                      axis=1)
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
@@ -110,7 +111,8 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
     return df_rf
 
 
-def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names, print_files=PRINT_FILES):
+def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
+                        print_files=PRINT_FILES):
     '''
     Use all profiles data and rating factors to generate scaled profiles
     '''
@@ -130,8 +132,10 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names, print_fil
         df_profiles_aux['aux'] = df_all_profiles[profile_name]
         # iterate rating factors
         for _, row in df_rf[df_rf['Name'] == unit].iterrows():
-            df_profiles.loc[df_profiles['Etapa'] >= row['Initial_Eta'], unit] = \
-                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row['Initial_Eta'], 'aux'] * row['Value [MW]']
+            df_profiles.loc[
+                df_profiles['Etapa'] >= row['Initial_Eta'], unit] =\
+                df_profiles_aux.loc[df_profiles_aux['Etapa'] >= row[
+                    'Initial_Eta'], 'aux'] * row['Value [MW]']
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file
