@@ -11,7 +11,9 @@ from utils.utils import (check_is_file,
 
 OUTPUT_FILENAME = 'plpmance.dat'
 
-custom_date_parser = lambda x: datetime.strptime(x, "%m/%d/%Y")
+
+def custom_date_parser(x):
+    return datetime.strptime(x, "%m/%d/%Y")
 
 
 formatters = {
