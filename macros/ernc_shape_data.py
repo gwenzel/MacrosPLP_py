@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 from datetime import datetime
+from utils.utils import append_rows
 
 PRINT_FILES = False
 
@@ -47,9 +48,6 @@ def replicate_profiles(df_left, df_right, type='H'):
         return pd.merge(df_left, df_right, how='left', on=['Block'])
     elif type == 'HM':
         return pd.merge(df_left, df_right, how='left', on=['Month', 'Block'])
-    elif type == 'M':
-        df_right = df_right.drop(['Block'], axis=1)
-        return pd.merge(df_left, df_right, how='left', on=['Month'])
     else:
         sys.exit("Invalid type: %s" % type)
 
@@ -131,7 +129,7 @@ def process_semi_months(df_rf):
 
     for idx, row in df_rf.iterrows():
         if row['Day'] == 1:
-            new_df_rf = pd.concat([new_df_rf, pd.DataFrame(row).T])
+            new_df_rf = append_rows(new_df_rf, row)
         else:
             fraction_before = row['Day'] / row['DaysInMonth']
             fraction_after = 1 - fraction_before
@@ -148,12 +146,7 @@ def process_semi_months(df_rf):
             new_row2 = row.copy()
             new_row2['Initial_Eta'] = row['Initial_Eta'] + 1
             # Concat all
-            list_to_concat = [
-                new_df_rf.iloc[:idx],
-                pd.DataFrame(new_row1).T,
-                pd.DataFrame(new_row2).T
-            ]
-            new_df_rf = pd.concat(list_to_concat)
+            new_df_rf = append_rows(new_df_rf.iloc[:idx], new_row1, new_row2)
         previous_row = row
         previous_value = 0
     return new_df_rf.reset_index(drop=True)

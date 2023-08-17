@@ -2,7 +2,8 @@
 
 Module to store all transversal utility functions
 '''
-import os, sys
+import os
+import sys
 from typing import TypedDict
 import pandas as pd
 from functools import wraps
@@ -58,7 +59,6 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        #print(f'Function {func.__name__}{args} {kwargs} Took {total_time:.4f} seconds')
         print(f'Function {func.__name__} Took {total_time:.4f} seconds')
         return result
     return timeit_wrapper
@@ -86,7 +86,8 @@ def process_etapas_blocks(path_dat: Path):
     block2day["Hour"] = pd.to_numeric(block2day["Hour"])
 
     block_len = (
-        block2day.groupby(["Month", "Block"]).size().reset_index(name="Block_Len")
+        block2day.groupby(
+            ["Month", "Block"]).size().reset_index(name="Block_Len")
     )
     blo_eta = pd.merge(plpetapas, block_len, on=["Month", "Block"])
     blo_eta = blo_eta.sort_values(by=["Etapa"])
@@ -97,7 +98,7 @@ def process_etapas_blocks(path_dat: Path):
 
 def input_path(file_descrption: str) -> Path:
     file_path = input('Enter a file/path for %s: ' % file_descrption)
-    file_path = file_path.replace('"','')
+    file_path = file_path.replace('"', '')
     # e.g. C:\Users\Bob\Desktop\example.txt
     # or /home/Bob/Desktop/example.txt
     print(file_path)
@@ -129,11 +130,13 @@ def is_valid_file(parser: ArgumentParser, arg: str):
 def define_arg_parser(ext: bool = False) -> ArgumentParser:
     parser = ArgumentParser(description="Get PLP input filepaths")
     parser.add_argument('-f', dest='iplp_path', required=False,
-                        help='IPLP input file path', metavar="IPLP_FILE_PATH",
+                        help='IPLP input file path',
+                        metavar="IPLP_FILE_PATH",
                         type=lambda x: is_valid_file(parser, x))
     if ext:
         parser.add_argument('-e', dest='ext_path', required=False,
-                            help='External inputs path', metavar="EXT_INPUTS_PATH",
+                            help='External inputs path',
+                            metavar="EXT_INPUTS_PATH",
                             type=lambda x: is_valid_file(parser, x))
     return parser
 
@@ -160,13 +163,14 @@ def get_ext_inputs_path(parser: ArgumentParser) -> Path:
 
 def create_logger(logname: str):
     # Gets or creates a logger
-    logger = logging.getLogger(logname)  
+    logger = logging.getLogger(logname)
 
     # set log level
     logger.setLevel(logging.INFO)
 
     # set formatter
-    formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 
     # define file and stream handlers
     root = get_project_root()
@@ -202,9 +206,9 @@ def get_list_of_all_barras(iplp_path: Path) -> list:
 
 
 class ScenarioData(TypedDict):
-        Demanda: str
-        Combustible: str
-        Eolico: str
+    Demanda: str
+    Combustible: str
+    Eolico: str
 
 
 def get_scenarios(iplp_path: Path) -> ScenarioData:
@@ -230,7 +234,7 @@ def write_lines_from_scratch(lines: str, filepath: Path):
     f.close()
 
 
-def write_lines_appending(lines:str, filepath: Path):
+def write_lines_appending(lines: str, filepath: Path):
     f = open(filepath, 'a')
     f.write('\n'.join(lines))
     f.close()
@@ -238,3 +242,13 @@ def write_lines_appending(lines:str, filepath: Path):
 
 def translate_to_hydromonth(df: pd.DataFrame) -> pd.DataFrame:
     return df.replace({'Month': MONTH_TO_HIDROMONTH})
+
+
+def append_rows(df, *rows):
+    '''
+    Append row to dataframe using concat to avoid FutureWarning
+    '''
+    list_of_dfs = [df]
+    for row in rows:
+        list_of_dfs.append(pd.DataFrame(row).T)
+    return pd.concat(list_of_dfs)
