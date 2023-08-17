@@ -266,16 +266,12 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
         df_pmin.loc[pmin_mask_ini & pmin_mask_end,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
     # 3. Average per Etapa and drop Day column
-    df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=[
-                       'Month', 'Year']).groupby([
-                           'Etapa', 'Year', 'Month', 'Block']).mean(
-                                numeric_only=True)
-    df_pmax = df_pmax.drop(['Day'], axis=1)
-    df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=[
-                       'Month', 'Year']).groupby([
-                           'Etapa', 'Year', 'Month', 'Block']).mean(
-                                numeric_only=True)
-    df_pmin = df_pmin.drop(['Day'], axis=1)
+    on_cols = ['Month', 'Year']
+    groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
+    df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=on_cols).groupby(
+        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
+    df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=on_cols).groupby(
+        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
     return df_pmin, df_pmax
 
 
