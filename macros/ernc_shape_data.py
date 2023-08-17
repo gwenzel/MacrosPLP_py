@@ -52,7 +52,7 @@ def replicate_profiles(df_left, df_right, type='H'):
         sys.exit("Invalid type: %s" % type)
 
 
-def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
+def get_all_profiles(blo_eta, profiles_dict, iplp_path):
     '''
     Run the replicate_profiles function for all profiles and group data
     on one output dataframe
@@ -61,8 +61,8 @@ def get_all_profiles(blo_eta, profiles_dict, print_files=PRINT_FILES):
     for type, df in profiles_dict.items():
         if len(df) > 0:
             df_out = replicate_profiles(df_out, df, type=type)
-    if print_files:
-        df_out.to_csv('df_all_profiles.csv')
+    # Print to csv
+    df_out.to_csv(iplp_path.parent / 'Temp' / 'df_all_profiles.csv')
     return df_out
 
 
@@ -76,7 +76,7 @@ def get_ini_date(blo_eta):
     return datetime(ini_year, ini_month, ini_day)
 
 
-def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
+def get_rating_factors(ernc_data, blo_eta, iplp_path):
     '''
     Return Rating Factors dataframe
     '''
@@ -107,8 +107,8 @@ def get_rating_factors(ernc_data, blo_eta, print_files=PRINT_FILES):
 
     df_rf = process_semi_months(df_rf)
 
-    if print_files:
-        df_rf.to_csv('df_rf.csv')
+    # Print to csv
+    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf.csv')
 
     return df_rf
 
@@ -153,7 +153,7 @@ def process_semi_months(df_rf):
 
 
 def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
-                        print_files=PRINT_FILES):
+                        iplp_path):
     '''
     Use all profiles data and rating factors to generate scaled profiles
     '''
@@ -181,6 +181,5 @@ def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file
-    if print_files:
-        df_profiles.to_csv('ernc_profiles.csv')
+    df_profiles.to_csv(iplp_path.parent / 'Temp' / 'ernc_profiles.csv')
     return df_profiles

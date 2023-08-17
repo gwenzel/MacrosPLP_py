@@ -63,25 +63,26 @@ def get_inputs(iplp_path, path_inputs, path_dat, input_names):
     return ernc_data, blo_eta, block2day, valid_unit_names
 
 
-def get_profiles_and_rating_factors(ernc_data, blo_eta, block2day):
+def get_profiles_and_rating_factors(ernc_data, blo_eta, block2day, iplp_path):
     # Convert hourly profiles to blocks
     logger.info('Converting hourly profiles to blocks')
     profiles_dict = get_profiles_blo(ernc_data, block2day)
 
     # Replicate data for all Etapas
     logger.info('Getting all profiles')
-    df_all_profiles = get_all_profiles(blo_eta, profiles_dict)
+    df_all_profiles = get_all_profiles(blo_eta, profiles_dict, iplp_path)
 
     # Get Rating Factors
     logger.info('Getting rating factors')
-    df_rf = get_rating_factors(ernc_data, blo_eta)
+    df_rf = get_rating_factors(ernc_data, blo_eta, iplp_path)
     return df_all_profiles, df_rf
 
 
-def scale_profiles(ernc_data, df_all_profiles, df_rf, valid_unit_names):
+def scale_profiles(ernc_data, df_all_profiles, df_rf, valid_unit_names,
+                   iplp_path):
     logger.info('Using rating factors to scale profiles')
     return get_scaled_profiles(
-        ernc_data, df_all_profiles, df_rf, valid_unit_names)
+        ernc_data, df_all_profiles, df_rf, valid_unit_names, iplp_path)
 
 
 def write_data(ernc_data, df_scaled_profiles, valid_unit_names, iplp_path):
@@ -112,11 +113,11 @@ def main():
 
     # Get profiles and rating factors
     df_all_profiles, df_rf = get_profiles_and_rating_factors(
-        ernc_data, blo_eta, block2day)
+        ernc_data, blo_eta, block2day, iplp_path)
 
     # Use RFs to scale profiles
     df_scaled_profiles = scale_profiles(
-        ernc_data, df_all_profiles, df_rf, valid_unit_names)
+        ernc_data, df_all_profiles, df_rf, valid_unit_names, iplp_path)
 
     # Write data in .dat format
     write_data(
