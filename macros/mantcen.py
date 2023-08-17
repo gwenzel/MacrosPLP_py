@@ -369,6 +369,7 @@ def main():
     logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
     df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
 
+    logger.info('Filtering required')
     df_mantcen = filter_df_mantcen(df_mantcen, df_centrales)
 
     # Add time info
