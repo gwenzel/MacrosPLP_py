@@ -61,7 +61,7 @@ def create_plpparam(df_hidro, df_etapas, path_dat):
 
 
 def create_plpetapas(df_etapas, path_dat):
-    
+
     etapas = df_etapas.shape[0]
     bloques = df_etapas.loc[0, 'Nº Bloques']
 
@@ -70,10 +70,10 @@ def create_plpetapas(df_etapas, path_dat):
     for e in range(etapas):
         for b in range(bloques): 
             plp_etapas_data.append(
-                ( 1 + (12*e+b), f"{df_etapas.loc[e, 'Inicial'].year}",
-                f"{df_etapas.loc[e, 'Inicial'].month}", b + 1)
+                (1 + (12*e+b), f"{df_etapas.loc[e, 'Inicial'].year}",
+                    f"{df_etapas.loc[e, 'Inicial'].month}", b + 1)
             )
-    
+
     # Convert the data to a DataFrame
     df = pd.DataFrame(plp_etapas_data)
 

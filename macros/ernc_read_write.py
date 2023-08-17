@@ -12,10 +12,6 @@ from utils.utils import (check_is_file,
 OUTPUT_FILENAME = 'plpmance.dat'
 
 
-def custom_date_parser(x):
-    return datetime.strptime(x, "%m/%d/%Y")
-
-
 formatters = {
     "Month":    "     {:02d}".format,
     "Etapa":    "     {:04d}".format,
@@ -70,7 +66,7 @@ def read_ernc_files(path_inputs, input_names):
     check_is_file(path_rating_factor)
     df_rating_factor = pd.read_csv(
         path_rating_factor, parse_dates=['DateFrom'],
-        date_parser=custom_date_parser)
+        date_format="%m/%d/%Y")
 
     # Profile files
     path_profiles_h = Path(

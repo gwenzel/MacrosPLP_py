@@ -5,7 +5,8 @@ requirements = [
     'numpy',
     'pyxlsb',
     'openpyxl',
-    'enlighten'
+    'enlighten',
+    'python-dateutil'
 ]
 
 setup(
