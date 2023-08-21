@@ -97,7 +97,6 @@ def calculate_cvar(blo_eta, fuel_prices, dict_unit_rend,
     month_end = blo_eta.loc[len(blo_eta) - 1, 'Month']
 
     # Merge dfs to keep the units we want
-    
     for unit, rend in dict_unit_rend.items():
         fuel_price = dict_unit_fuel_price_name[unit]
         #stacked_fuel_price = fuel_prices['coal'].stack(level=[0, 1])
