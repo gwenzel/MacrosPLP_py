@@ -24,15 +24,15 @@ setup(
     entry_points={
         "console_scripts": [
             "postpro = postpro.main:main",
-            "filt = macros.0_filter_files:main",
-            "bar = macros.1_bar:main",
-            "dda = macros.3_dem:main",
-            "mantcen = macros.5_mantcen:main",
-            "ernc = macros.6_ernc:main",
-            "cvar = macros.7_cvar:main",
-            "lin = macros.8_lin:main",
-            "manli = macros.9_manli:main",
-            "manlix = macros.10_manlix:main"
+            "filt = macros.filter_files:main",
+            "bar = macros.bar:main",
+            "dda = macros.dem:main",
+            "mantcen = macros.mantcen:main",
+            "ernc = macros.ernc:main",
+            "cvar = macros.cvar:main",
+            "lin = macros.lin:main",
+            "manli = macros.manli:main",
+            "manlix = macros.manlix:main"
         ]
     },
     classifiers=[

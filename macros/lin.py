@@ -63,7 +63,6 @@ def read_df_lines(iplp_path):
         {True: 'T', False: 'F'})
     df_lines['FlujoDC'] = df_lines['FlujoDC'].replace(
         {True: 'T', False: 'F'})
-
     return df_lines
 
 
@@ -92,8 +91,6 @@ def main():
     iplp_path = get_iplp_input_path(parser)
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
 
     logger.info('Print uni_plpcnfli.dat')
     print_uni_plpcnfli(path_inputs, iplp_path)
