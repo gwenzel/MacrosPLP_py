@@ -29,7 +29,10 @@ setup(
             "dda = macros.3_dem:main",
             "mantcen = macros.5_mantcen:main",
             "ernc = macros.6_ernc:main",
-            "cvar = macros.7_cvar:main"
+            "cvar = macros.7_cvar:main",
+            "lin = macros.8_lin:main",
+            "manli = macros.9_manli:main",
+            "manlix = macros.10_manlix:main"
         ]
     },
     classifiers=[
