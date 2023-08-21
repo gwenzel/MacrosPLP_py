@@ -5,12 +5,11 @@ Module to generate:
 - uni_plpbar.dat
 - plpbar_full.dat
 '''
-from utils.utils import (   define_arg_parser,
-                            get_iplp_input_path,
-                            check_is_path,
-                            create_logger,
-                            write_lines_from_scratch
-)
+from utils.utils import (define_arg_parser,
+                         get_iplp_input_path,
+                         check_is_path,
+                         create_logger,
+                         write_lines_from_scratch)
 import pandas as pd
 
 logger = create_logger('barras')
@@ -32,7 +31,7 @@ formatter_plpbar_full = {
 def print_uni_plpbar(path_inputs):
     #  write data from scratch
     path_uni_plpbar = path_inputs / 'uni_plpbar.dat'
-    lines =  ['# Archivo con definicion de barras (plpbar.dat)']
+    lines = ['# Archivo con definicion de barras (plpbar.dat)']
     lines += ['# Numero de Barras']
     lines += ['       1']
     lines += ['# Numero       Nombre']
@@ -44,43 +43,42 @@ def print_uni_plpbar(path_inputs):
 def print_plpbar(path_inputs, df_barras):
     # shape data
     df_aux = df_barras.reset_index()
-    df_aux = df_aux[['index','BARRA']]
-    
+    df_aux = df_aux[['index', 'BARRA']]
+
     #  write data from scratch
     path_plpbar = path_inputs / 'plpbar.dat'
-    lines =  ['# Archivo con definicion de barras (plpbar.dat)']
+    lines = ['# Archivo con definicion de barras (plpbar.dat)']
     lines += ['# Numero de Barras']
     lines += ['       %s' % len(df_barras)]
     lines += ['# Numero       Nombre']
     lines += [df_aux.to_string(
             index=False, header=False, formatters=formatter_plpbar)]
-    
+
     write_lines_from_scratch(lines, path_plpbar)
 
 
 def print_plpbar_full(path_inputs, df_barras):
     # shape data
-    df_aux = df_barras.fillna(0) # convert empty values (Trf) to 0
+    df_aux = df_barras.fillna(0)  # convert empty values (Trf) to 0
     df_aux = df_aux.reset_index()
     df_aux['FlagDDA'] = df_aux['FlagDDA'].astype(int)
     df_aux['FlagGx'] = df_aux['FlagGx'].astype(int)
-    df_aux = df_aux[['index','BARRA','Tension','FlagDDA','FlagGx']]
-    
+    df_aux = df_aux[['index', 'BARRA', 'Tension', 'FlagDDA', 'FlagGx']]
+
     #  write data from scratch
     path_plpbar_full = path_inputs / 'plpbar_full.dat'
-    lines =  ['# Archivo con definicion de barras (plpbar.dat)']
+    lines = ['# Archivo con definicion de barras (plpbar.dat)']
     lines += ['# Numero de Barras']
     lines += ['       %s' % len(df_barras)]
     lines += ['# Numero                    Nombre  Tension       FL       FI']
     lines += [df_aux.to_string(
         index=False, header=False, formatters=formatter_plpbar_full)]
-    
     write_lines_from_scratch(lines, path_plpbar_full)
 
 
 def get_barras_info(iplp_path):
     return pd.read_excel(iplp_path, sheet_name="Barras",
-                       skiprows=4, usecols="A:C,E:F")
+                         skiprows=4, usecols="A:C,E:F")
 
 
 def main():

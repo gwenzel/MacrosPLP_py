@@ -1,7 +1,6 @@
 import pandas as pd
 from shutil import copy
 from pathlib import Path
-from datetime import datetime
 from openpyxl.utils.datetime import from_excel
 
 from utils.utils import (check_is_file,

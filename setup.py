@@ -23,14 +23,13 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "main = macros.main:main",
-            "filt = macros.filter_files:main",
             "postpro = postpro.main:main",
-            "ernc = macros.ernc:main",
-            "dda = macros.demanda:main",
-            "bar = macros.barras:main",
-            "mantcen = macros.mantcen:main",
-            "cvar = macros.cvariable:main"
+            "filt = macros.0_filter_files:main",
+            "bar = macros.1_bar:main",
+            "dda = macros.3_dem:main",
+            "mantcen = macros.5_mantcen:main",
+            "ernc = macros.6_ernc:main",
+            "cvar = macros.7_cvar:main"
         ]
     },
     classifiers=[
