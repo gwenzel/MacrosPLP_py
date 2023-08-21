@@ -3,10 +3,106 @@
 Generate PLPCNFLI.dat file with information from tab Lineas
 
 '''
+from utils.utils import (define_arg_parser,
+                         get_iplp_input_path,
+                         check_is_path,
+                         create_logger,
+                         write_lines_from_scratch)
+import pandas as pd
+
+logger = create_logger('lineas')
+
+formatter_plpcnfli_full = {
+    "Nombre A->B": "{:<48}".format,
+    "Barra A": "{:8d}".format,
+    "Barra B": "{:8d}".format,
+    "A->B": "{:9.2f}".format,
+    "B->A": "{:10.2f}".format,
+    "V [kV]": "{:9d}".format,
+    "R[ohm]": "{:7.3f}".format,
+    "X[ohm]": "{:7.3f}".format,
+    "Pérdidas": "{:>11}".format,
+    "Nº de Tramos": "{:11d}".format,
+    "Operativa": "{:>11}".format,
+    "FlujoDC": "{:>10}".format
+}
+
+
+def read_losses(iplp_path):
+    df = pd.read_excel(iplp_path, sheet_name='Líneas', usecols='M',
+                       nrows=2, header=None, names=["Value"])
+    bool_losses_value = df.iloc[0]["Value"]
+    bool_losses = 'T' if bool_losses_value else 'F'
+    point_losses = df.iloc[1]["Value"]
+    return bool_losses, point_losses
+
+
+def print_uni_plpcnfli(path_inputs, iplp_path):
+    bool_losses, point_losses = read_losses(iplp_path)
+    lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
+    lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
+    lines += ["           %s                 %s          '%s'        1000.d0" %
+              (0, bool_losses, point_losses)]
+    write_lines_from_scratch(lines, path_inputs / 'uni_plpcnfli.dat')
+
+
+def read_df_lines(iplp_path):
+    df_lines = pd.read_excel(iplp_path, sheet_name='Líneas',
+                             usecols='B:O', skiprows=4)
+    max_length = df_lines['Nombre A->B'].apply(lambda x: len(x)).max()
+    if max_length > 48:
+        logger.error('Los nombres de línea deben tener un largo'
+                     'inferior a 48 caracteres')
+    reordered_cols = ['Nombre A->B', 'A->B', 'B->A', 'Barra A', 'Barra B',
+                      'V [kV]', 'R[ohm]', 'X[ohm]', 'Pérdidas',
+                      'Nº de Tramos', 'Operativa', 'FlujoDC']
+    df_lines = df_lines[reordered_cols]
+    df_lines['Pérdidas'] = df_lines['Pérdidas'].replace(
+        {True: 'T', False: 'F'})
+    df_lines['Operativa'] = df_lines['Operativa'].replace(
+        {True: 'T', False: 'F'})
+    df_lines['FlujoDC'] = df_lines['FlujoDC'].replace(
+        {True: 'T', False: 'F'})
+
+    return df_lines
+
+
+def print_plpcnfli(path_inputs, iplp_path, df_lines):
+    bool_losses, point_losses = read_losses(iplp_path)
+    lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
+    lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
+    lines += ["         %s                 %s          '%s'        1000.d0" %
+              (len(df_lines), bool_losses, point_losses)]
+    lines += ["# Caracteristicas de las Lineas"]
+    lines += ["# Nombre                                           "
+              "FMaxA-B    FMaxB-A   BarraA   BarraB   Tension  R(Ohm)  X(ohm)"
+              "   Mod.Perd.  Num.Tramos   Operativa    FlujoDC"]
+    lines += [df_lines.to_string(
+        index=False, header=False, formatters=formatter_plpcnfli_full)]
+    write_lines_from_scratch(lines, path_inputs / 'plpcnfli.dat')
 
 
 def main():
-    pass
+    '''
+    Main routine
+    '''
+    # Get input file path
+    logger.info('Getting input file path')
+    parser = define_arg_parser()
+    iplp_path = get_iplp_input_path(parser)
+    path_inputs = iplp_path.parent / "Temp"
+    check_is_path(path_inputs)
+    path_dat = iplp_path.parent / "Temp" / "Dat"
+    check_is_path(path_dat)
+
+    logger.info('Print uni_plpcnfli.dat')
+    print_uni_plpcnfli(path_inputs, iplp_path)
+
+    logger.info('Read lines data')
+    df_lines = read_df_lines(iplp_path)
+
+    logger.info('Print plpcnfli.dat')
+    print_plpcnfli(path_inputs, iplp_path, df_lines)
 
 
 if __name__ == "__main__":
