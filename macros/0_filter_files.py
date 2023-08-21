@@ -5,8 +5,7 @@ from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          timeit,
-                         create_logger
-)
+                         create_logger)
 
 
 logger = create_logger('filter_files')
@@ -41,16 +40,21 @@ def create_plpparam(df_hidro, df_etapas, path_dat):
     etapas = df_etapas.shape[0]
     bloques = df_etapas.loc[0, 'Nº Bloques']
     n = etapas - 1
-    
+
+    ini_month = f"{df_etapas.loc[0, 'Inicial'].month}"
+    ini_year = f"{df_etapas.loc[0, 'Inicial'].year}"
+    end_month = f"{df_etapas.loc[n, 'Final'].month}"
+    end_year = f"{df_etapas.loc[n, 'Final'].year}"
+
     # Prepare the data to write to plpparam
     data = [
-        ("Nº Hidr:", df_hidro.iloc[2,2]),
-        ("Nº Sim:", df_hidro.iloc[0,2]),
+        ("Nº Hidr:", df_hidro.iloc[2, 2]),
+        ("Nº Sim:", df_hidro.iloc[0, 2]),
         ("Nº Bloq:", bloques),
         ("", "", ""),
         ("", "Mes", "Año"),
-        ("Inicio:", f"{df_etapas.loc[0, 'Inicial'].month}", f"{df_etapas.loc[0, 'Inicial'].year}"),
-        ("Fin:", f"{df_etapas.loc[n, 'Final'].month}", f"{df_etapas.loc[n, 'Final'].year}")
+        ("Inicio:", ini_month, ini_year)
+        ("Fin:", end_month, end_year)
     ]
     # Convert the data to a DataFrame
     df = pd.DataFrame(data)
@@ -68,7 +72,7 @@ def create_plpetapas(df_etapas, path_dat):
     # Prepare the data to write to plpetapas
     plp_etapas_data = [("Etapa", "Year", "Month", "Block")]
     for e in range(etapas):
-        for b in range(bloques): 
+        for b in range(bloques):
             plp_etapas_data.append(
                 (1 + (12*e+b), f"{df_etapas.loc[e, 'Inicial'].year}",
                     f"{df_etapas.loc[e, 'Inicial'].month}", b + 1)
@@ -86,8 +90,8 @@ def create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos):
 
     fecha_ini = df_etapas.loc[0, 'Inicial']
     n_meses = df_etapas.shape[0]
-    total_hidro = df_hidro.iloc[2,2]
-    total_sim = df_hidro.iloc[0,2]
+    total_hidro = df_hidro.iloc[2, 2]
+    total_sim = df_hidro.iloc[0, 2]
     n_blo = df_etapas.loc[0, 'Nº Bloques']
 
     # Initialize empty lists to store data
@@ -95,10 +99,12 @@ def create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos):
     data_list_plexos = [("Year", "Month", "Hour", "ID_Hyd", "ID_Sym")]
 
     def format_data_plp(etapa, b, h, hidro, sim):
-        return  (f"{(etapa - 1) * n_blo + b}", f"{hidro}", f"{sim}")
+        return (f"{(etapa - 1) * n_blo + b}",
+                f"{hidro}", f"{sim}")
 
     def format_data_plexos(fecha, h, hidro, sim):
-        return (f"{fecha.year}", f"{fecha.month}", f"{h}", f"{hidro}", f"{sim}")
+        return (f"{fecha.year}", f"{fecha.month}",
+                f"{h}", f"{hidro}", f"{sim}")
 
     # Loop through each simulation (Sim)
     for Sim in range(1, total_sim + 1):
@@ -108,10 +114,12 @@ def create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos):
         # Loop through each stage (Etapa)
         for Etapa in range(1, n_meses + 1):
             for b in range(1, n_blo + 1):
-                data_list_plp.append(format_data_plp(Etapa, b, 0, Hidro, Sim))
+                data_list_plp.append(
+                    format_data_plp(Etapa, b, 0, Hidro, Sim))
 
             for h in range(1, 25):
-                data_list_plexos.append(format_data_plexos(fecha, h, Hidro, Sim))
+                data_list_plexos.append(
+                    format_data_plexos(fecha, h, Hidro, Sim))
 
             fecha += timedelta(days=30)  # Add one month to the current date
             if fecha.month == 4:
@@ -130,7 +138,7 @@ def create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos):
     # Write the DataFrame to plpetapas
     csv_file = path_dat_plexos / "SimToHyd_Hour.csv"
     df_plexos.to_csv(csv_file, index=False, header=None, encoding='latin1')
-    
+
 
 @timeit
 def main():
