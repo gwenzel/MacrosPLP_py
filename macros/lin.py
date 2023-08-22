@@ -13,7 +13,7 @@ import pandas as pd
 logger = create_logger('lineas')
 
 formatter_plpcnfli_full = {
-    "Nombre A->B": "{:<48}".format,
+    "Nombre A->B": "'{:<48}'".format,
     "Barra A": "{:8d}".format,
     "Barra B": "{:8d}".format,
     "A->B": "{:9.2f}".format,
