@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from shutil import copyfile
 import time
 import logging
+from datetime import datetime
 
 
 # Archivo de etapas y block2day
@@ -261,4 +262,20 @@ def add_time_info(df):
     df['YearEnd'] = df['FINAL'].dt.year
     df['MonthEnd'] = df['FINAL'].dt.month
     df['DayEnd'] = df['FINAL'].dt.day
+    return df
+
+
+def get_daily_indexed_df(blo_eta):
+    '''
+    Get dataframe indexed by day within the timeframe
+    '''
+    ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
+    end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
+    index = pd.date_range(start=ini_date, end=end_date, freq='D')
+    df = pd.DataFrame(index=index, columns=['Year', 'Month', 'Day'])
+    df['Year'] = df.index.year
+    df['Month'] = df.index.month
+    df['Day'] = df.index.day
+    df['Date'] = df.index
+    df = df.reset_index(drop=True)
     return df

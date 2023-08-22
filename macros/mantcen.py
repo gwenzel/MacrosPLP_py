@@ -18,6 +18,7 @@ from utils.utils import (define_arg_parser,
                          write_lines_from_scratch,
                          write_lines_appending,
                          translate_to_hydromonth,
+                         get_daily_indexed_df,
                          timeit,
                          add_time_info
                          )
@@ -201,22 +202,6 @@ def get_pmin_pmax_dict(df_centrales):
     '''
     centrales_dict = df_centrales.set_index('Nombre').to_dict()
     return centrales_dict['Pmin'], centrales_dict['Pmax']
-
-
-def get_daily_indexed_df(blo_eta):
-    '''
-    Get dataframe indexed by day within the timeframe
-    '''
-    ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
-    end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
-    index = pd.date_range(start=ini_date, end=end_date, freq='D')
-    df = pd.DataFrame(index=index, columns=['Year', 'Month', 'Day'])
-    df['Year'] = df.index.year
-    df['Month'] = df.index.month
-    df['Day'] = df.index.day
-    df['Date'] = df.index
-    df = df.reset_index(drop=True)
-    return df
 
 
 def build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales):

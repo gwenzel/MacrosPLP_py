@@ -3,6 +3,7 @@
 Generate PLPMANLI.dat file with line availability data
 
 '''
+import sys
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
@@ -10,12 +11,12 @@ from utils.utils import (define_arg_parser,
                          process_etapas_blocks,
                          add_time_info,
                          translate_to_hydromonth,
+                         get_daily_indexed_df,
                          write_lines_from_scratch,
                          write_lines_appending)
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
 from macros.lin import read_df_lines
-from datetime import datetime
 
 
 logger = create_logger('manli')
@@ -108,36 +109,20 @@ def validate_manli(df_manli):
     pass
 
 
-def get_capmax_dict(df_lineas):
+def get_capmax_dict(df_lineas, key='Nombre A->B', value='A->B'):
     '''
     Get dictionary with Capmax for each line
     '''
-    centrales_dict = df_lineas.set_index('Nombre A->B').to_dict()
-    return centrales_dict['A->B']
+    centrales_dict = df_lineas.set_index(key).to_dict()
+    return centrales_dict[value]
 
 
-def get_daily_indexed_df(blo_eta):
-    '''
-    Get dataframe indexed by day within the timeframe
-    '''
-    ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
-    end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
-    index = pd.date_range(start=ini_date, end=end_date, freq='D')
-    df = pd.DataFrame(index=index, columns=['Year', 'Month', 'Day'])
-    df['Year'] = df.index.year
-    df['Month'] = df.index.month
-    df['Day'] = df.index.day
-    df['Date'] = df.index
-    df = df.reset_index(drop=True)
-    return df
-
-
-def build_df_capmax(blo_eta, df_manli, df_lineas):
+def build_df_capmax(blo_eta, df_manli, df_lineas, id_col='LÍNEA'):
     '''
     Build matrix with all pmin/pmax info in mantcen sheet
     '''
-    # Get unit names
-    manli_line_names = df_manli['LÍNEA'].unique().tolist()
+    # Get line names
+    manli_line_names = df_manli[id_col].unique().tolist()
     # Get capmax dictionaries
     capmax_dict = get_capmax_dict(df_lineas)
     # Get base dataframes
@@ -147,11 +132,12 @@ def build_df_capmax(blo_eta, df_manli, df_lineas):
         columns=df_capmax.columns.tolist() + manli_line_names)
     # Add default values
     df_capmax[manli_line_names] = [
-        capmax_dict[unit] for unit in manli_line_names]
+        capmax_dict[line] for line in manli_line_names]
     return df_capmax
 
 
-def get_manli_output(blo_eta, df_manli, df_lines):
+def get_manli_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
+                     field_col='A-B', func='mean'):
     # 1. Build default dataframes
     df_capmax = build_df_capmax(blo_eta, df_manli, df_lines)
     # 2. Add df_manli data in row-by-row order
@@ -163,16 +149,26 @@ def get_manli_output(blo_eta, df_manli, df_lines):
         df_manli[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
             'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
     for i in range(len(manli_dates_ini)):
-        pmax_mask_ini = manli_dates_ini.iloc[i] <= df_capmax['Date']
-        pmax_mask_end = manli_dates_end.iloc[i] >= df_capmax['Date']
-        name = df_manli.iloc[i]['LÍNEA']
-        df_capmax.loc[pmax_mask_ini & pmax_mask_end,
-                      name] = df_manli.iloc[i]['A-B']
-    # 3. Average per Etapa and drop Day column
+        capmax_mask_ini = manli_dates_ini.iloc[i] <= df_capmax['Date']
+        capmax_mask_end = manli_dates_end.iloc[i] >= df_capmax['Date']
+        name = df_manli.iloc[i][id_col]
+        df_capmax.loc[capmax_mask_ini & capmax_mask_end, name] = \
+            df_manli.iloc[i][field_col]
+    # 3. Apply func per Etapa
     on_cols = ['Month', 'Year']
     groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
-    df_capmax = pd.merge(blo_eta, df_capmax, how='left', on=on_cols).groupby(
-        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
+    if func == 'mean':
+        df_capmax = pd.merge(
+            blo_eta, df_capmax, how='left', on=on_cols).groupby(
+            groupby_cols).mean(numeric_only=True)
+    elif func == 'last':
+        df_capmax = pd.merge(
+            blo_eta, df_capmax, how='left', on=on_cols).groupby(
+            groupby_cols).last(numeric_only=True)
+    else:
+        sys.exit('Invalid function: %s' % func)
+    # 4. Drop Day column
+    df_capmax = df_capmax.drop(['Day'], axis=1)
     return df_capmax
 
 

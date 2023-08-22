@@ -48,17 +48,17 @@ def get_manlix_output(blo_eta, df_manlix, df_lines):
     df_capmax = build_df_capmax(blo_eta, df_manlix, df_lines)
     # 2. Add df_manlix data in row-by-row order
     # Note that filters have a daily resolution
-    manli_dates_ini = pd.to_datetime(
+    manlix_dates_ini = pd.to_datetime(
         df_manlix[['YearIni', 'MonthIni', 'DayIni']].rename(columns={
             'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
-    manli_dates_end = pd.to_datetime(
+    manlix_dates_end = pd.to_datetime(
         df_manlix[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
             'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
-    for i in range(len(manli_dates_ini)):
-        pmax_mask_ini = manli_dates_ini.iloc[i] <= df_capmax['Date']
-        pmax_mask_end = manli_dates_end.iloc[i] >= df_capmax['Date']
+    for i in range(len(manlix_dates_ini)):
+        capmax_mask_ini = manlix_dates_ini.iloc[i] <= df_capmax['Date']
+        capmax_mask_end = manlix_dates_end.iloc[i] >= df_capmax['Date']
         name = df_manlix.iloc[i]['LÍNEA']
-        df_capmax.loc[pmax_mask_ini & pmax_mask_end,
+        df_capmax.loc[capmax_mask_ini & capmax_mask_end,
                       name] = df_manlix.iloc[i]['A-B']
     # 3. Average per Etapa and drop Day column
     on_cols = ['Month', 'Year']
