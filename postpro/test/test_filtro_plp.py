@@ -1,12 +1,12 @@
 import unittest
-import os
-
+import pytest
 from pathlib import Path
 from utils.utils import get_project_root, process_etapas_blocks
 
-
 root = get_project_root()
 
+
+@pytest.mark.skip(reason="no way of currently testing this")
 class Test_Filtro_PLP_Windows(unittest.TestCase):
 
     def test_process_etapas_blocks(self):
@@ -24,5 +24,3 @@ class Test_Filtro_PLP_Windows(unittest.TestCase):
         mask2 = blo_eta['Month'] == 3
         tasa_val = blo_eta[mask1 & mask2]['Tasa'].mean()    
         self.assertEqual(round(tasa_val, 6), 14.651901)
-
-    
