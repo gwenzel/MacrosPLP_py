@@ -109,37 +109,39 @@ def validate_manli(df_manli):
     pass
 
 
-def get_capmax_dict(df_lineas, key='Nombre A->B', value='A->B'):
+def get_nominal_values_dict(df_lineas, value='A->B'):
     '''
     Get dictionary with Capmax for each line
     '''
-    centrales_dict = df_lineas.set_index(key).to_dict()
+    centrales_dict = df_lineas.set_index('Nombre A->B').to_dict()
     return centrales_dict[value]
 
 
-def build_df_capmax(blo_eta, df_manli, df_lineas, id_col='LÍNEA'):
+def build_df_nominal(blo_eta, df_manli, df_lineas, id_col='LÍNEA',
+                     lines_value_col='A->B'):
     '''
-    Build matrix with all pmin/pmax info in mantcen sheet
+    Build matrix with all nominal values for each line in mantcen
     '''
     # Get line names
     manli_line_names = df_manli[id_col].unique().tolist()
     # Get capmax dictionaries
-    capmax_dict = get_capmax_dict(df_lineas)
+    nominal_values_dict = get_nominal_values_dict(df_lineas, lines_value_col)
     # Get base dataframes
-    df_capmax = get_daily_indexed_df(blo_eta)
+    df_nominal = get_daily_indexed_df(blo_eta)
     # Add empty columns
-    df_capmax = df_capmax.reindex(
-        columns=df_capmax.columns.tolist() + manli_line_names)
+    df_nominal = df_nominal.reindex(
+        columns=df_nominal.columns.tolist() + manli_line_names)
     # Add default values
-    df_capmax[manli_line_names] = [
-        capmax_dict[line] for line in manli_line_names]
-    return df_capmax
+    df_nominal[manli_line_names] = [
+        nominal_values_dict[line] for line in manli_line_names]
+    return df_nominal
 
 
 def get_manli_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
-                     field_col='A-B', func='mean'):
+                     manli_col='A-B', lines_value_col='A->B', func='mean'):
     # 1. Build default dataframes
-    df_capmax = build_df_capmax(blo_eta, df_manli, df_lines)
+    df_nominal = build_df_nominal(blo_eta, df_manli, df_lines,
+                                  id_col, lines_value_col)
     # 2. Add df_manli data in row-by-row order
     # Note that filters have a daily resolution
     manli_dates_ini = pd.to_datetime(
@@ -149,27 +151,27 @@ def get_manli_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
         df_manli[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
             'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
     for i in range(len(manli_dates_ini)):
-        capmax_mask_ini = manli_dates_ini.iloc[i] <= df_capmax['Date']
-        capmax_mask_end = manli_dates_end.iloc[i] >= df_capmax['Date']
+        manli_mask_ini = manli_dates_ini.iloc[i] <= df_nominal['Date']
+        manli_mask_end = manli_dates_end.iloc[i] >= df_nominal['Date']
         name = df_manli.iloc[i][id_col]
-        df_capmax.loc[capmax_mask_ini & capmax_mask_end, name] = \
-            df_manli.iloc[i][field_col]
+        df_nominal.loc[manli_mask_ini & manli_mask_end, name] = \
+            df_manli.iloc[i][manli_col]
     # 3. Apply func per Etapa
     on_cols = ['Month', 'Year']
     groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
     if func == 'mean':
-        df_capmax = pd.merge(
-            blo_eta, df_capmax, how='left', on=on_cols).groupby(
+        df_final = pd.merge(
+            blo_eta, df_nominal, how='left', on=on_cols).groupby(
             groupby_cols).mean(numeric_only=True)
     elif func == 'last':
-        df_capmax = pd.merge(
-            blo_eta, df_capmax, how='left', on=on_cols).groupby(
+        df_final = pd.merge(
+            blo_eta, df_nominal, how='left', on=on_cols).groupby(
             groupby_cols).last(numeric_only=True)
     else:
         sys.exit('Invalid function: %s' % func)
     # 4. Drop Day column
-    df_capmax = df_capmax.drop(['Day'], axis=1)
-    return df_capmax
+    df_final = df_final.drop(['Day'], axis=1)
+    return df_final
 
 
 def main():

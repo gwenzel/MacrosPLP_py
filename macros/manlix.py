@@ -13,10 +13,22 @@ from utils.utils import (define_arg_parser,
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
 from macros.lin import read_df_lines
-from macros.manli import build_df_capmax
+from macros.manli import get_manli_output
 
 
 logger = create_logger('manlix')
+
+formatters_plpmanlix = {
+    "NomLin":   "{:<48},".format,
+    "EtaIni":   "{:04d},".format,
+    "EtaFin":   "{:04d},".format,
+    "ManALin":  "{:6.1f},".format,
+    "ManBLin":  "{:6.1f},".format,
+    "VNomLin":  "{:03d},".format,
+    "ResLin":   "{:5.3f},".format,
+    "XImpLin":  "{:5.3f},".format,
+    "FOpeLin":  "{:>}".format
+}
 
 
 def get_manlix_input(iplp_path):
@@ -43,35 +55,65 @@ def validate_manlix(df_manlix):
     pass
 
 
-def get_manlix_output(blo_eta, df_manlix, df_lines):
-    # 1. Build default dataframes
-    df_capmax = build_df_capmax(blo_eta, df_manlix, df_lines)
-    # 2. Add df_manlix data in row-by-row order
-    # Note that filters have a daily resolution
-    manlix_dates_ini = pd.to_datetime(
-        df_manlix[['YearIni', 'MonthIni', 'DayIni']].rename(columns={
-            'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
-    manlix_dates_end = pd.to_datetime(
-        df_manlix[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
-            'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
-    for i in range(len(manlix_dates_ini)):
-        capmax_mask_ini = manlix_dates_ini.iloc[i] <= df_capmax['Date']
-        capmax_mask_end = manlix_dates_end.iloc[i] >= df_capmax['Date']
-        name = df_manlix.iloc[i]['LÍNEA']
-        df_capmax.loc[capmax_mask_ini & capmax_mask_end,
-                      name] = df_manlix.iloc[i]['A-B']
-    # 3. Average per Etapa and drop Day column
-    on_cols = ['Month', 'Year']
-    groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
-    df_capmax = pd.merge(blo_eta, df_capmax, how='left', on=on_cols).groupby(
-        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
-    return df_capmax
+def get_manlix_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
+                      manli_col='A-B', lines_value_col='A->B', func='mean'):
+    '''
+    Wrapper for get_manli_output function
+    '''
+    return get_manli_output(blo_eta, df_manli, df_lines, id_col,
+                            manli_col, lines_value_col, func)
 
 
-def write_plpmanlix(path_inputs):
+def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
+                       print_values=True):
+    '''
+    Get dataframe with manlix format
+    CSV with a row for each capacity change, with initial/final etapa,
+    and V, R, X data
+    '''
+    manlix_lines = df_capmax.columns
+    n_blo = len(df_capmax)
+    col_names = ['NomLin', 'EtaIni', 'EtaFin', 'ManALin', 'ManBLin',
+                 'VNomLin', 'ResLin', 'XImpLin', 'FOpeLin']
+    list_of_dfs = []
+    for line in manlix_lines:
+        # Get diff vector to detect changes
+        # Filter when diff is not 0 and not nan
+        # (nominal value should be nan)
+        df_diff = df_capmax[line].diff()
+        mask_changes = (df_diff != 0) & (df_diff.notna())
+        if mask_changes.any():
+            # Build dataframe with all data
+            df_aux = pd.concat([
+                df_capmax.loc[mask_changes, line].rename('ManALin'),
+                df_capmax.loc[mask_changes, line].rename('ManBLin'),
+                df_v.loc[mask_changes, line].rename('VNomLin'),
+                df_r.loc[mask_changes, line].rename('ResLin'),
+                df_x.loc[mask_changes, line].rename('XImpLin')
+                ], axis=1)
+            df_aux['NomLin'] = line
+            df_aux['EtaIni'] = df_aux.index.get_level_values('Etapa')
+            df_aux['EtaFin'] = n_blo  # TODO improve
+            df_aux['FOpeLin'] = 'T'
+            # Reorder columns
+            df_aux = df_aux[col_names].reset_index(drop=True)
+            # Add rows
+            list_of_dfs.append(df_aux.copy())
+    df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
+
+    if print_values:
+        df_manlix_changes.to_csv(path_inputs / 'df_manlix_changes.csv')
+
+    return df_manlix_changes
+
+
+def write_plpmanlix(path_inputs, df_manlix_changes):
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]
-    lines += [""]
+    #lines += df_manlix_changes.to_csv(
+    #    header=None, index=False, quoting=3, quotechar="'").strip('\n').split('\n')
+    lines += [df_manlix_changes.to_string(index=False, header=False,
+                                          formatters=formatters_plpmanlix)]
     # Write dat file from scratch
     write_lines_from_scratch(lines, path_inputs / 'plpmanlix.dat')
 
@@ -112,15 +154,38 @@ def main():
     logger.info('Validating MantLINX data')
     validate_manlix(df_manlix)
 
-    # Generate arrays with min/max capacity data
-    logger.info('Generating min and max capacity data')
-    df_capmax = get_manlix_output(blo_eta, df_manlix, df_lines)
+    # Generate dfs for capacity, V, R and X
+    logger.info('Generating max capacity data')
+    df_capmax = get_manlix_output(
+        blo_eta, df_manlix, df_lines,
+        id_col='LÍNEA', manli_col='A-B',
+        lines_value_col='A->B', func='mean')
 
-    import pdb; pdb.set_trace()
+    logger.info('Generating V data')
+    df_v = get_manlix_output(
+        blo_eta, df_manlix, df_lines,
+        id_col='LÍNEA', manli_col='V [kV]',
+        lines_value_col='V [kV]', func='last')
+
+    logger.info('Generating R data')
+    df_r = get_manlix_output(
+        blo_eta, df_manlix, df_lines,
+        id_col='LÍNEA', manli_col='R [ohms]',
+        lines_value_col='R[ohm]', func='last')
+
+    logger.info('Generating X data')
+    df_x = get_manlix_output(
+        blo_eta, df_manlix, df_lines,
+        id_col='LÍNEA', manli_col='X [ohms]',
+        lines_value_col='X[ohm]', func='last')
+
+    logger.info('Detect changes and get formatted dataframe')
+    df_manlix_changes = get_manlix_changes(
+        df_capmax, df_v, df_r, df_x, path_inputs)
 
     # Write data
     logger.info('Write manli data')
-    write_plpmanlix(path_inputs, df_capmax)
+    write_plpmanlix(path_inputs, df_manlix_changes)
 
     logger.info('Process finished successfully')
 
