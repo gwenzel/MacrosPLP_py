@@ -18,7 +18,7 @@ from macros.manli import get_manli_output
 logger = create_logger('manlix')
 
 formatters_plpmanlix = {
-    "NomLin":   "'{:<}',".format,
+    "NomLin":   "{:<48},".format,
     "EtaIni":   "{:04d},".format,
     "EtaFin":   "{:04d},".format,
     "ManALin":  "{:6.1f},".format,
@@ -116,6 +116,8 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
 
 
 def write_plpmanlix(path_inputs, df_manlix_changes):
+    df_manlix_changes.update(
+        df_manlix_changes[['NomLin']].map("'{}'".format))
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]
     lines += [df_manlix_changes.to_string(index=False, header=False,

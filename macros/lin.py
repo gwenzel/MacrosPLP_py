@@ -13,7 +13,7 @@ import pandas as pd
 logger = create_logger('lineas')
 
 formatter_plpcnfli_full = {
-    "Nombre A->B": "'{:<48}'".format,
+    "Nombre A->B": "{:<48}".format,
     "Barra A": "{:8d}".format,
     "Barra B": "{:8d}".format,
     "A->B": "{:9.2f}".format,
@@ -73,6 +73,7 @@ def read_df_lines(iplp_path):
 
 def print_plpcnfli(path_inputs, iplp_path, df_lines):
     bool_losses, point_losses = read_losses(iplp_path)
+    df_lines.update(df_lines[['Nombre A->B']].map("'{}'".format))
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
     lines += ["         %s                 %s          '%s'        1000.d0" %
