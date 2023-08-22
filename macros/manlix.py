@@ -8,8 +8,7 @@ from utils.utils import (define_arg_parser,
                          create_logger,
                          process_etapas_blocks,
                          add_time_info,
-                         write_lines_from_scratch,
-                         write_lines_appending)
+                         write_lines_from_scratch)
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
 from macros.lin import read_df_lines
@@ -19,7 +18,7 @@ from macros.manli import get_manli_output
 logger = create_logger('manlix')
 
 formatters_plpmanlix = {
-    "NomLin":   "{:<48},".format,
+    "NomLin":   "'{:<}',".format,
     "EtaIni":   "{:04d},".format,
     "EtaFin":   "{:04d},".format,
     "ManALin":  "{:6.1f},".format,
@@ -64,6 +63,30 @@ def get_manlix_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
                             manli_col, lines_value_col, func)
 
 
+def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
+    '''
+    Build dataframe with manlix changes for one line
+    To be appended in the loop in get_manlix_changes
+    '''
+    n_blo = len(df_capmax)
+    col_names = ['NomLin', 'EtaIni', 'EtaFin', 'ManALin', 'ManBLin',
+                 'VNomLin', 'ResLin', 'XImpLin', 'FOpeLin']
+    # Build dataframe with all data
+    df_aux = pd.concat([
+        df_capmax.loc[mask_changes, line].rename('ManALin'),
+        df_capmax.loc[mask_changes, line].rename('ManBLin'),
+        df_v.loc[mask_changes, line].rename('VNomLin'),
+        df_r.loc[mask_changes, line].rename('ResLin'),
+        df_x.loc[mask_changes, line].rename('XImpLin')
+        ], axis=1)
+    df_aux['NomLin'] = line
+    df_aux['EtaIni'] = df_aux.index.get_level_values('Etapa')
+    df_aux['EtaFin'] = n_blo  # TODO improve
+    df_aux['FOpeLin'] = 'T'
+    # Reorder columns
+    return df_aux[col_names].reset_index(drop=True)
+
+
 def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
                        print_values=True):
     '''
@@ -72,32 +95,17 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
     and V, R, X data
     '''
     manlix_lines = df_capmax.columns
-    n_blo = len(df_capmax)
-    col_names = ['NomLin', 'EtaIni', 'EtaFin', 'ManALin', 'ManBLin',
-                 'VNomLin', 'ResLin', 'XImpLin', 'FOpeLin']
     list_of_dfs = []
     for line in manlix_lines:
         # Get diff vector to detect changes
         # Filter when diff is not 0 and not nan
         # (nominal value should be nan)
+        # Then append results to main dataframe
         df_diff = df_capmax[line].diff()
         mask_changes = (df_diff != 0) & (df_diff.notna())
         if mask_changes.any():
-            # Build dataframe with all data
-            df_aux = pd.concat([
-                df_capmax.loc[mask_changes, line].rename('ManALin'),
-                df_capmax.loc[mask_changes, line].rename('ManBLin'),
-                df_v.loc[mask_changes, line].rename('VNomLin'),
-                df_r.loc[mask_changes, line].rename('ResLin'),
-                df_x.loc[mask_changes, line].rename('XImpLin')
-                ], axis=1)
-            df_aux['NomLin'] = line
-            df_aux['EtaIni'] = df_aux.index.get_level_values('Etapa')
-            df_aux['EtaFin'] = n_blo  # TODO improve
-            df_aux['FOpeLin'] = 'T'
-            # Reorder columns
-            df_aux = df_aux[col_names].reset_index(drop=True)
-            # Add rows
+            df_aux = build_df_aux(mask_changes, line,
+                                  df_capmax, df_v, df_r, df_x)
             list_of_dfs.append(df_aux.copy())
     df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
 
@@ -110,9 +118,8 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
 def write_plpmanlix(path_inputs, df_manlix_changes):
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]
-    #lines += df_manlix_changes.to_csv(
-    #    header=None, index=False, quoting=3, quotechar="'").strip('\n').split('\n')
     lines += [df_manlix_changes.to_string(index=False, header=False,
+                                          justify='left',
                                           formatters=formatters_plpmanlix)]
     # Write dat file from scratch
     write_lines_from_scratch(lines, path_inputs / 'plpmanlix.dat')
