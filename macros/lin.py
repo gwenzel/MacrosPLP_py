@@ -49,14 +49,19 @@ def print_uni_plpcnfli(path_inputs, iplp_path):
 def read_df_lines(iplp_path):
     df_lines = pd.read_excel(iplp_path, sheet_name='Líneas',
                              usecols='B:O', skiprows=4)
+    # Filter out non-operative lines
+    df_lines = df_lines[df_lines['Operativa']]
+    # Check name length
     max_length = df_lines['Nombre A->B'].apply(lambda x: len(x)).max()
     if max_length > 48:
         logger.error('Los nombres de línea deben tener un largo'
                      'inferior a 48 caracteres')
+    # Reorder columns
     reordered_cols = ['Nombre A->B', 'A->B', 'B->A', 'Barra A', 'Barra B',
                       'V [kV]', 'R[ohm]', 'X[ohm]', 'Pérdidas',
                       'Nº de Tramos', 'Operativa', 'FlujoDC']
     df_lines = df_lines[reordered_cols]
+    # Replace boolean by string
     df_lines['Pérdidas'] = df_lines['Pérdidas'].replace(
         {True: 'T', False: 'F'})
     df_lines['Operativa'] = df_lines['Operativa'].replace(
@@ -92,14 +97,16 @@ def main():
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
 
-    logger.info('Print uni_plpcnfli.dat')
+    logger.info('Write uni_plpcnfli.dat')
     print_uni_plpcnfli(path_inputs, iplp_path)
 
     logger.info('Read lines data')
     df_lines = read_df_lines(iplp_path)
 
-    logger.info('Print plpcnfli.dat')
+    logger.info('Write plpcnfli.dat')
     print_plpcnfli(path_inputs, iplp_path, df_lines)
+
+    logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

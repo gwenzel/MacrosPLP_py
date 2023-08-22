@@ -252,3 +252,13 @@ def append_rows(df, *rows):
     for row in rows:
         list_of_dfs.append(pd.DataFrame(row).T)
     return pd.concat(list_of_dfs)
+
+
+def add_time_info(df):
+    df['YearIni'] = df['INICIAL'].dt.year
+    df['MonthIni'] = df['INICIAL'].dt.month
+    df['DayIni'] = df['INICIAL'].dt.day
+    df['YearEnd'] = df['FINAL'].dt.year
+    df['MonthEnd'] = df['FINAL'].dt.month
+    df['DayEnd'] = df['FINAL'].dt.day
+    return df

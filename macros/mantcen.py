@@ -18,7 +18,8 @@ from utils.utils import (define_arg_parser,
                          write_lines_from_scratch,
                          write_lines_appending,
                          translate_to_hydromonth,
-                         timeit
+                         timeit,
+                         add_time_info
                          )
 
 
@@ -69,16 +70,6 @@ def get_mantcen_input(iplp_path):
     df['INICIAL'] = df['INICIAL'].apply(from_excel)
     df['FINAL'] = df['FINAL'].apply(from_excel)
     return df
-
-
-def add_time_info(df_mantcen):
-    df_mantcen['YearIni'] = df_mantcen['INICIAL'].dt.year
-    df_mantcen['MonthIni'] = df_mantcen['INICIAL'].dt.month
-    df_mantcen['DayIni'] = df_mantcen['INICIAL'].dt.day
-    df_mantcen['YearEnd'] = df_mantcen['FINAL'].dt.year
-    df_mantcen['MonthEnd'] = df_mantcen['FINAL'].dt.month
-    df_mantcen['DayEnd'] = df_mantcen['FINAL'].dt.day
-    return df_mantcen
 
 
 def validate_centrales(df_centrales):
@@ -205,11 +196,17 @@ def filter_df_mantcen(df_mantcen, df_centrales):
 
 
 def get_pmin_pmax_dict(df_centrales):
+    '''
+    Get dictionary with Pmin and Pmax for each unit
+    '''
     centrales_dict = df_centrales.set_index('Nombre').to_dict()
     return centrales_dict['Pmin'], centrales_dict['Pmax']
 
 
 def get_daily_indexed_df(blo_eta):
+    '''
+    Get dataframe indexed by day within the timeframe
+    '''
     ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
     end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
     index = pd.date_range(start=ini_date, end=end_date, freq='D')
