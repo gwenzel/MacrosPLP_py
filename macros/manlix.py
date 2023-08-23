@@ -19,14 +19,14 @@ logger = create_logger('manlix')
 LINE_CHANGE_TOLERANCE = 0.1
 
 formatters_plpmanlix = {
-    "NomLin":   "{:<48},".format,
-    "EtaIni":   "{:04d},".format,
-    "EtaFin":   "{:04d},".format,
-    "ManALin":  "{:6.1f},".format,
-    "ManBLin":  "{:6.1f},".format,
-    "VNomLin":  "{:03d},".format,
-    "ResLin":   "{:5.3f},".format,
-    "XImpLin":  "{:5.3f},".format,
+    "NomLin":   "'{}'".format,
+    "EtaIni":   "{:d}".format,
+    "EtaFin":   "{:04d}".format,
+    "ManALin":  "{:.1f}".format,
+    "ManBLin":  "{:.1f}".format,
+    "VNomLin":  "{:.1f}".format,
+    "ResLin":   "{:.3f}".format,
+    "XImpLin":  "{:.3f}".format,
     "FOpeLin":  "{:>}".format
 }
 
@@ -121,12 +121,8 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
 
 def write_plpmanlix(path_inputs, df_manlix_changes):
     # Format columns
-    df_manlix_changes['NomLin'] = df_manlix_changes['NomLin'].apply(
-        "'{}'".format, axis=1)
-    df_manlix_changes['ResLin'] = df_manlix_changes['ResLin'].apply(
-        "{:5.3f}".format, axis=1)
-    df_manlix_changes['XImpLin'] = df_manlix_changes['XImpLin'].apply(
-        "{:5.3f}".format, axis=1)
+    for key, value in formatters_plpmanlix.items():
+        df_manlix_changes[key] = df_manlix_changes[key].apply(value, axis=1)
     # Build file
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]

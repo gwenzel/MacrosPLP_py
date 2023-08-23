@@ -22,10 +22,10 @@ logger = create_logger('manli')
 
 
 formatters_plpmanli = {
-    "Etapa":        "    {:03d}".format,
-    "PotMaxAB":     "        {:8.1f}".format,
+    "Etapa":        "  {:03d}".format,
+    "PotMaxAB":     "         {:8.1f}".format,
     "PotMaxBA":     "  {:8.1f}".format,
-    "Operativa":     "            {:>}".format
+    "Operativa":     "        {:>}".format
 }
 
 
@@ -66,7 +66,7 @@ def write_plpmanli(path_inputs, df_capmax, printdata=True):
 
     lines = ['# Archivo de mantenimientos de lineas (plpmanli.dat)']
     lines += ['# Numero de lineas con matenimientos']
-    lines += ['  %s' % len(list_manli)]
+    lines += [' %s' % len(list_manli)]
 
     # Write dat file from scratch
     write_lines_from_scratch(lines, path_inputs / 'plpmanli.dat')
@@ -76,10 +76,10 @@ def write_plpmanli(path_inputs, df_capmax, printdata=True):
         df_aux = build_df_aux(df_capmax, line)
         if len(df_aux) > 0:
             # Print data
-            lines = ['\n# Nombre de las líneas']
+            lines = ['\n# Nombre de las lineas']
             lines += ["'%s'" % line]
-            lines += ['#   Numero de Bloques con mantenimiento']
-            lines += ['  %04d' % len(df_aux)]
+            lines += ['# Numero de Bloques con mantenimiento']
+            lines += ['  %03d' % len(df_aux)]
             lines += ['# Bloque         PotMaxAB   PotMaxBA     Operativa']
             # Add data as string using predefined format
             lines += [df_aux.to_string(

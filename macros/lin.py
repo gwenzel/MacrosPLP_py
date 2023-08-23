@@ -21,10 +21,10 @@ formatter_plpcnfli_full = {
     "V [kV]": "{:9.1f}".format,
     "R[ohm]": "{:7.3f}".format,
     "X[ohm]": "{:7.3f}".format,
-    "Pérdidas": "{:>7}".format,
+    "Pérdidas": "{:>6}".format,
     "Nº de Tramos": "{:11d}".format,
     "Operativa": "{:>12}".format,
-    "FlujoDC": "{:>11}".format
+    "FlujoDC": "{:>12}".format
 }
 
 
@@ -41,7 +41,7 @@ def print_uni_plpcnfli(path_inputs, iplp_path):
     bool_losses, point_losses = read_losses(iplp_path)
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
-    lines += ["           %s                 %s          '%s'        1000.d0" %
+    lines += ["           %s          %s             '%s'         1000.d0" %
               (0, bool_losses, point_losses)]
     write_lines_from_scratch(lines, path_inputs / 'uni_plpcnfli.dat')
 
@@ -77,7 +77,7 @@ def print_plpcnfli(path_inputs, iplp_path, df_lines):
         "'{}'".format, axis=1)
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
-    lines += ["         %s           %s            '%s'         1000.d0" %
+    lines += ["         %s          %s             '%s'         1000.d0" %
               (len(df_lines), bool_losses, point_losses)]
     lines += ["# Caracteristicas de las Lineas"]
     lines += ["# Nombre                                           "
