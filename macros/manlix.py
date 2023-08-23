@@ -10,6 +10,7 @@ from utils.utils import (define_arg_parser,
                          add_time_info,
                          write_lines_from_scratch)
 import pandas as pd
+from pathlib import Path
 from openpyxl.utils.datetime import from_excel
 from macros.lin import read_df_lines
 from macros.manli import get_manli_output
@@ -31,7 +32,7 @@ formatters_plpmanlix = {
 }
 
 
-def get_manlix_input(iplp_path):
+def get_manlix_input(iplp_path: Path) -> pd.DataFrame:
     '''
     Read inputs from MantLINX sheet
     '''
@@ -42,7 +43,8 @@ def get_manlix_input(iplp_path):
     return df_manlix
 
 
-def filter_linesx(df_lines, df_manlix):
+def filter_linesx(df_lines: pd.DataFrame,
+                  df_manlix: pd.DataFrame) -> pd.DataFrame:
     '''
     Filter only operative lines that exist
     '''
@@ -51,12 +53,14 @@ def filter_linesx(df_lines, df_manlix):
     return df_manlix[filter1 & filter2]
 
 
-def validate_manlix(df_manlix):
+def validate_manlix(df_manlix: pd.DataFrame):
     pass
 
 
-def get_manlix_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
-                      manli_col='A-B', lines_value_col='A->B', func='mean'):
+def get_manlix_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
+                      df_lines: pd.DataFrame, id_col: str = 'LÍNEA',
+                      manli_col: str = 'A-B', lines_value_col: str = 'A->B',
+                      func: str = 'mean') -> pd.DataFrame:
     '''
     Wrapper for get_manli_output function
     '''
@@ -88,8 +92,10 @@ def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
     return df_aux[col_names].reset_index(drop=True)
 
 
-def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
-                       print_values=True):
+def get_manlix_changes(df_capmax: pd.DataFrame, df_v: pd.DataFrame,
+                       df_r: pd.DataFrame, df_x: pd.DataFrame,
+                       path_inputs: Path, print_values: bool = True) \
+                        -> pd.DataFrame:
     '''
     Get dataframe with manlix format
     CSV with a row for each capacity change, with initial/final etapa,
@@ -119,7 +125,7 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
     return pd.DataFrame()
 
 
-def write_plpmanlix(path_inputs, df_manlix_changes):
+def write_plpmanlix(path_inputs: Path, df_manlix_changes: pd.DataFrame):
     # Format columns
     for key, value in formatters_plpmanlix.items():
         df_manlix_changes[key] = df_manlix_changes[key].apply(value, axis=1)

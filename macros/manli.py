@@ -15,6 +15,7 @@ from utils.utils import (define_arg_parser,
                          write_lines_appending)
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
+from pathlib import Path
 from macros.lin import read_df_lines
 
 
@@ -29,7 +30,7 @@ formatters_plpmanli = {
 }
 
 
-def get_manli_input(iplp_path):
+def get_manli_input(iplp_path: Path) -> pd.DataFrame:
     '''
     Read inputs from MantLIN sheet
     '''
@@ -40,7 +41,7 @@ def get_manli_input(iplp_path):
     return df_manli
 
 
-def build_df_aux(df_capmax, line):
+def build_df_aux(df_capmax: pd.DataFrame, line: str) -> pd.DataFrame:
     df_aux_capmax = df_capmax[['Etapa', line]].copy()
     df_aux_capmax = df_aux_capmax.rename(columns={line: 'PotMaxAB'})
     df_aux_capmax['PotMaxBA'] = df_aux_capmax['PotMaxAB']
@@ -51,7 +52,8 @@ def build_df_aux(df_capmax, line):
     return df_aux_capmax[['Etapa', 'PotMaxAB', 'PotMaxBA', 'Operativa']]
 
 
-def write_plpmanli(path_inputs, df_capmax, printdata=True):
+def write_plpmanli(path_inputs: Path, df_capmax: pd.DataFrame,
+                   printdata: bool = True):
     '''
     Write plpmanli.dat file
     '''
@@ -88,14 +90,15 @@ def write_plpmanli(path_inputs, df_capmax, printdata=True):
         write_lines_appending(lines, path_inputs / 'plpmanli.dat')
 
 
-def write_uni_plpmanli(path_inputs):
+def write_uni_plpmanli(path_inputs: Path):
     lines = ['# Archivo de mantenimientos de lineas (plpmanli.dat)']
     lines += ['# Numero de lineas con matenimientos']
     lines += ['0']
     write_lines_from_scratch(lines, path_inputs / 'uni_plpmanli.dat')
 
 
-def filter_lines(df_lines, df_manli):
+def filter_lines(df_lines: pd.DataFrame,
+                 df_manli: pd.DataFrame) -> pd.DataFrame:
     '''
     Filter only non-operatiuve lines that exist
     '''
@@ -104,11 +107,12 @@ def filter_lines(df_lines, df_manli):
     return df_manli[filter1 & filter2]
 
 
-def validate_manli(df_manli):
+def validate_manli(df_manli: pd.DataFrame):
     pass
 
 
-def get_nominal_values_dict(df_lineas, value='A->B'):
+def get_nominal_values_dict(df_lineas: pd.DataFrame,
+                            value: str = 'A->B') -> dict:
     '''
     Get dictionary with Capmax for each line
     '''
@@ -116,8 +120,9 @@ def get_nominal_values_dict(df_lineas, value='A->B'):
     return centrales_dict[value]
 
 
-def build_df_nominal(blo_eta, df_manli, df_lineas, id_col='LÍNEA',
-                     lines_value_col='A->B'):
+def build_df_nominal(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
+                     df_lineas: pd.DataFrame, id_col: str = 'LÍNEA',
+                     lines_value_col: str = 'A->B') -> pd.DataFrame:
     '''
     Build matrix with all nominal values for each line in mantcen
     '''
@@ -136,8 +141,10 @@ def build_df_nominal(blo_eta, df_manli, df_lineas, id_col='LÍNEA',
     return df_nominal
 
 
-def get_manli_output(blo_eta, df_manli, df_lines, id_col='LÍNEA',
-                     manli_col='A-B', lines_value_col='A->B', func='mean'):
+def get_manli_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
+                     df_lines: pd.DataFrame, id_col: str = 'LÍNEA',
+                     manli_col: str = 'A-B', lines_value_col: str = 'A->B',
+                     func: str = 'mean') -> pd.DataFrame:
     # 1. Build default dataframes
     df_nominal = build_df_nominal(blo_eta, df_manli, df_lines,
                                   id_col, lines_value_col)

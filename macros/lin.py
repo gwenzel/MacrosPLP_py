@@ -8,6 +8,7 @@ from utils.utils import (define_arg_parser,
                          check_is_path,
                          create_logger,
                          write_lines_from_scratch)
+from pathlib import Path
 import pandas as pd
 
 logger = create_logger('lineas')
@@ -28,7 +29,7 @@ formatter_plpcnfli_full = {
 }
 
 
-def read_losses(iplp_path):
+def read_losses(iplp_path: Path) -> (str, str):
     df = pd.read_excel(iplp_path, sheet_name='Líneas', usecols='M',
                        nrows=2, header=None, names=["Value"])
     bool_losses_value = df.iloc[0]["Value"]
@@ -37,7 +38,7 @@ def read_losses(iplp_path):
     return bool_losses, point_losses
 
 
-def print_uni_plpcnfli(path_inputs, iplp_path):
+def print_uni_plpcnfli(path_inputs: Path, iplp_path: Path):
     bool_losses, point_losses = read_losses(iplp_path)
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
@@ -46,7 +47,7 @@ def print_uni_plpcnfli(path_inputs, iplp_path):
     write_lines_from_scratch(lines, path_inputs / 'uni_plpcnfli.dat')
 
 
-def read_df_lines(iplp_path):
+def read_df_lines(iplp_path: Path) -> pd.DataFrame:
     df_lines = pd.read_excel(iplp_path, sheet_name='Líneas',
                              usecols='B:O', skiprows=4)
     # Filter out non-operative lines
@@ -71,7 +72,7 @@ def read_df_lines(iplp_path):
     return df_lines
 
 
-def print_plpcnfli(path_inputs, iplp_path, df_lines):
+def print_plpcnfli(path_inputs: Path, iplp_path: Path, df_lines: pd.DataFrame):
     bool_losses, point_losses = read_losses(iplp_path)
     df_lines['Nombre A->B'] = df_lines['Nombre A->B'].apply(
         "'{}'".format, axis=1)
