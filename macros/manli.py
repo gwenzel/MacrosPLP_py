@@ -10,7 +10,6 @@ from utils.utils import (define_arg_parser,
                          create_logger,
                          process_etapas_blocks,
                          add_time_info,
-                         translate_to_hydromonth,
                          get_daily_indexed_df,
                          write_lines_from_scratch,
                          write_lines_appending)
