@@ -16,15 +16,15 @@ logger = create_logger('barras')
 
 formatter_plpbar = {
     "index":    "{:8d}".format,
-    "BARRA":   "'{:<}'".format,
+    "BARRA":    "      {:<30}".format,
 }
 
 formatter_plpbar_full = {
     "index":    "{:8d}".format,
-    "BARRA":    "'{:<}'".format,
-    "Tension":  "{:8d}".format,
-    "FlagDDA":  "{:8d}".format,
-    "FlagGx":   "{:8d}".format,
+    "BARRA":    "      {:<30}".format,
+    "Tension":  "{:21d}".format,
+    "FlagDDA":  "{:4d}".format,
+    "FlagGx":   "{:2d}".format,
 }
 
 
@@ -42,35 +42,41 @@ def print_uni_plpbar(path_inputs):
 
 def print_plpbar(path_inputs, df_barras):
     # shape data
-    df_aux = df_barras.reset_index()
+    df_aux = df_barras.copy()
+    df_aux.index = df_aux.index + 1
+    df_aux = df_aux.reset_index()
     df_aux = df_aux[['index', 'BARRA']]
+    df_aux['BARRA'] = df_aux['BARRA'].apply("'{}'".format, axis=1)
 
     #  write data from scratch
     path_plpbar = path_inputs / 'plpbar.dat'
     lines = ['# Archivo con definicion de barras (plpbar.dat)']
     lines += ['# Numero de Barras']
-    lines += ['       %s' % len(df_barras)]
+    lines += ['     %s' % len(df_barras)]
     lines += ['# Numero       Nombre']
     lines += [df_aux.to_string(
             index=False, header=False, formatters=formatter_plpbar)]
-
     write_lines_from_scratch(lines, path_plpbar)
 
 
 def print_plpbar_full(path_inputs, df_barras):
     # shape data
-    df_aux = df_barras.fillna(0)  # convert empty values (Trf) to 0
+    df_aux = df_barras.copy()
+    df_aux = df_aux.fillna(0)  # convert empty values (Trf) to 0
+    df_aux.index = df_aux.index + 1
     df_aux = df_aux.reset_index()
     df_aux['FlagDDA'] = df_aux['FlagDDA'].astype(int)
     df_aux['FlagGx'] = df_aux['FlagGx'].astype(int)
     df_aux = df_aux[['index', 'BARRA', 'Tension', 'FlagDDA', 'FlagGx']]
+    df_aux['BARRA'] = df_aux['BARRA'].apply("'{}'".format, axis=1)
 
     #  write data from scratch
     path_plpbar_full = path_inputs / 'plpbar_full.dat'
-    lines = ['# Archivo con definicion de barras (plpbar.dat)']
+    lines = ['# Archivo con definicion de barras (plpbar_full.dat)']
     lines += ['# Numero de Barras']
-    lines += ['       %s' % len(df_barras)]
-    lines += ['# Numero                    Nombre  Tension       FL       FI']
+    lines += ['     %s' % len(df_barras)]
+    lines += ['# Numero       Nombre                                 '
+              '      Tension   FL FI']
     lines += [df_aux.to_string(
         index=False, header=False, formatters=formatter_plpbar_full)]
     write_lines_from_scratch(lines, path_plpbar_full)
