@@ -16,6 +16,7 @@ from macros.manli import get_manli_output
 
 
 logger = create_logger('manlix')
+LINE_CHANGE_TOLERANCE = 0.1
 
 formatters_plpmanlix = {
     "NomLin":   "{:<48},".format,
@@ -102,7 +103,8 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
         # (nominal value should be nan)
         # Then append results to main dataframe
         df_diff = df_capmax[line].diff()
-        mask_changes = (df_diff != 0) & (df_diff.notna())
+        mask_changes = (abs(df_diff) >= LINE_CHANGE_TOLERANCE) &\
+                       (df_diff.notna())
         if mask_changes.any():
             df_aux = build_df_aux(mask_changes, line,
                                   df_capmax, df_v, df_r, df_x)
