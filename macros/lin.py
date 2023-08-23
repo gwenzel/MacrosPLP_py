@@ -73,7 +73,8 @@ def read_df_lines(iplp_path):
 
 def print_plpcnfli(path_inputs, iplp_path, df_lines):
     bool_losses, point_losses = read_losses(iplp_path)
-    df_lines.update(df_lines[['Nombre A->B']].map("'{}'".format))
+    df_lines['Nombre A->B'] = df_lines['Nombre A->B'].apply(
+        "'{}'".format, axis=1)
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
     lines += ["         %s                 %s          '%s'        1000.d0" %

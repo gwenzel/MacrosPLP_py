@@ -116,8 +116,8 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
 
 
 def write_plpmanlix(path_inputs, df_manlix_changes):
-    df_manlix_changes.update(
-        df_manlix_changes[['NomLin']].map("'{}'".format))
+    df_manlix_changes['NomLin'] = df_manlix_changes['NomLin'].apply(
+        "'{}'".format, axis=1)
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]
     lines += [df_manlix_changes.to_string(index=False, header=False,
