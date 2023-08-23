@@ -47,7 +47,7 @@ def filter_linesx(df_lines, df_manlix):
     Filter only operative lines that exist
     '''
     filter1 = (df_manlix['LÍNEA'].isin(df_lines['Nombre A->B'].tolist()))
-    filter2 = (df_manlix['OPERATIVA'] is True)
+    filter2 = (df_manlix['OPERATIVA'].isin([True]))
     return df_manlix[filter1 & filter2]
 
 
@@ -109,12 +109,14 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
             df_aux = build_df_aux(mask_changes, line,
                                   df_capmax, df_v, df_r, df_x)
             list_of_dfs.append(df_aux.copy())
-    df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
-
-    if print_values:
-        df_manlix_changes.to_csv(path_inputs / 'df_manlix_changes.csv')
-
-    return df_manlix_changes
+    if len(list_of_dfs) > 0:
+        df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
+        if print_values:
+            df_manlix_changes.to_csv(path_inputs / 'df_manlix_changes.csv')
+        return df_manlix_changes
+    # else
+    logger.error('No valid line changes in manlix')
+    return pd.DataFrame()
 
 
 def write_plpmanlix(path_inputs, df_manlix_changes):
