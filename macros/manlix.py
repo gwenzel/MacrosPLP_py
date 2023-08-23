@@ -47,7 +47,7 @@ def filter_linesx(df_lines, df_manlix):
     Filter only operative lines that exist
     '''
     filter1 = (df_manlix['LÍNEA'].isin(df_lines['Nombre A->B'].tolist()))
-    filter2 = (df_manlix['OPERATIVA'] == True)
+    filter2 = (df_manlix['OPERATIVA'] is True)
     return df_manlix[filter1 & filter2]
 
 

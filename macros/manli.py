@@ -100,7 +100,7 @@ def filter_lines(df_lines, df_manli):
     Filter only non-operatiuve lines that exist
     '''
     filter1 = (df_manli['LÍNEA'].isin(df_lines['Nombre A->B'].tolist()))
-    filter2 = (df_manli['OPERATIVA'] == False)
+    filter2 = (df_manli['OPERATIVA'] is False)
     return df_manli[filter1 & filter2]
 
 
