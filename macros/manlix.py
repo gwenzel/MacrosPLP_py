@@ -118,13 +118,22 @@ def get_manlix_changes(df_capmax, df_v, df_r, df_x, path_inputs,
 
 
 def write_plpmanlix(path_inputs, df_manlix_changes):
+    # Format columns
     df_manlix_changes['NomLin'] = df_manlix_changes['NomLin'].apply(
         "'{}'".format, axis=1)
+    df_manlix_changes['ResLin'] = df_manlix_changes['ResLin'].apply(
+        "{:5.3f}".format, axis=1)
+    df_manlix_changes['XImpLin'] = df_manlix_changes['XImpLin'].apply(
+        "{:5.3f}".format, axis=1)
+    # Build file
     lines = ["#NomLin,EtaIni,EtaFin,ManALin,ManBLin,"
              "VNomLin,ResLin,XImpLin,FOpeLin"]
+    lines += df_manlix_changes.to_csv(index=False, header=False).split('\r\n')
+    '''
     lines += [df_manlix_changes.to_string(index=False, header=False,
                                           justify='left',
                                           formatters=formatters_plpmanlix)]
+    '''
     # Write dat file from scratch
     write_lines_from_scratch(lines, path_inputs / 'plpmanlix.dat')
 
