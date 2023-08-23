@@ -16,15 +16,15 @@ formatter_plpcnfli_full = {
     "Nombre A->B": "{:<48}".format,
     "Barra A": "{:8d}".format,
     "Barra B": "{:8d}".format,
-    "A->B": "{:9.2f}".format,
-    "B->A": "{:10.2f}".format,
-    "V [kV]": "{:9d}".format,
+    "A->B": "{:9.1f}".format,
+    "B->A": "{:10.1f}".format,
+    "V [kV]": "{:9.1f}".format,
     "R[ohm]": "{:7.3f}".format,
     "X[ohm]": "{:7.3f}".format,
-    "Pérdidas": "{:>11}".format,
+    "Pérdidas": "{:>7}".format,
     "Nº de Tramos": "{:11d}".format,
-    "Operativa": "{:>11}".format,
-    "FlujoDC": "{:>10}".format
+    "Operativa": "{:>12}".format,
+    "FlujoDC": "{:>11}".format
 }
 
 
@@ -77,7 +77,7 @@ def print_plpcnfli(path_inputs, iplp_path, df_lines):
         "'{}'".format, axis=1)
     lines = ['# Archivo de configuracion de lineas (plpcnfli.dat)']
     lines += ['# Num.Lineas   Modela Perdidas  Perd.en.ERM   Ang. de Ref.']
-    lines += ["         %s                 %s          '%s'        1000.d0" %
+    lines += ["         %s           %s            '%s'         1000.d0" %
               (len(df_lines), bool_losses, point_losses)]
     lines += ["# Caracteristicas de las Lineas"]
     lines += ["# Nombre                                           "
@@ -85,6 +85,7 @@ def print_plpcnfli(path_inputs, iplp_path, df_lines):
               "   Mod.Perd.  Num.Tramos   Operativa    FlujoDC"]
     lines += [df_lines.to_string(
         index=False, header=False, formatters=formatter_plpcnfli_full)]
+    lines += ['']
     write_lines_from_scratch(lines, path_inputs / 'plpcnfli.dat')
 
 
