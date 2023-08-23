@@ -245,7 +245,7 @@ def translate_to_hydromonth(df: pd.DataFrame) -> pd.DataFrame:
     return df.replace({'Month': MONTH_TO_HIDROMONTH})
 
 
-def append_rows(df, *rows):
+def append_rows(df: pd.DataFrame, *rows: pd.Series) -> pd.DataFrame:
     '''
     Append row to dataframe using concat to avoid FutureWarning
     '''
@@ -255,7 +255,7 @@ def append_rows(df, *rows):
     return pd.concat(list_of_dfs)
 
 
-def add_time_info(df):
+def add_time_info(df: pd.DataFrame) -> pd.DataFrame:
     df['YearIni'] = df['INICIAL'].dt.year
     df['MonthIni'] = df['INICIAL'].dt.month
     df['DayIni'] = df['INICIAL'].dt.day
@@ -265,7 +265,7 @@ def add_time_info(df):
     return df
 
 
-def get_daily_indexed_df(blo_eta):
+def get_daily_indexed_df(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Get dataframe indexed by day within the timeframe
     '''
