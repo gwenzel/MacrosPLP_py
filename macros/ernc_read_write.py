@@ -20,7 +20,7 @@ formatters = {
 }
 
 
-def define_input_names(ernc_scenario):
+def define_input_names(ernc_scenario: str) -> dict:
     '''
     Define input csv files to use
     ernc_scenario should be "Base", "WindHigh" or "WindLow"
@@ -31,7 +31,6 @@ def define_input_names(ernc_scenario):
         "WindLow": "low"
     }
     suffix = suffix_dict[ernc_scenario]
-
     names = {
         "MAX_CAPACITY_FILENAME": "ernc_MaxCapacity.csv",
         "MIN_CAPACITY_FILENAME": "ernc_MinCapacity.csv",
@@ -43,7 +42,7 @@ def define_input_names(ernc_scenario):
     return names
 
 
-def read_ernc_files(path_inputs, input_names):
+def read_ernc_files(path_inputs: Path, input_names: dict) -> dict:
     '''
     Read all input csv files to generate ernc profiles
     '''
@@ -89,8 +88,8 @@ def read_ernc_files(path_inputs, input_names):
     return ernc_data
 
 
-def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names,
-                            iplp_path):
+def write_plpmance_ernc_dat(ernc_data: dict, df_scaled_profiles: pd.DataFrame,
+                            unit_names: list, iplp_path: Path):
     '''
     Write dat file in PLP format
     '''
@@ -141,7 +140,7 @@ def write_plpmance_ernc_dat(ernc_data, df_scaled_profiles, unit_names,
     # check_plpmance(dest)
 
 
-def add_ernc_units(plpmance_file, new_units_number):
+def add_ernc_units(plpmance_file: Path, new_units_number: int):
     # open file in read mode
     file = open(plpmance_file, "r")
     lines = file.readlines()
@@ -157,7 +156,8 @@ def add_ernc_units(plpmance_file, new_units_number):
     write_file.close()
 
 
-def generate_max_capacity_csv(iplp_path, path_inputs, input_names):
+def generate_max_capacity_csv(iplp_path: Path, path_inputs: Path,
+                              input_names: dict):
     '''
     Read iplp file, sheet ERNC, and extract max capacities
     '''
@@ -167,7 +167,8 @@ def generate_max_capacity_csv(iplp_path, path_inputs, input_names):
               index=False)
 
 
-def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
+def generate_min_capacity_csv(iplp_path: Path, path_inputs: Path,
+                              input_names: list):
     '''
     Read iplp file, sheet Centrales, and extract pmin for all units
 
@@ -181,7 +182,8 @@ def generate_min_capacity_csv(iplp_path, path_inputs, input_names):
               index=False)
 
 
-def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
+def generate_rating_factor_csv(iplp_path: Path, path_inputs: Path,
+                               input_names: list):
     '''
     Read iplp file, sheet ERNC, and extract rating factors
     '''
@@ -194,7 +196,8 @@ def generate_rating_factor_csv(iplp_path, path_inputs, input_names):
               index=False)
 
 
-def generate_profiles_csv(iplp_path, path_inputs, input_names):
+def generate_profiles_csv(iplp_path: Path, path_inputs: Path,
+                          input_names: list):
     '''
     Read csv profiles from external inputs path and copy to path_inputs folder
     '''
@@ -208,7 +211,7 @@ def generate_profiles_csv(iplp_path, path_inputs, input_names):
                  index=False, header=True)
 
 
-def get_unit_type(iplp_path):
+def get_unit_type(iplp_path: Path) -> dict:
     '''
     Read iplp file, sheet Centrales, and extract unit type
     '''
@@ -220,7 +223,7 @@ def get_unit_type(iplp_path):
     return df.to_dict()['Type']
 
 
-def get_valid_unit_names(ernc_data, iplp_path):
+def get_valid_unit_names(ernc_data: dict, iplp_path: Path) -> list:
     '''
     Return list of units with type different than X
     '''

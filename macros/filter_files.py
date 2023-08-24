@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import timedelta
+from pathlib import Path
 from openpyxl.utils.datetime import from_excel
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
@@ -11,7 +12,8 @@ from utils.utils import (define_arg_parser,
 logger = create_logger('filter_files')
 
 
-def create_block2day(iplp_path, path_dat, sheet_name='Block2Day'):
+def create_block2day(iplp_path: Path, path_dat: Path,
+                     sheet_name: str = 'Block2Day'):
     # Read data from Excel file starting from cell A1 to M25
     df = pd.read_excel(iplp_path, header=None, sheet_name=sheet_name,
                        usecols="A:M", nrows=25)
@@ -20,7 +22,8 @@ def create_block2day(iplp_path, path_dat, sheet_name='Block2Day'):
     df.to_csv(csv_file, index=False, header=False)
 
 
-def create_plpparam_and_plpetapas(iplp_path, path_dat, path_dat_plexos):
+def create_plpparam_and_plpetapas(iplp_path: Path, path_dat: Path,
+                                  path_dat_plexos: Path):
     # read data
     df_etapas = pd.read_excel(iplp_path, sheet_name='Etapas', skiprows=3)
     df_hidro = pd.read_excel(iplp_path, sheet_name='Hidrología',
@@ -35,7 +38,8 @@ def create_plpparam_and_plpetapas(iplp_path, path_dat, path_dat_plexos):
     create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos)
 
 
-def create_plpparam(df_hidro, df_etapas, path_dat):
+def create_plpparam(df_hidro: pd.DataFrame, df_etapas: pd.DataFrame,
+                    path_dat: Path):
 
     etapas = df_etapas.shape[0]
     bloques = df_etapas.loc[0, 'Nº Bloques']
@@ -64,7 +68,7 @@ def create_plpparam(df_hidro, df_etapas, path_dat):
     df.to_csv(csv_file, index=False, header=None, encoding='latin1')
 
 
-def create_plpetapas(df_etapas, path_dat):
+def create_plpetapas(df_etapas: pd.DataFrame, path_dat: Path):
 
     etapas = df_etapas.shape[0]
     bloques = df_etapas.loc[0, 'Nº Bloques']
@@ -86,7 +90,8 @@ def create_plpetapas(df_etapas, path_dat):
     df.to_csv(csv_file, index=False, header=None, encoding='latin1')
 
 
-def create_simtohyd(df_hidro, df_etapas, path_dat, path_dat_plexos):
+def create_simtohyd(df_hidro: pd.DataFrame, df_etapas: pd.DataFrame,
+                    path_dat: Path, path_dat_plexos: Path):
 
     fecha_ini = df_etapas.loc[0, 'Inicial']
     n_meses = df_etapas.shape[0]

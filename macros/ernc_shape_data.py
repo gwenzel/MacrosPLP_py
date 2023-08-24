@@ -1,12 +1,13 @@
 import sys
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 from utils.utils import append_rows
 
 PRINT_FILES = False
 
 
-def hour2block(df, block2day):
+def hour2block(df: pd.DataFrame, block2day: pd.DataFrame) -> pd.DataFrame:
     '''
     Reshape dataframe to show energy per block
     '''
@@ -27,7 +28,7 @@ def hour2block(df, block2day):
     return df
 
 
-def get_profiles_blo(ernc_data, block2day):
+def get_profiles_blo(ernc_data: dict, block2day: pd.DataFrame) -> dict:
     '''
     Get all hourly, hour-monthly and monthly profiles,
     with their blocks definition on one dictionary
@@ -39,7 +40,8 @@ def get_profiles_blo(ernc_data, block2day):
     return profiles_dict
 
 
-def replicate_profiles(df_left, df_right, type='H'):
+def replicate_profiles(df_left: pd.DataFrame, df_right: pd.DataFrame,
+                       type: str = 'H') -> pd.DataFrame:
     '''
     Use Merge left to match the generation on each block
     '''
@@ -52,7 +54,8 @@ def replicate_profiles(df_left, df_right, type='H'):
         sys.exit("Invalid type: %s" % type)
 
 
-def get_all_profiles(blo_eta, profiles_dict, iplp_path):
+def get_all_profiles(blo_eta: pd.DataFrame, profiles_dict: dict,
+                     iplp_path: Path) -> pd.DataFrame:
     '''
     Run the replicate_profiles function for all profiles and group data
     on one output dataframe
@@ -66,7 +69,7 @@ def get_all_profiles(blo_eta, profiles_dict, iplp_path):
     return df_out
 
 
-def get_ini_date(blo_eta):
+def get_ini_date(blo_eta: pd.DataFrame) -> datetime:
     '''
     Get initial date
     '''
@@ -76,7 +79,8 @@ def get_ini_date(blo_eta):
     return datetime(ini_year, ini_month, ini_day)
 
 
-def get_rating_factors(ernc_data, blo_eta, iplp_path):
+def get_rating_factors(ernc_data: dict, blo_eta: pd.DataFrame,
+                       iplp_path: Path) -> pd.DataFrame:
     '''
     Return Rating Factors dataframe
     '''
@@ -113,7 +117,7 @@ def get_rating_factors(ernc_data, blo_eta, iplp_path):
     return df_rf
 
 
-def process_semi_months(df_rf):
+def process_semi_months(df_rf: pd.DataFrame) -> pd.DataFrame:
     '''
     There are some lines in the rating factor list that do not
     start on the 1st of the month.
@@ -152,8 +156,9 @@ def process_semi_months(df_rf):
     return new_df_rf.reset_index(drop=True)
 
 
-def get_scaled_profiles(ernc_data, df_all_profiles, df_rf, unit_names,
-                        iplp_path):
+def get_scaled_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
+                        df_rf: pd.DataFrame, unit_names: list,
+                        iplp_path: Path) -> pd.DataFrame:
     '''
     Use all profiles data and rating factors to generate scaled profiles
     '''
