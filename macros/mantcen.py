@@ -9,6 +9,7 @@ import sys
 from openpyxl.utils.datetime import from_excel
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from pathlib import Path
 
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
@@ -42,7 +43,7 @@ formatters_plpmance = {
 }
 
 
-def get_centrales(iplp_path):
+def get_centrales(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
                        skiprows=4, usecols="B,C,AA,AB")
     # Filter out if X
@@ -53,7 +54,7 @@ def get_centrales(iplp_path):
     return df
 
 
-def get_mantcen_input(iplp_path):
+def get_mantcen_input(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="MantCEN",
                        skiprows=4, usecols="A:F")
     df = df.rename(
@@ -73,14 +74,14 @@ def get_mantcen_input(iplp_path):
     return df
 
 
-def validate_centrales(df_centrales):
+def validate_centrales(df_centrales: pd.DataFrame):
     if not df_centrales['Nombre'].is_unique:
         logger.error('List of Centrales has repeated values')
         sys.exit('List of Centrales has repeated values')
     logger.info('Validation process for Centrales successful')
 
 
-def validate_mantcen(df_centrales, df_mantcen):
+def validate_mantcen(df_centrales: pd.DataFrame, df_mantcen: pd.DataFrame):
     # Names
     list_of_names_centrales = df_centrales['Nombre'].unique().tolist()
     list_of_names_mantcen = df_mantcen['Nombre'].unique().tolist()
@@ -95,7 +96,8 @@ def validate_mantcen(df_centrales, df_mantcen):
     logger.info('Validation process for MantCEN successful')
 
 
-def shape_extra_mant_no_gas(df, description='NA'):
+def shape_extra_mant_no_gas(df: pd.DataFrame,
+                            description: str = 'NA') -> pd.DataFrame:
     df['INICIAL'] = df['INICIAL'].apply(from_excel)
     df['FINAL'] = df['FINAL'].apply(from_excel)
     df['Description'] = description
@@ -105,7 +107,7 @@ def shape_extra_mant_no_gas(df, description='NA'):
     return df[reordered_cols]
 
 
-def read_extra_mant_no_ciclicos(iplp_path):
+def read_extra_mant_no_ciclicos(iplp_path: Path) -> pd.DataFrame:
     # No ciclicos
     df_no_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
@@ -121,7 +123,8 @@ def read_extra_mant_no_ciclicos(iplp_path):
     return df_no_ciclicos
 
 
-def read_extra_mant_ciclicos(iplp_path, blo_eta):
+def read_extra_mant_ciclicos(iplp_path: Path,
+                             blo_eta: pd.DataFrame) -> pd.DataFrame:
     # Ciclicos
     df_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
@@ -149,7 +152,8 @@ def read_extra_mant_ciclicos(iplp_path, blo_eta):
     return df_ciclicos
 
 
-def read_extra_mant_gas(iplp_path, blo_eta):
+def read_extra_mant_gas(iplp_path: Path,
+                        blo_eta: pd.DataFrame) -> pd.DataFrame:
     end_year = blo_eta.iloc[-1]['Year']
     # Gas
     df_gas = pd.read_excel(
@@ -174,7 +178,8 @@ def read_extra_mant_gas(iplp_path, blo_eta):
     return df_out
 
 
-def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
+def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
+                      blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Read directly from MantenimientosIM and add to
     df_mantcen before generating output:
@@ -189,14 +194,15 @@ def add_extra_mantcen(iplp_path, df_mantcen, blo_eta):
     return df_mantcen
 
 
-def filter_df_mantcen(df_mantcen, df_centrales):
+def filter_df_mantcen(df_mantcen: pd.DataFrame,
+                      df_centrales: pd.DataFrame) -> pd.DataFrame:
     '''
     Filter out rows with non-existent Unit names
     '''
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
-def get_pmin_pmax_dict(df_centrales):
+def get_pmin_pmax_dict(df_centrales: pd.DataFrame) -> (dict, dict):
     '''
     Get dictionary with Pmin and Pmax for each unit
     '''
@@ -204,7 +210,9 @@ def get_pmin_pmax_dict(df_centrales):
     return centrales_dict['Pmin'], centrales_dict['Pmax']
 
 
-def build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales):
+def build_df_pmin_pmax(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
+                       df_centrales: pd.DataFrame) -> \
+                       (pd.DataFrame, pd.DataFrame):
     '''
     Build matrix with all pmin/pmax info in mantcen sheet
     '''
@@ -227,7 +235,9 @@ def build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales):
     return df_pmin, df_pmax
 
 
-def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
+def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
+                       df_centrales: pd.DataFrame) -> \
+                       (pd.DataFrame, pd.DataFrame):
     # 1. Build default dataframes
     df_pmin, df_pmax = build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales)
     # 2. Add df_mantcen data in row-by-row order
@@ -257,7 +267,8 @@ def get_mantcen_output(blo_eta, df_mantcen, df_centrales):
     return df_pmin, df_pmax
 
 
-def build_df_aux(df_pmin, df_pmax, unit):
+def build_df_aux(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
+                 unit: str) -> pd.DataFrame:
     df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
     df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
     df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
@@ -268,7 +279,8 @@ def build_df_aux(df_pmin, df_pmax, unit):
     return df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
 
 
-def write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=False):
+def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
+                           iplp_path: Path, printdata: bool = False):
     '''
     Write plpmance_ini.dat file, which will be used later to add the
     renewable energy profiles and generate the definitive

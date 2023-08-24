@@ -11,6 +11,7 @@ from utils.utils import (define_arg_parser,
                          create_logger,
                          write_lines_from_scratch)
 import pandas as pd
+from pathlib import Path
 
 logger = create_logger('barras')
 
@@ -28,7 +29,7 @@ formatter_plpbar_full = {
 }
 
 
-def print_uni_plpbar(path_inputs):
+def print_uni_plpbar(path_inputs: Path):
     #  write data from scratch
     path_uni_plpbar = path_inputs / 'uni_plpbar.dat'
     lines = ['# Archivo con definicion de barras (plpbar.dat)']
@@ -36,11 +37,10 @@ def print_uni_plpbar(path_inputs):
     lines += ['       1']
     lines += ['# Numero       Nombre']
     lines += ["       1       'UNINODAL'"]
-
     write_lines_from_scratch(lines, path_uni_plpbar)
 
 
-def print_plpbar(path_inputs, df_barras):
+def print_plpbar(path_inputs: Path, df_barras: pd.DataFrame):
     # shape data
     df_aux = df_barras.copy()
     df_aux.index = df_aux.index + 1
@@ -59,7 +59,7 @@ def print_plpbar(path_inputs, df_barras):
     write_lines_from_scratch(lines, path_plpbar)
 
 
-def print_plpbar_full(path_inputs, df_barras):
+def print_plpbar_full(path_inputs: Path, df_barras: pd.DataFrame):
     # shape data
     df_aux = df_barras.copy()
     df_aux = df_aux.fillna(0)  # convert empty values (Trf) to 0
@@ -82,7 +82,7 @@ def print_plpbar_full(path_inputs, df_barras):
     write_lines_from_scratch(lines, path_plpbar_full)
 
 
-def get_barras_info(iplp_path):
+def get_barras_info(iplp_path: Path):
     return pd.read_excel(iplp_path, sheet_name="Barras",
                          skiprows=4, usecols="A:C,E:F")
 

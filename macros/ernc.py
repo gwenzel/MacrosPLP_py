@@ -23,11 +23,13 @@ from macros.ernc_shape_data import (get_profiles_blo,
                                     get_all_profiles,
                                     get_rating_factors,
                                     get_scaled_profiles)
+from pathlib import Path
+import pandas as pd
 
 logger = create_logger('ernc')
 
 
-def get_input_paths():
+def get_input_paths() -> (Path, Path, Path):
     logger.info('Getting input file path')
     parser = define_arg_parser(ext=True)
     iplp_path = get_iplp_input_path(parser)
@@ -38,7 +40,7 @@ def get_input_paths():
     return iplp_path, path_inputs, path_dat
 
 
-def get_input_names(iplp_path):
+def get_input_names(iplp_path: Path) -> dict:
     logger.info('Getting scenarios and input names')
     scenario_data = get_scenarios(iplp_path)
     ernc_scenario = scenario_data['Eolico']
@@ -46,7 +48,7 @@ def get_input_names(iplp_path):
     return input_names
 
 
-def generate_csv_files(iplp_path, path_inputs, input_names):
+def generate_csv_files(iplp_path: Path, path_inputs: Path, input_names: dict):
     logger.info('Generating input csv files')
     generate_max_capacity_csv(iplp_path, path_inputs, input_names)
     generate_min_capacity_csv(iplp_path, path_inputs, input_names)
@@ -54,7 +56,8 @@ def generate_csv_files(iplp_path, path_inputs, input_names):
     generate_profiles_csv(iplp_path, path_inputs, input_names)
 
 
-def get_inputs(iplp_path, path_inputs, path_dat, input_names):
+def get_inputs(iplp_path: Path, path_inputs: Path, path_dat: Path,
+               input_names: dict) -> (dict, pd.DataFrame, pd.DataFrame, list):
     logger.info('Processing csv inputs')
     ernc_data = read_ernc_files(path_inputs, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
@@ -63,7 +66,11 @@ def get_inputs(iplp_path, path_inputs, path_dat, input_names):
     return ernc_data, blo_eta, block2day, valid_unit_names
 
 
-def get_profiles_and_rating_factors(ernc_data, blo_eta, block2day, iplp_path):
+def get_profiles_and_rating_factors(ernc_data: dict,
+                                    blo_eta: pd.DataFrame,
+                                    block2day: pd.DataFrame,
+                                    iplp_path: Path) -> (
+                                    pd.DataFrame, pd.DataFrame):
     # Convert hourly profiles to blocks
     logger.info('Converting hourly profiles to blocks')
     profiles_dict = get_profiles_blo(ernc_data, block2day)
@@ -78,14 +85,16 @@ def get_profiles_and_rating_factors(ernc_data, blo_eta, block2day, iplp_path):
     return df_all_profiles, df_rf
 
 
-def scale_profiles(ernc_data, df_all_profiles, df_rf, valid_unit_names,
-                   iplp_path):
+def scale_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
+                   df_rf: pd.DataFrame, valid_unit_names: list,
+                   iplp_path: Path) -> pd.DataFrame:
     logger.info('Using rating factors to scale profiles')
     return get_scaled_profiles(
         ernc_data, df_all_profiles, df_rf, valid_unit_names, iplp_path)
 
 
-def write_data(ernc_data, df_scaled_profiles, valid_unit_names, iplp_path):
+def write_data(ernc_data: dict, df_scaled_profiles: pd.DataFrame,
+               valid_unit_names: list, iplp_path: Path):
     logger.info('Writing profiles in .dat format')
     write_plpmance_ernc_dat(
         ernc_data, df_scaled_profiles, valid_unit_names, iplp_path)

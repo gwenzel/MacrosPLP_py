@@ -69,7 +69,8 @@ def get_project_root() -> Path:
     return Path(__file__).parent
 
 
-def process_etapas_blocks(path_dat: Path):
+def process_etapas_blocks(path_dat: Path) -> (pd.DataFrame, pd.Series,
+                                              pd.DataFrame):
     '''
     Get blocks to etapas definition and tasa
     '''
@@ -121,7 +122,7 @@ def check_is_path(path: Path):
         sys.exit("Dat path is not valid: %s" % path)
 
 
-def is_valid_file(parser: ArgumentParser, arg: str):
+def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
     if not os.path.exists(arg):
         parser.error("The file or path %s does not exist!" % arg)
     else:
