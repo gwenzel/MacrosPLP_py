@@ -12,6 +12,7 @@ Ouput files are:
 import pandas as pd
 import numpy as np
 from openpyxl.utils.datetime import from_excel
+from pathlib import Path
 
 from utils.utils import (create_logger,
                          timeit,
@@ -58,7 +59,8 @@ formatters_plpfal = {
 }
 
 
-def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
+def dda_por_barra_to_row_format(iplp_path: Path,
+                                write_to_csv: bool = False) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
     keys = ["Coordinado", "Cliente", "Profile",
             "Barra Consumo", "Factor Barra Consumo"]
@@ -87,7 +89,7 @@ def dda_por_barra_to_row_format(iplp_path, write_to_csv=False):
     return df_dda_por_barra
 
 
-def get_monthly_demand(iplp_path):
+def get_monthly_demand(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
     # Drop rows if column # is nan
     df = df.dropna(subset=['#'], how='any')
@@ -108,7 +110,7 @@ def get_monthly_demand(iplp_path):
     return df
 
 
-def get_hourly_profiles(iplp_path):
+def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
     # Clean data
     cols_to_drop = ['#', 'Año', 'Verificador consumo']
@@ -123,7 +125,8 @@ def get_hourly_profiles(iplp_path):
     return df
 
 
-def get_blockly_profiles(df_hourly_profiles, block2day):
+def get_blockly_profiles(df_hourly_profiles: pd.DataFrame,
+                         block2day: pd.DataFrame) -> pd.DataFrame:
     df = df_hourly_profiles.rename(
         columns={'Perfil día tipo': 'Profile',
                  'Mes': 'Month',
@@ -145,8 +148,10 @@ def calculate_consumption(x):
     return num / den
 
 
-def get_all_profiles(blo_eta, block2day,
-                     df_monthly_demand, df_hourly_profiles, df_dda_por_barra):
+def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
+                     df_monthly_demand: pd.DataFrame,
+                     df_hourly_profiles: pd.DataFrame,
+                     df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
 
     # Turn hourly profiles to profiles by block
     df_blockly_profiles = get_blockly_profiles(df_hourly_profiles, block2day)
@@ -185,7 +190,7 @@ def get_all_profiles(blo_eta, block2day,
     return df
 
 
-def write_plpdem_dat(df_all_profiles, iplp_path):
+def write_plpdem_dat(df_all_profiles: pd.DataFrame, iplp_path: Path):
 
     plpdem_path = iplp_path.parent / 'Temp' / 'plpdem.dat'
 
@@ -221,7 +226,7 @@ def write_plpdem_dat(df_all_profiles, iplp_path):
         write_lines_appending(lines, plpdem_path)
 
 
-def write_uni_plpdem_dat(df_all_profiles, iplp_path):
+def write_uni_plpdem_dat(df_all_profiles: pd.DataFrame, iplp_path: Path):
     uni_plpdem_path = iplp_path.parent / 'Temp' / 'uni_plpdem.dat'
 
     # Sum demand of all barras
@@ -249,7 +254,8 @@ def write_uni_plpdem_dat(df_all_profiles, iplp_path):
     write_lines_from_scratch(lines, uni_plpdem_path)
 
 
-def write_plpfal_prn(blo_eta, df_all_profiles, iplp_path):
+def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
+                     iplp_path: Path):
     plpfal_path = iplp_path.parent / 'Temp' / 'plpfal.prn'
 
     list_all_barras = get_list_of_all_barras(iplp_path)
