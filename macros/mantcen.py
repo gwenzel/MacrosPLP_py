@@ -38,8 +38,8 @@ formatters_plpmance = {
     "Month":    "     {:02d}".format,
     "Etapa":    "     {:04d}".format,
     "NIntPot":  "       {:01d}".format,
-    "Pmin":     "{:8.2f}".format,
-    "Pmax":     "{:8.2f}".format
+    "Pmin":     "{:8.1f}".format,
+    "Pmax":     "{:8.1f}".format
 }
 
 

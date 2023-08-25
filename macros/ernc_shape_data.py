@@ -109,10 +109,12 @@ def get_rating_factors(ernc_data: dict, blo_eta: pd.DataFrame,
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
+    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf_initial.csv')
+
     df_rf = process_semi_months(df_rf)
 
     # Print to csv
-    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf.csv')
+    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf_final.csv')
 
     return df_rf
 
@@ -150,7 +152,7 @@ def process_semi_months(df_rf: pd.DataFrame) -> pd.DataFrame:
             new_row2 = row.copy()
             new_row2['Initial_Eta'] = row['Initial_Eta'] + 1
             # Concat all
-            new_df_rf = append_rows(new_df_rf.iloc[:idx], new_row1, new_row2)
+            new_df_rf = append_rows(new_df_rf, new_row1, new_row2)
         previous_row = row
         previous_value = 0
     return new_df_rf.reset_index(drop=True)
