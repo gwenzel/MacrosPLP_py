@@ -268,14 +268,21 @@ def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
 
 
 def build_df_aux(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
-                 unit: str) -> pd.DataFrame:
+                 unit: str, iplp_path: Path) -> pd.DataFrame:
     df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
     df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
     df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
     df_aux_pmax = df_aux_pmax.rename(columns={unit: 'Pmax'})
     df_aux = pd.merge(df_aux_pmin, df_aux_pmax)
+    '''
+    # Keep rows only if pmin or pmax are not default values
+    pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
+    pmin_not_default = (df_aux['Pmin'] != pmin_dict[unit])
+    pmax_not_default = (df_aux['Pmax'] != pmax_dict[unit])
+    df_aux = df_aux[pmin_not_default | pmax_not_default]
+    '''
+    # Reorder columns and add NIntPot
     df_aux['NIntPot'] = 1
-    # Reorder columns
     return df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
 
 
@@ -318,7 +325,7 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
         lines += ['  %04d                 01' % num_blo]
         lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         # Build df_aux from both dataframes, for each unit
-        df_aux = build_df_aux(df_pmin, df_pmax, unit)
+        df_aux = build_df_aux(df_pmin, df_pmax, unit, iplp_path)
         # Add data as string using predefined format
         lines += [df_aux.to_string(
             index=False, header=False, formatters=formatters_plpmance)]
