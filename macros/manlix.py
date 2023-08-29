@@ -103,7 +103,7 @@ def get_manlix_changes(df_capmax: pd.DataFrame, df_v: pd.DataFrame,
     '''
     manlix_lines = df_capmax.columns
     list_of_dfs = []
-    
+
     for line in manlix_lines:
         # Get diff vector to detect changes
         # Filter when diff is not 0 and also keep nan row (first row)
