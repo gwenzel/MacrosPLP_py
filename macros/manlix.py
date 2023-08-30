@@ -13,7 +13,10 @@ import pandas as pd
 from pathlib import Path
 from openpyxl.utils.datetime import from_excel
 from macros.lin import read_df_lines
-from macros.manli import get_manli_output
+from macros.manli import (get_df_manli,
+                          build_df_nominal,
+                          add_manli_data_row_by_row,
+                          apply_func_per_etapa)
 
 
 logger = create_logger('manlix')
@@ -53,19 +56,20 @@ def filter_linesx(df_lines: pd.DataFrame,
     return df_manlix[filter1 & filter2]
 
 
-def validate_manlix(df_manlix: pd.DataFrame):
-    pass
-
-
-def get_manlix_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
-                      df_lines: pd.DataFrame, id_col: str = 'LÍNEA',
-                      manli_col: str = 'A-B', lines_value_col: str = 'A->B',
-                      func: str = 'mean') -> pd.DataFrame:
-    '''
-    Wrapper for get_manli_output function
-    '''
-    return get_manli_output(blo_eta, df_manli, df_lines, id_col,
-                            manli_col, lines_value_col, func)
+def validate_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
+    for idx, row in df_manlix.iterrows():
+        if row.isna().any():
+            logger.error('Missing fields in row %s' % idx)
+        if not row['LÍNEA'] in (df_lines['Nombre A->B'].tolist()):
+            logger.error('Line %s in does not exist' % row['LÍNEA'])
+        if row['A-B'] < 0:
+            logger.error('Line %s has negative capacity' % row['LÍNEA'])
+        if row['V [kV]'] < 0:
+            logger.error('Line %s has negative V' % row['LÍNEA'])
+        if row['R [ohms]'] < 0:
+            logger.error('Line %s has negative R' % row['LÍNEA'])
+        if row['X [ohms]'] < 0:
+            logger.error('Line %s has negative X' % row['LÍNEA'])
 
 
 def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
@@ -92,29 +96,32 @@ def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
     return df_aux[col_names].reset_index(drop=True)
 
 
-def get_manlix_changes(df_capmax: pd.DataFrame, df_v: pd.DataFrame,
-                       df_r: pd.DataFrame, df_x: pd.DataFrame,
-                       path_inputs: Path, print_values: bool = True) \
-                        -> pd.DataFrame:
+def get_manlix_changes(df_capmax_manlix: pd.DataFrame,
+                       df_v: pd.DataFrame,
+                       df_r: pd.DataFrame,
+                       df_x: pd.DataFrame,
+                       path_inputs: Path,
+                       print_values: bool = True) -> pd.DataFrame:
     '''
     Get dataframe with manlix format
     CSV with a row for each capacity change, with initial/final etapa,
     and V, R, X data
     '''
-    manlix_lines = df_capmax.columns
+    manlix_lines = df_capmax_manlix.columns
     list_of_dfs = []
 
     for line in manlix_lines:
         # Get diff vector to detect changes
         # Filter when diff is not 0 and also keep nan row (first row)
         # (nominal value should be nan)
-        # Then append results to main dataframeimport pdb; pdb.set_trace()
-        df_diff = df_capmax[line].diff()
+        # Then append results to main dataframe
+        df_diff = df_capmax_manlix[line].diff()
+
         mask_changes = (abs(df_diff) >= LINE_CHANGE_TOLERANCE) |\
                        (df_diff.isna())
         if mask_changes.any():
-            df_aux = build_df_aux(mask_changes, line,
-                                  df_capmax, df_v, df_r, df_x)
+            df_aux = build_df_aux(
+                mask_changes, line, df_capmax_manlix, df_v, df_r, df_x)
             list_of_dfs.append(df_aux.copy())
     if len(list_of_dfs) > 0:
         df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
@@ -143,6 +150,53 @@ def write_plpmanlix(path_inputs: Path, df_manlix_changes: pd.DataFrame):
     write_lines_from_scratch(lines, path_inputs / 'plpmanlix.dat')
 
 
+def get_df_manlix(iplp_path: Path, df_lines: pd.DataFrame) -> pd.DataFrame:
+    logger.info('Read line in/out input data')
+    df_manlix = get_manlix_input(iplp_path)
+
+    # Filter out non-existing lines
+    logger.info('Filter out non-existing lines')
+    df_manlix = filter_linesx(df_lines, df_manlix)
+
+    # Add time info
+    logger.info('Adding time info')
+    df_manlix = add_time_info(df_manlix)
+
+    # Validate manli data
+    logger.info('Validating MantLINX data')
+    validate_manlix(df_manlix, df_lines)
+    return df_manlix
+
+
+def get_manlix_output(blo_eta: pd.DataFrame,
+                      df_manli: pd.DataFrame,
+                      df_manlix: pd.DataFrame,
+                      df_lines: pd.DataFrame,
+                      id_col: str = 'LÍNEA',
+                      manli_col: str = 'A-B',
+                      lines_value_col: str = 'A->B',
+                      func: str = 'mean') -> pd.DataFrame:
+    # 1. Get nominal data for all lines in manlix
+    df_nominal = build_df_nominal(
+            blo_eta, df_manlix, df_lines, id_col, lines_value_col)
+    if manli_col == 'A-B':
+        # 2. If dealing with Max Capacity,
+        # Add df_manli and manlix data in row-by-row order
+        df_nominal_mod1 = add_manli_data_row_by_row(
+            df_nominal, df_manli, id_col, manli_col)
+        df_nominal_mod2 = add_manli_data_row_by_row(
+            df_nominal_mod1, df_manlix, id_col, manli_col)
+        # 3. Apply func per Etapa and drop day column
+        return apply_func_per_etapa(blo_eta, df_nominal_mod2, func)
+    else:
+        # 2. If dealing with Voltage or other
+        # Add only manlix data in row-by-row order
+        df_nominal_mod = add_manli_data_row_by_row(
+            df_nominal, df_manlix, id_col, manli_col)
+        # 3. Apply func per Etapa and drop day column
+        return apply_func_per_etapa(blo_eta, df_nominal_mod, func)
+
+
 def main():
     '''
     Main routine
@@ -159,54 +213,48 @@ def main():
     logger.info('Read existing lines data')
     df_lines = read_df_lines(iplp_path)
 
-    logger.info('Read line in/out input data')
-    df_manlix = get_manlix_input(iplp_path)
-
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
     blo_eta, _, _ = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
-    # Filter out non-existing lines
-    logger.info('Filter out non-existing lines')
-    df_manlix = filter_linesx(df_lines, df_manlix)
+    # Get df_manlix
+    logger.info('Getting df_manlix')
+    df_manlix = get_df_manlix(iplp_path, df_lines)
 
-    # Add time info
-    logger.info('Adding time info')
-    df_manlix = add_time_info(df_manlix)
-
-    # Validate manli data
-    logger.info('Validating MantLINX data')
-    validate_manlix(df_manlix)
+    # Get data from Manli routine to know when lines exist
+    logger.info('Getting df_manli')
+    df_manli = get_df_manli(iplp_path, df_lines)
 
     # Generate dfs for capacity, V, R and X
     logger.info('Generating max capacity data')
-    df_capmax = get_manlix_output(
-        blo_eta, df_manlix, df_lines,
+    df_capmax_manlix = get_manlix_output(
+        blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='A-B',
         lines_value_col='A->B', func='mean')
 
     logger.info('Generating V data')
     df_v = get_manlix_output(
-        blo_eta, df_manlix, df_lines,
+        blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='V [kV]',
         lines_value_col='V [kV]', func='last')
 
     logger.info('Generating R data')
     df_r = get_manlix_output(
-        blo_eta, df_manlix, df_lines,
+        blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='R [ohms]',
         lines_value_col='R[ohm]', func='last')
 
     logger.info('Generating X data')
     df_x = get_manlix_output(
-        blo_eta, df_manlix, df_lines,
+        blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='X [ohms]',
         lines_value_col='X[ohm]', func='last')
 
     logger.info('Detect changes and get formatted dataframe')
     df_manlix_changes = get_manlix_changes(
-        df_capmax, df_v, df_r, df_x, path_inputs)
+        df_capmax_manlix,
+        df_v, df_r, df_x, path_inputs)
 
     # Write data
     logger.info('Write manli data')

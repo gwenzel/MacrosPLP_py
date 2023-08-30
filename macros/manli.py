@@ -107,8 +107,14 @@ def filter_lines(df_lines: pd.DataFrame,
     return df_manli[filter1 & filter2]
 
 
-def validate_manli(df_manli: pd.DataFrame):
-    pass
+def validate_manli(df_manli: pd.DataFrame, df_lines: pd.DataFrame):
+    for idx, row in df_manli.iterrows():
+        if row.isna().any():
+            logger.error('Missing fields in row %s' % idx)
+        if not row['LÍNEA'] in (df_lines['Nombre A->B'].tolist()):
+            logger.error('Line %s in does not exist' % row['LÍNEA'])
+        if row['A-B'] < 0:
+            logger.error('Line %s has negative capacity' % row['LÍNEA'])
 
 
 def get_nominal_values_dict(df_lineas: pd.DataFrame,
@@ -121,14 +127,14 @@ def get_nominal_values_dict(df_lineas: pd.DataFrame,
 
 
 def build_df_nominal(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
-                     df_lineas: pd.DataFrame, id_col: str = 'LÍNEA',
-                     lines_value_col: str = 'A->B') -> pd.DataFrame:
+                     df_lineas: pd.DataFrame, id_col: str,
+                     lines_value_col: str) -> pd.DataFrame:
     '''
     Build matrix with all nominal values for each line in mantcen
     '''
     # Get line names
     manli_line_names = df_manli[id_col].unique().tolist()
-    # Get capmax dictionaries
+    # Get nominal value dictionaries
     nominal_values_dict = get_nominal_values_dict(df_lineas, lines_value_col)
     # Get base dataframes
     df_nominal = get_daily_indexed_df(blo_eta)
@@ -141,6 +147,51 @@ def build_df_nominal(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
     return df_nominal
 
 
+def add_manli_data_row_by_row(df_nominal: pd.DataFrame,
+                              df_manli: pd.DataFrame,
+                              id_col: str,
+                              manli_col: str) -> pd.DataFrame:
+    '''
+    Add df_manli data in row-by-row order to df_nominal
+    Note that filters have a daily resolution
+    '''
+    df = df_nominal.copy()
+    manli_dates_ini = pd.to_datetime(
+        df_manli[['YearIni', 'MonthIni', 'DayIni']].rename(columns={
+            'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
+    manli_dates_end = pd.to_datetime(
+        df_manli[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
+            'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
+    for i in range(len(manli_dates_ini)):
+        name = df_manli.iloc[i][id_col]
+        if name in df.columns:
+            manli_mask_ini = manli_dates_ini.iloc[i] <= df['Date']
+            manli_mask_end = manli_dates_end.iloc[i] >= df['Date']
+            df.loc[manli_mask_ini & manli_mask_end, name] = \
+                df_manli.iloc[i][manli_col]
+    return df
+
+
+def apply_func_per_etapa(blo_eta: pd.DataFrame, df: pd.DataFrame,
+                         func: str = 'mean') -> pd.DataFrame:
+    '''
+    Apply func per Etapa and drop day column
+    '''
+    on_cols = ['Month', 'Year']
+    groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
+    if func == 'mean':
+        df_final = pd.merge(
+            blo_eta, df, how='left', on=on_cols).groupby(
+            groupby_cols).mean(numeric_only=True)
+    elif func == 'last':
+        df_final = pd.merge(
+            blo_eta, df, how='left', on=on_cols).groupby(
+            groupby_cols).last(numeric_only=True)
+    else:
+        sys.exit('Invalid function: %s' % func)
+    return df_final.drop(['Day'], axis=1)
+
+
 def get_manli_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
                      df_lines: pd.DataFrame, id_col: str = 'LÍNEA',
                      manli_col: str = 'A-B', lines_value_col: str = 'A->B',
@@ -150,34 +201,28 @@ def get_manli_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
                                   id_col, lines_value_col)
     # 2. Add df_manli data in row-by-row order
     # Note that filters have a daily resolution
-    manli_dates_ini = pd.to_datetime(
-        df_manli[['YearIni', 'MonthIni', 'DayIni']].rename(columns={
-            'YearIni': 'year', 'MonthIni': 'month', 'DayIni': 'day'}))
-    manli_dates_end = pd.to_datetime(
-        df_manli[['YearEnd', 'MonthEnd', 'DayEnd']].rename(columns={
-            'YearEnd': 'year', 'MonthEnd': 'month', 'DayEnd': 'day'}))
-    for i in range(len(manli_dates_ini)):
-        manli_mask_ini = manli_dates_ini.iloc[i] <= df_nominal['Date']
-        manli_mask_end = manli_dates_end.iloc[i] >= df_nominal['Date']
-        name = df_manli.iloc[i][id_col]
-        df_nominal.loc[manli_mask_ini & manli_mask_end, name] = \
-            df_manli.iloc[i][manli_col]
-    # 3. Apply func per Etapa
-    on_cols = ['Month', 'Year']
-    groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
-    if func == 'mean':
-        df_final = pd.merge(
-            blo_eta, df_nominal, how='left', on=on_cols).groupby(
-            groupby_cols).mean(numeric_only=True)
-    elif func == 'last':
-        df_final = pd.merge(
-            blo_eta, df_nominal, how='left', on=on_cols).groupby(
-            groupby_cols).last(numeric_only=True)
-    else:
-        sys.exit('Invalid function: %s' % func)
-    # 4. Drop Day column
-    df_final = df_final.drop(['Day'], axis=1)
-    return df_final
+    df_nominal_modified = add_manli_data_row_by_row(
+        df_nominal, df_manli, id_col, manli_col)
+    # 3. Apply func per Etapa abd drop day column
+    return apply_func_per_etapa(blo_eta, df_nominal_modified, func)
+
+
+def get_df_manli(iplp_path: Path, df_lines: pd.DataFrame) -> pd.DataFrame:
+    logger.info('Read line in/out input data')
+    df_manli = get_manli_input(iplp_path)
+
+    # Filter out non-existing lines
+    logger.info('Filter out non-existing lines')
+    df_manli = filter_lines(df_lines, df_manli)
+
+    # Add time info
+    logger.info('Adding time info')
+    df_manli = add_time_info(df_manli)
+
+    # Validate manli data
+    logger.info('Validating MantLin data')
+    validate_manli(df_manli, df_lines)
+    return df_manli
 
 
 def main():
@@ -196,25 +241,14 @@ def main():
     logger.info('Read existing lines data')
     df_lines = read_df_lines(iplp_path)
 
-    logger.info('Read line in/out input data')
-    df_manli = get_manli_input(iplp_path)
-
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
     blo_eta, _, _ = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
-    # Filter out non-existing lines
-    logger.info('Filter out non-existing lines')
-    df_manli = filter_lines(df_lines, df_manli)
-
-    # Add time info
-    logger.info('Adding time info')
-    df_manli = add_time_info(df_manli)
-
-    # Validate manli data
-    logger.info('Validating MantLin data')
-    validate_manli(df_manli)
+    # Get df_manli
+    logger.info('Getting df_manli')
+    df_manli = get_df_manli(iplp_path, df_lines)
 
     # Generate arrays with min/max capacity data
     logger.info('Generating min and max capacity data')
