@@ -12,8 +12,11 @@ from numpy import ceil
 from argparse import ArgumentParser
 from shutil import copyfile
 import time
-import logging
 from datetime import datetime
+from utils.logger import create_logger
+
+
+logger = create_logger('utils')
 
 
 # Archivo de etapas y block2day
@@ -65,10 +68,6 @@ def timeit(func):
     return timeit_wrapper
 
 
-def get_project_root() -> Path:
-    return Path(__file__).parent
-
-
 def process_etapas_blocks(path_dat: Path) -> (pd.DataFrame, pd.Series,
                                               pd.DataFrame):
     '''
@@ -103,23 +102,25 @@ def input_path(file_descrption: str) -> Path:
     file_path = file_path.replace('"', '')
     # e.g. C:\Users\Bob\Desktop\example.txt
     # or /home/Bob/Desktop/example.txt
-    print(file_path)
+    logger.info(file_path)
 
     if os.path.exists(file_path):
-        print('The file/path %s exists' % file_path)
+        logger.info('The file/path %s exists' % file_path)
     else:
-        print('The specified file/path does NOT exist')
+        logger.error('The specified file/path does NOT exist')
     return Path(file_path)
 
 
 def check_is_file(path: Path):
     if not path.is_file():
-        sys.exit("file %s does not exist" % path)
+        logger.error("file %s does not exist" % path)
 
 
 def check_is_path(path: Path):
     if not path.exists():
-        sys.exit("Dat path is not valid: %s" % path)
+        logger.warning("Path is not valid: %s" % path)
+        path.mkdir(parents=True, exist_ok=True)
+        logger.info("Path was created: %s" % path)
 
 
 def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
@@ -161,32 +162,6 @@ def get_ext_inputs_path(parser: ArgumentParser) -> Path:
     ext_path = input_path("External inputs path")
     check_is_path(ext_path)
     return ext_path
-
-
-def create_logger(logname: str):
-    # Gets or creates a logger
-    logger = logging.getLogger(logname)
-
-    # set log level
-    logger.setLevel(logging.INFO)
-
-    # set formatter
-    formatter = logging.Formatter(
-        '%(asctime)s : %(levelname)s : %(name)s : %(message)s')
-
-    # define file and stream handlers
-    root = get_project_root()
-    filepath = root / ('log_%s.log' % logname)
-    file_handler = logging.FileHandler(filepath, mode='w')
-    file_handler.setFormatter(formatter)
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-
-    # add file and handler to logger
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
-    return logger
 
 
 def remove_blank_lines(text_file: Path):
