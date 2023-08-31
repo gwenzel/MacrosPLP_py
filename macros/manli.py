@@ -7,12 +7,12 @@ import sys
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
-                         create_logger,
                          process_etapas_blocks,
                          add_time_info,
                          get_daily_indexed_df,
                          write_lines_from_scratch,
                          write_lines_appending)
+from utils.logger import create_logger
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
 from pathlib import Path
@@ -56,8 +56,7 @@ def build_df_aux(df_capmax_ab: pd.DataFrame,
 
 def write_plpmanli(path_inputs: Path,
                    df_capmax_ab: pd.DataFrame,
-                   df_capmax_ba: pd.DataFrame,
-                   printdata: bool = True):
+                   df_capmax_ba: pd.DataFrame):
     '''
     Write plpmanli.dat file
     '''
@@ -66,11 +65,6 @@ def write_plpmanli(path_inputs: Path,
     # Get ['Etapa','Year','Month','Block'] as columns
     df_capmax_ab = df_capmax_ab.reset_index()
     df_capmax_ba = df_capmax_ba.reset_index()
-
-    # Print data if requested
-    if printdata:
-        df_capmax_ab.to_csv(path_inputs / 'df_manli_ab.csv')
-        df_capmax_ba.to_csv(path_inputs / 'df_manli_ba.csv')
 
     lines = ['# Archivo de mantenimientos de lineas (plpmanli.dat)']
     lines += ['# Numero de lineas con matenimientos']
@@ -101,6 +95,14 @@ def write_uni_plpmanli(path_inputs: Path):
     lines += ['# Numero de lineas con matenimientos']
     lines += ['0']
     write_lines_from_scratch(lines, path_inputs / 'uni_plpmanli.dat')
+
+
+def print_dfs(path_df: Path,
+              df_capmax_ab: pd.DataFrame,
+              df_capmax_ba: pd.DataFrame):
+    # Print data if requested
+    df_capmax_ab.to_csv(path_df / 'df_manli_ab.csv')
+    df_capmax_ba.to_csv(path_df / 'df_manli_ba.csv')
 
 
 def filter_lines(df_lines: pd.DataFrame,
@@ -243,6 +245,8 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+    path_df = iplp_path.parent / "Temp" / "df"
+    check_is_path(path_df)
 
     logger.info('Read existing lines data')
     df_lines = read_df_lines(iplp_path)
@@ -270,6 +274,7 @@ def main():
                                     func='mean')
     # Write data
     logger.info('Write manli data')
+    print_dfs(path_df, df_capmax_ab, df_capmax_ba)
     write_plpmanli(path_inputs, df_capmax_ab, df_capmax_ba)
     write_uni_plpmanli(path_inputs)
 

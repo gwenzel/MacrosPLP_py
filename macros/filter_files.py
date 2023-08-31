@@ -5,9 +5,8 @@ from openpyxl.utils.datetime import from_excel
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
-                         timeit,
-                         create_logger)
-
+                         timeit)
+from utils.logger import create_logger
 
 logger = create_logger('filter_files')
 

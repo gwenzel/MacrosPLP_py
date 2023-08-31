@@ -5,10 +5,10 @@ Generate PLPMANLIX.dat file with changes in line capacity
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
-                         create_logger,
                          process_etapas_blocks,
                          add_time_info,
                          write_lines_from_scratch)
+from utils.logger import create_logger
 import pandas as pd
 from pathlib import Path
 from openpyxl.utils.datetime import from_excel
@@ -103,7 +103,7 @@ def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
                        df_v: pd.DataFrame,
                        df_r: pd.DataFrame,
                        df_x: pd.DataFrame,
-                       path_inputs: Path,
+                       path_df: Path,
                        print_values: bool = True) -> pd.DataFrame:
     '''
     Get dataframe with manlix format
@@ -114,8 +114,8 @@ def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
     list_of_dfs = []
 
     if print_values:
-        df_capmax_manlix_ab.to_csv(path_inputs / 'df_manlix_ab.csv')
-        df_capmax_manlix_ba.to_csv(path_inputs / 'df_manlix_ba.csv')
+        df_capmax_manlix_ab.to_csv(path_df / 'df_manlix_ab.csv')
+        df_capmax_manlix_ba.to_csv(path_df / 'df_manlix_ba.csv')
 
     for line in manlix_lines:
         # Get diff vector to detect changes
@@ -137,7 +137,7 @@ def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
     if len(list_of_dfs) > 0:
         df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
         if print_values:
-            df_manlix_changes.to_csv(path_inputs / 'df_manlix_changes.csv')
+            df_manlix_changes.to_csv(path_df / 'df_manlix_changes.csv')
         return df_manlix_changes
     # else
     logger.error('No valid line changes in manlix')
@@ -220,6 +220,8 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+    path_df = iplp_path.parent / "Temp" / "df"
+    check_is_path(path_df)
 
     logger.info('Read existing lines data')
     df_lines = read_df_lines(iplp_path)
@@ -269,7 +271,7 @@ def main():
     logger.info('Detect changes and get formatted dataframe')
     df_manlix_changes = get_manlix_changes(
         df_capmax_ab, df_capmax_ba,
-        df_v, df_r, df_x, path_inputs)
+        df_v, df_r, df_x, path_df)
 
     # Write data
     logger.info('Write manli data')

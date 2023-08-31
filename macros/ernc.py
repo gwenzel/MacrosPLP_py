@@ -9,8 +9,8 @@ from utils.utils import (timeit,
                          define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
-                         create_logger,
                          get_scenarios)
+from utils.logger import create_logger
 from macros.ernc_read_write import (read_ernc_files,
                                     write_plpmance_ernc_dat,
                                     generate_max_capacity_csv,
@@ -37,7 +37,9 @@ def get_input_paths() -> (Path, Path, Path):
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
-    return iplp_path, path_inputs, path_dat
+    path_df = iplp_path.parent / "Temp" / "df"
+    check_is_path(path_df)
+    return iplp_path, path_inputs, path_dat, path_df
 
 
 def get_input_names(iplp_path: Path) -> dict:
@@ -69,7 +71,7 @@ def get_inputs(iplp_path: Path, path_inputs: Path, path_dat: Path,
 def get_profiles_and_rating_factors(ernc_data: dict,
                                     blo_eta: pd.DataFrame,
                                     block2day: pd.DataFrame,
-                                    iplp_path: Path) -> (
+                                    path_df: Path) -> (
                                     pd.DataFrame, pd.DataFrame):
     # Convert hourly profiles to blocks
     logger.info('Converting hourly profiles to blocks')
@@ -77,20 +79,20 @@ def get_profiles_and_rating_factors(ernc_data: dict,
 
     # Replicate data for all Etapas
     logger.info('Getting all profiles')
-    df_all_profiles = get_all_profiles(blo_eta, profiles_dict, iplp_path)
+    df_all_profiles = get_all_profiles(blo_eta, profiles_dict, path_df)
 
     # Get Rating Factors
     logger.info('Getting rating factors')
-    df_rf = get_rating_factors(ernc_data, blo_eta, iplp_path)
+    df_rf = get_rating_factors(ernc_data, blo_eta, path_df)
     return df_all_profiles, df_rf
 
 
 def scale_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
                    df_rf: pd.DataFrame, valid_unit_names: list,
-                   iplp_path: Path) -> pd.DataFrame:
+                   path_df: Path) -> pd.DataFrame:
     logger.info('Using rating factors to scale profiles')
     return get_scaled_profiles(
-        ernc_data, df_all_profiles, df_rf, valid_unit_names, iplp_path)
+        ernc_data, df_all_profiles, df_rf, valid_unit_names, path_df)
 
 
 def write_data(ernc_data: dict, df_scaled_profiles: pd.DataFrame,
@@ -106,7 +108,7 @@ def main():
     Main routine
     '''
     # Get input file path
-    iplp_path, path_inputs, path_dat =\
+    iplp_path, path_inputs, path_dat, path_df =\
         get_input_paths()
 
     # Get ERNC scenario and input file names
@@ -122,11 +124,11 @@ def main():
 
     # Get profiles and rating factors
     df_all_profiles, df_rf = get_profiles_and_rating_factors(
-        ernc_data, blo_eta, block2day, iplp_path)
+        ernc_data, blo_eta, block2day, path_df)
 
     # Use RFs to scale profiles
     df_scaled_profiles = scale_profiles(
-        ernc_data, df_all_profiles, df_rf, valid_unit_names, iplp_path)
+        ernc_data, df_all_profiles, df_rf, valid_unit_names, path_df)
 
     # Write data in .dat format
     write_data(

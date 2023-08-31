@@ -55,7 +55,7 @@ def replicate_profiles(df_left: pd.DataFrame, df_right: pd.DataFrame,
 
 
 def get_all_profiles(blo_eta: pd.DataFrame, profiles_dict: dict,
-                     iplp_path: Path) -> pd.DataFrame:
+                     path_df: Path) -> pd.DataFrame:
     '''
     Run the replicate_profiles function for all profiles and group data
     on one output dataframe
@@ -65,7 +65,7 @@ def get_all_profiles(blo_eta: pd.DataFrame, profiles_dict: dict,
         if len(df) > 0:
             df_out = replicate_profiles(df_out, df, type=type)
     # Print to csv
-    df_out.to_csv(iplp_path.parent / 'Temp' / 'df_all_profiles.csv')
+    df_out.to_csv(path_df / 'df_ernc_all_profiles.csv')
     return df_out
 
 
@@ -80,7 +80,7 @@ def get_ini_date(blo_eta: pd.DataFrame) -> datetime:
 
 
 def get_rating_factors(ernc_data: dict, blo_eta: pd.DataFrame,
-                       iplp_path: Path) -> pd.DataFrame:
+                       path_df: Path) -> pd.DataFrame:
     '''
     Return Rating Factors dataframe
     '''
@@ -109,12 +109,12 @@ def get_rating_factors(ernc_data: dict, blo_eta: pd.DataFrame,
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
-    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf_initial.csv')
+    df_rf.to_csv(path_df / 'df_ernc_rf_initial.csv')
 
     df_rf = process_semi_months(df_rf)
 
     # Print to csv
-    df_rf.to_csv(iplp_path.parent / 'Temp' / 'df_rf_final.csv')
+    df_rf.to_csv(path_df / 'df_ernc_rf_final.csv')
 
     return df_rf
 
@@ -160,7 +160,7 @@ def process_semi_months(df_rf: pd.DataFrame) -> pd.DataFrame:
 
 def get_scaled_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
                         df_rf: pd.DataFrame, unit_names: list,
-                        iplp_path: Path) -> pd.DataFrame:
+                        path_df: Path) -> pd.DataFrame:
     '''
     Use all profiles data and rating factors to generate scaled profiles
     '''
@@ -188,5 +188,5 @@ def get_scaled_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file
-    df_profiles.to_csv(iplp_path.parent / 'Temp' / 'ernc_profiles.csv')
+    df_profiles.to_csv(path_df / 'df_ernc_scaled_profiles.csv')
     return df_profiles

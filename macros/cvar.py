@@ -3,9 +3,9 @@ from utils.utils import (   timeit,
                             get_iplp_input_path,
                             get_ext_inputs_path,
                             check_is_path,
-                            create_logger,
                             process_etapas_blocks
 )
+from utils.logger import create_logger
 import pandas as pd
 
 logger = create_logger('cvariable')

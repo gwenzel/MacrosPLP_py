@@ -14,8 +14,7 @@ import numpy as np
 from openpyxl.utils.datetime import from_excel
 from pathlib import Path
 
-from utils.utils import (create_logger,
-                         timeit,
+from utils.utils import (timeit,
                          define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
@@ -24,6 +23,7 @@ from utils.utils import (create_logger,
                          write_lines_from_scratch,
                          write_lines_appending,
                          translate_to_hydromonth)
+from utils.logger import create_logger
 
 logger = create_logger('demanda')
 
@@ -59,8 +59,7 @@ formatters_plpfal = {
 }
 
 
-def dda_por_barra_to_row_format(iplp_path: Path,
-                                write_to_csv: bool = False) -> pd.DataFrame:
+def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
     keys = ["Coordinado", "Cliente", "Profile",
             "Barra Consumo", "Factor Barra Consumo"]
@@ -83,9 +82,6 @@ def dda_por_barra_to_row_format(iplp_path: Path,
     df_dda_por_barra = pd.DataFrame(new_dict).reset_index(drop=True)
     df_dda_por_barra['Coordinado'] = \
         df_dda_por_barra['Coordinado'].fillna("NA")
-    if write_to_csv:
-        df_dda_por_barra.to_csv(
-            iplp_path.parent / 'Temp' / 'DdaPorBarra_rows.csv')
     return df_dda_por_barra
 
 
@@ -302,6 +298,10 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
         write_lines_appending(lines, plpfal_path)
 
 
+def print_df_dda_por_barra(path_df: Path, df_dda_por_barra: pd.DataFrame):
+    df_dda_por_barra.to_csv(path_df / 'df_dda_por_barra.csv')
+
+
 @timeit
 def main():
     '''
@@ -315,6 +315,8 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+    path_df = iplp_path.parent / "Temp" / "df"
+    check_is_path(path_df)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
@@ -323,8 +325,8 @@ def main():
 
     # Sheet "DdaPorBarra" to row format
     logger.info('Processing DdaPorBarra sheet')
-    df_dda_por_barra = dda_por_barra_to_row_format(
-        iplp_path, write_to_csv=True)
+    df_dda_por_barra = dda_por_barra_to_row_format(iplp_path)
+    print_df_dda_por_barra(path_df, df_dda_por_barra)
 
     # Get monthly demand from Sheet "DdaEnergia"
     logger.info('Processing DdaEnergia sheet')

@@ -14,7 +14,6 @@ from pathlib import Path
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
-                         create_logger,
                          process_etapas_blocks,
                          write_lines_from_scratch,
                          write_lines_appending,
@@ -23,7 +22,7 @@ from utils.utils import (define_arg_parser,
                          timeit,
                          add_time_info
                          )
-
+from utils.logger import create_logger
 
 logger = create_logger('mantcen')
 
@@ -287,7 +286,8 @@ def build_df_aux(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
 
 
 def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
-                           iplp_path: Path, printdata: bool = False):
+                           iplp_path: Path, path_df: Path,
+                           printdata: bool = False):
     '''
     Write plpmance_ini.dat file, which will be used later to add the
     renewable energy profiles and generate the definitive
@@ -308,8 +308,8 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
 
     # Print data if requested
     if printdata:
-        df_pmax.to_csv(iplp_path.parent / 'Temp' / 'mantcen_pmax.csv')
-        df_pmin.to_csv(iplp_path.parent / 'Temp' / 'mantcen_pmin.csv')
+        df_pmax.to_csv(path_df / 'df_mantcen_pmax.csv')
+        df_pmin.to_csv(path_df / 'df_mantcen_pmin.csv')
 
     lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
     lines += ['# numero de centrales con matenimientos']
@@ -346,6 +346,8 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+    path_df = iplp_path.parent / "Temp" / "df"
+    check_is_path(path_df)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
@@ -387,7 +389,8 @@ def main():
 
     # Write data
     logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, printdata=True)
+    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, path_df,
+                           printdata=True)
 
     logger.info('Process finished successfully')
 
