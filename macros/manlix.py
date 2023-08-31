@@ -72,18 +72,20 @@ def validate_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
             logger.error('Line %s has negative X' % row['LÍNEA'])
 
 
-def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
+def build_df_aux(mask_changes: pd.Series, line: str,
+                 df_capmax_ab: pd.DataFrame, df_capmax_ba: pd.DataFrame,
+                 df_v: pd.DataFrame, df_r: pd.DataFrame, df_x: pd.DataFrame):
     '''
     Build dataframe with manlix changes for one line
     To be appended in the loop in get_manlix_changes
     '''
-    n_blo = len(df_capmax)
+    n_blo = len(df_capmax_ab)
     col_names = ['NomLin', 'EtaIni', 'EtaFin', 'ManALin', 'ManBLin',
                  'VNomLin', 'ResLin', 'XImpLin', 'FOpeLin']
     # Build dataframe with all data
     df_aux = pd.concat([
-        df_capmax.loc[mask_changes, line].rename('ManALin'),
-        df_capmax.loc[mask_changes, line].rename('ManBLin'),
+        df_capmax_ab.loc[mask_changes, line].rename('ManALin'),
+        df_capmax_ba.loc[mask_changes, line].rename('ManBLin'),
         df_v.loc[mask_changes, line].rename('VNomLin'),
         df_r.loc[mask_changes, line].rename('ResLin'),
         df_x.loc[mask_changes, line].rename('XImpLin')
@@ -96,7 +98,8 @@ def build_df_aux(mask_changes, line, df_capmax, df_v, df_r, df_x):
     return df_aux[col_names].reset_index(drop=True)
 
 
-def get_manlix_changes(df_capmax_manlix: pd.DataFrame,
+def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
+                       df_capmax_manlix_ba: pd.DataFrame,
                        df_v: pd.DataFrame,
                        df_r: pd.DataFrame,
                        df_x: pd.DataFrame,
@@ -107,22 +110,30 @@ def get_manlix_changes(df_capmax_manlix: pd.DataFrame,
     CSV with a row for each capacity change, with initial/final etapa,
     and V, R, X data
     '''
-    manlix_lines = df_capmax_manlix.columns
+    manlix_lines = df_capmax_manlix_ab.columns
     list_of_dfs = []
+
+    if print_values:
+        df_capmax_manlix_ab.to_csv(path_inputs / 'df_manlix_ab.csv')
+        df_capmax_manlix_ba.to_csv(path_inputs / 'df_manlix_ba.csv')
 
     for line in manlix_lines:
         # Get diff vector to detect changes
         # Filter when diff is not 0 and also keep nan row (first row)
         # (nominal value should be nan)
         # Then append results to main dataframe
-        df_diff = df_capmax_manlix[line].diff()
+        df_diff_ab = df_capmax_manlix_ab[line].diff()
+        df_diff_ba = df_capmax_manlix_ba[line].diff()
 
-        mask_changes = (abs(df_diff) >= LINE_CHANGE_TOLERANCE) |\
-                       (df_diff.isna())
+        mask_changes = (abs(df_diff_ab) >= LINE_CHANGE_TOLERANCE) |\
+                       (abs(df_diff_ba) >= LINE_CHANGE_TOLERANCE) |\
+                       (df_diff_ab.isna())
         if mask_changes.any():
             df_aux = build_df_aux(
-                mask_changes, line, df_capmax_manlix, df_v, df_r, df_x)
+                mask_changes, line, df_capmax_manlix_ab, df_capmax_manlix_ba,
+                df_v, df_r, df_x)
             list_of_dfs.append(df_aux.copy())
+    # Concat all dataframes
     if len(list_of_dfs) > 0:
         df_manlix_changes = pd.concat(list_of_dfs).reset_index(drop=True)
         if print_values:
@@ -179,7 +190,7 @@ def get_manlix_output(blo_eta: pd.DataFrame,
     # 1. Get nominal data for all lines in manlix
     df_nominal = build_df_nominal(
             blo_eta, df_manlix, df_lines, id_col, lines_value_col)
-    if manli_col == 'A-B':
+    if manli_col == 'A-B' or manli_col == 'B-A':
         # 2. If dealing with Max Capacity,
         # Add df_manli and manlix data in row-by-row order
         df_nominal_mod1 = add_manli_data_row_by_row(
@@ -228,10 +239,14 @@ def main():
 
     # Generate dfs for capacity, V, R and X
     logger.info('Generating max capacity data')
-    df_capmax_manlix = get_manlix_output(
+    df_capmax_ab = get_manlix_output(
         blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='A-B',
         lines_value_col='A->B', func='mean')
+    df_capmax_ba = get_manlix_output(
+        blo_eta, df_manli, df_manlix, df_lines,
+        id_col='LÍNEA', manli_col='B-A',
+        lines_value_col='B->A', func='mean')
 
     logger.info('Generating V data')
     df_v = get_manlix_output(
@@ -253,7 +268,7 @@ def main():
 
     logger.info('Detect changes and get formatted dataframe')
     df_manlix_changes = get_manlix_changes(
-        df_capmax_manlix,
+        df_capmax_ab, df_capmax_ba,
         df_v, df_r, df_x, path_inputs)
 
     # Write data

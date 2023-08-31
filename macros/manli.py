@@ -41,30 +41,36 @@ def get_manli_input(iplp_path: Path) -> pd.DataFrame:
     return df_manli
 
 
-def build_df_aux(df_capmax: pd.DataFrame, line: str) -> pd.DataFrame:
-    df_aux_capmax = df_capmax[['Etapa', line]].copy()
-    df_aux_capmax = df_aux_capmax.rename(columns={line: 'PotMaxAB'})
-    df_aux_capmax['PotMaxBA'] = df_aux_capmax['PotMaxAB']
+def build_df_aux(df_capmax_ab: pd.DataFrame,
+                 df_capmax_ba: pd.DataFrame,
+                 line: str) -> pd.DataFrame:
+    df_aux_capmax = df_capmax_ab[['Etapa', line]].copy()\
+                        .rename(columns={line: 'PotMaxAB'})
+    df_aux_capmax['PotMaxBA'] = df_capmax_ba[[line]].copy()
     df_aux_capmax['Operativa'] = 'F'
-    # Filter only 0 rows
+    # Filter only 0 rows in PotMax AB
     df_aux_capmax = df_aux_capmax[df_aux_capmax['PotMaxAB'] == 0]
     # Select and reorder columns
     return df_aux_capmax[['Etapa', 'PotMaxAB', 'PotMaxBA', 'Operativa']]
 
 
-def write_plpmanli(path_inputs: Path, df_capmax: pd.DataFrame,
+def write_plpmanli(path_inputs: Path,
+                   df_capmax_ab: pd.DataFrame,
+                   df_capmax_ba: pd.DataFrame,
                    printdata: bool = True):
     '''
     Write plpmanli.dat file
     '''
-    list_manli = list(df_capmax.columns)
+    list_manli = list(df_capmax_ab.columns)
 
     # Get ['Etapa','Year','Month','Block'] as columns
-    df_capmax = df_capmax.reset_index()
+    df_capmax_ab = df_capmax_ab.reset_index()
+    df_capmax_ba = df_capmax_ba.reset_index()
 
     # Print data if requested
     if printdata:
-        df_capmax.to_csv(path_inputs / 'df_manli.csv')
+        df_capmax_ab.to_csv(path_inputs / 'df_manli_ab.csv')
+        df_capmax_ba.to_csv(path_inputs / 'df_manli_ba.csv')
 
     lines = ['# Archivo de mantenimientos de lineas (plpmanli.dat)']
     lines += ['# Numero de lineas con matenimientos']
@@ -75,7 +81,7 @@ def write_plpmanli(path_inputs: Path, df_capmax: pd.DataFrame,
 
     for line in list_manli:
         # Build df_aux from both dataframes, for each line
-        df_aux = build_df_aux(df_capmax, line)
+        df_aux = build_df_aux(df_capmax_ab, df_capmax_ba, line)
         if len(df_aux) > 0:
             # Print data
             lines = ['\n# Nombre de las lineas']
@@ -252,11 +258,19 @@ def main():
 
     # Generate arrays with min/max capacity data
     logger.info('Generating min and max capacity data')
-    df_capmax = get_manli_output(blo_eta, df_manli, df_lines)
-
+    df_capmax_ab = get_manli_output(blo_eta, df_manli, df_lines,
+                                    id_col='LÍNEA',
+                                    manli_col='A-B',
+                                    lines_value_col='A->B',
+                                    func='mean')
+    df_capmax_ba = get_manli_output(blo_eta, df_manli, df_lines,
+                                    id_col='LÍNEA',
+                                    manli_col='B-A',
+                                    lines_value_col='B->A',
+                                    func='mean')
     # Write data
     logger.info('Write manli data')
-    write_plpmanli(path_inputs, df_capmax)
+    write_plpmanli(path_inputs, df_capmax_ab, df_capmax_ba)
     write_uni_plpmanli(path_inputs)
 
     logger.info('Process finished successfully')
