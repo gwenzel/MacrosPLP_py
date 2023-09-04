@@ -196,8 +196,11 @@ def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
 def filter_df_mantcen(df_mantcen: pd.DataFrame,
                       df_centrales: pd.DataFrame) -> pd.DataFrame:
     '''
-    Filter out rows with non-existent Unit names
+    Filter out rows with non-existent Unit names and ERNC
     '''
+    types_to_filter = ['SOLAR_', 'SOLARx_', 'EOLICA_', 'EOLICAx_']
+    for type in types_to_filter:
+        df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
@@ -266,20 +269,13 @@ def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
     return df_pmin, df_pmax
 
 
-def build_df_aux(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
-                 unit: str, iplp_path: Path) -> pd.DataFrame:
-    df_aux_pmin = df_pmin[['Month', 'Etapa', unit]].copy()
-    df_aux_pmin = df_aux_pmin.rename(columns={unit: 'Pmin'})
-    df_aux_pmax = df_pmax[['Month', 'Etapa', unit]].copy()
-    df_aux_pmax = df_aux_pmax.rename(columns={unit: 'Pmax'})
-    df_aux = pd.merge(df_aux_pmin, df_aux_pmax)
-    '''
+def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
+                 unit: str, pmin_dict: dict, pmax_dict: dict) -> pd.DataFrame:
+    df_aux = pd.merge(df_pmin_unit, df_pmax_unit)
     # Keep rows only if pmin or pmax are not default values
-    pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
     pmin_not_default = (df_aux['Pmin'] != pmin_dict[unit])
     pmax_not_default = (df_aux['Pmax'] != pmax_dict[unit])
     df_aux = df_aux[pmin_not_default | pmax_not_default]
-    '''
     # Reorder columns and add NIntPot
     df_aux['NIntPot'] = 1
     return df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
@@ -318,19 +314,28 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
     # Write dat file from scratch
     write_lines_from_scratch(lines, plpmance_path)
 
+    # Read dicts
+    pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
+
     for unit in list_mantcen:
-        lines = ['\n# Nombre de la central']
-        lines += ["'%s'" % unit]
-        lines += ['#   Numero de Bloques e Intervalos']
-        lines += ['  %04d                 01' % num_blo]
-        lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
         # Build df_aux from both dataframes, for each unit
-        df_aux = build_df_aux(df_pmin, df_pmax, unit, iplp_path)
-        # Add data as string using predefined format
-        lines += [df_aux.to_string(
-            index=False, header=False, formatters=formatters_plpmance)]
-        # Write data for current unit
-        write_lines_appending(lines, plpmance_path)
+        df_pmin_unit = df_pmin[['Month', 'Etapa', unit]]\
+            .rename(columns={unit: 'Pmin'})
+        df_pmax_unit = df_pmax[['Month', 'Etapa', unit]]\
+            .rename(columns={unit: 'Pmax'})
+        df_aux = build_df_aux(df_pmin_unit, df_pmax_unit, unit,
+                              pmin_dict, pmax_dict)
+        if len(df_aux) > 0:
+            lines = ['\n# Nombre de la central']
+            lines += ["'%s'" % unit]
+            lines += ['#   Numero de Bloques e Intervalos']
+            lines += ['  %04d                 01' % num_blo]
+            lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
+            # Add data as string using predefined format
+            lines += [df_aux.to_string(
+                index=False, header=False, formatters=formatters_plpmance)]
+            # Write data for current unit
+            write_lines_appending(lines, plpmance_path)
 
 
 @timeit
