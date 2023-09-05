@@ -73,8 +73,11 @@ def validate_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
 
 
 def build_df_aux(mask_changes: pd.Series, line: str,
-                 df_capmax_ab: pd.DataFrame, df_capmax_ba: pd.DataFrame,
-                 df_v: pd.DataFrame, df_r: pd.DataFrame, df_x: pd.DataFrame):
+                 df_capmax_ab: pd.DataFrame,
+                 df_capmax_ba: pd.DataFrame,
+                 df_v: pd.DataFrame,
+                 df_r: pd.DataFrame,
+                 df_x: pd.DataFrame) -> pd.DataFrame:
     '''
     Build dataframe with manlix changes for one line
     To be appended in the loop in get_manlix_changes
@@ -90,9 +93,15 @@ def build_df_aux(mask_changes: pd.Series, line: str,
         df_r.loc[mask_changes, line].rename('ResLin'),
         df_x.loc[mask_changes, line].rename('XImpLin')
         ], axis=1)
+    # Calculate EtaIni / EtaFin
+    list_eta_ini = df_aux.index.get_level_values('Etapa')
+    list_eta_fin = (df_aux.index.get_level_values('Etapa').tolist()[1:])
+    list_eta_fin = [item - 1 for item in list_eta_fin]
+    list_eta_fin += [n_blo]
+    # Fill remaining data
     df_aux['NomLin'] = line
-    df_aux['EtaIni'] = df_aux.index.get_level_values('Etapa')
-    df_aux['EtaFin'] = n_blo  # TODO improve
+    df_aux['EtaIni'] = list_eta_ini
+    df_aux['EtaFin'] = list_eta_fin
     df_aux['FOpeLin'] = 'T'
     # Reorder columns
     return df_aux[col_names].reset_index(drop=True)

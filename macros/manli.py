@@ -76,13 +76,13 @@ def write_plpmanli(path_inputs: Path,
     for line in list_manli:
         # Build df_aux from both dataframes, for each line
         df_aux = build_df_aux(df_capmax_ab, df_capmax_ba, line)
+        # Print data
+        lines = ['\n# Nombre de la lineas']
+        lines += ["'%s'" % line]
+        lines += ['# Numero de Bloques con mantenimiento']
+        lines += ['  %03d' % len(df_aux)]
+        lines += ['# Bloque         PotMaxAB   PotMaxBA     Operativa']
         if len(df_aux) > 0:
-            # Print data
-            lines = ['\n# Nombre de las lineas']
-            lines += ["'%s'" % line]
-            lines += ['# Numero de Bloques con mantenimiento']
-            lines += ['  %03d' % len(df_aux)]
-            lines += ['# Bloque         PotMaxAB   PotMaxBA     Operativa']
             # Add data as string using predefined format
             lines += [df_aux.to_string(
                 index=False, header=False, formatters=formatters_plpmanli)]
