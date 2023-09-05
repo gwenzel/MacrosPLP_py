@@ -24,6 +24,8 @@ from utils.utils import (define_arg_parser,
                          )
 from utils.logger import create_logger
 
+POWER_CHANGE_TOLERANCE = 0.01
+
 logger = create_logger('mantcen')
 
 MONTH2NUMBER = {
@@ -270,11 +272,13 @@ def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
 
 
 def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
-                 unit: str, pmin_dict: dict, pmax_dict: dict) -> pd.DataFrame:
+                 pmin_unit: float, pmax_unit: float) -> pd.DataFrame:
     df_aux = pd.merge(df_pmin_unit, df_pmax_unit)
     # Keep rows only if pmin or pmax are not default values
-    pmin_not_default = (df_aux['Pmin'] != pmin_dict[unit])
-    pmax_not_default = (df_aux['Pmax'] != pmax_dict[unit])
+    pmin_not_default = (abs(df_pmin_unit['Pmin'] - pmin_unit) >=
+                        POWER_CHANGE_TOLERANCE)
+    pmax_not_default = (abs(df_pmax_unit['Pmax'] - pmax_unit) >=
+                        POWER_CHANGE_TOLERANCE)
     df_aux = df_aux[pmin_not_default | pmax_not_default]
     # Reorder columns and add NIntPot
     df_aux['NIntPot'] = 1
@@ -284,8 +288,7 @@ def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
 def get_mantcen_data(list_mantcen: list,
                      df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
                      pmin_dict: dict, pmax_dict: dict) -> (
-                         list, int
-                     ):
+                        list, int):
     '''
     Return text lines with mantcen data for all units
     '''
@@ -297,8 +300,8 @@ def get_mantcen_data(list_mantcen: list,
             .rename(columns={unit: 'Pmin'})
         df_pmax_unit = df_pmax[['Month', 'Etapa', unit]]\
             .rename(columns={unit: 'Pmax'})
-        df_aux = build_df_aux(df_pmin_unit, df_pmax_unit, unit,
-                              pmin_dict, pmax_dict)
+        df_aux = build_df_aux(df_pmin_unit, df_pmax_unit,
+                              pmin_dict[unit], pmax_dict[unit])
         if len(df_aux) > 0:
             number_of_units += 1
             lines += ['\n# Nombre de la central']
