@@ -281,6 +281,47 @@ def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
     return df_aux[['Month', 'Etapa', 'NIntPot', 'Pmin', 'Pmax']]
 
 
+def get_mantcen_data(list_mantcen: list,
+                     df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
+                     pmin_dict: dict, pmax_dict: dict) -> (
+                         list, int
+                     ):
+    '''
+    Return text lines with mantcen data for all units
+    '''
+    lines = []
+    number_of_units = 0
+    for unit in list_mantcen:
+        # Build df_aux from both dataframes, for each unit
+        df_pmin_unit = df_pmin[['Month', 'Etapa', unit]]\
+            .rename(columns={unit: 'Pmin'})
+        df_pmax_unit = df_pmax[['Month', 'Etapa', unit]]\
+            .rename(columns={unit: 'Pmax'})
+        df_aux = build_df_aux(df_pmin_unit, df_pmax_unit, unit,
+                              pmin_dict, pmax_dict)
+        if len(df_aux) > 0:
+            number_of_units += 1
+            lines += ['\n# Nombre de la central']
+            lines += ["'%s'" % unit]
+            lines += ['#   Numero de Bloques e Intervalos']
+            lines += ['  %04d                 01' % len(df_aux)]
+            lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
+            # Add data as string using predefined format
+            lines += [df_aux.to_string(
+                index=False, header=False, formatters=formatters_plpmance)]
+    return lines, number_of_units
+
+
+def get_header_data(number_of_units: int) -> list:
+    '''
+    Return text lines for dat file header
+    '''
+    lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
+    lines += ['# numero de centrales con matenimientos']
+    lines += ['  %s' % number_of_units]
+    return lines
+
+
 def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
                            iplp_path: Path, path_df: Path,
                            printdata: bool = False):
@@ -292,7 +333,6 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
     plpmance_path = iplp_path.parent / 'Temp' / 'plpmance_ini.dat'
 
     list_mantcen = list(df_pmin.columns)
-    num_blo = len(df_pmin)
 
     # Get ['Etapa','Year','Month','Block'] as columns
     df_pmax = df_pmax.reset_index()
@@ -307,35 +347,18 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
         df_pmax.to_csv(path_df / 'df_mantcen_pmax.csv')
         df_pmin.to_csv(path_df / 'df_mantcen_pmin.csv')
 
-    lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
-    lines += ['# numero de centrales con matenimientos']
-    lines += ['  %s' % len(list_mantcen)]
-
-    # Write dat file from scratch
-    write_lines_from_scratch(lines, plpmance_path)
-
     # Read dicts
     pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
 
-    for unit in list_mantcen:
-        # Build df_aux from both dataframes, for each unit
-        df_pmin_unit = df_pmin[['Month', 'Etapa', unit]]\
-            .rename(columns={unit: 'Pmin'})
-        df_pmax_unit = df_pmax[['Month', 'Etapa', unit]]\
-            .rename(columns={unit: 'Pmax'})
-        df_aux = build_df_aux(df_pmin_unit, df_pmax_unit, unit,
-                              pmin_dict, pmax_dict)
-        if len(df_aux) > 0:
-            lines = ['\n# Nombre de la central']
-            lines += ["'%s'" % unit]
-            lines += ['#   Numero de Bloques e Intervalos']
-            lines += ['  %04d                 01' % num_blo]
-            lines += ['#   Mes    Bloque  NIntPot   PotMin   PotMax']
-            # Add data as string using predefined format
-            lines += [df_aux.to_string(
-                index=False, header=False, formatters=formatters_plpmance)]
-            # Write data for current unit
-            write_lines_appending(lines, plpmance_path)
+    # Get mantcen data
+    lines_units, number_of_units = get_mantcen_data(
+        list_mantcen, df_pmin, df_pmax, pmin_dict, pmax_dict)
+    lines_header = get_header_data(number_of_units)
+
+    # Write dat file from scratch
+    write_lines_from_scratch(lines_header, plpmance_path)
+    # Write data for all units
+    write_lines_appending(lines_units, plpmance_path)
 
 
 @timeit
