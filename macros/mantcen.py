@@ -304,7 +304,7 @@ def get_mantcen_data(list_mantcen: list,
                               pmin_dict[unit], pmax_dict[unit])
         if len(df_aux) > 0:
             number_of_units += 1
-            lines += ['\n# Nombre de la central']
+            lines += ['# Nombre de la central']
             lines += ["'%s'" % unit]
             lines += ['#   Numero de Bloques e Intervalos']
             lines += ['  %04d                 01' % len(df_aux)]
@@ -321,7 +321,7 @@ def get_header_data(number_of_units: int) -> list:
     '''
     lines = ['# Archivo de mantenimientos de centrales (plpmance.dat)']
     lines += ['# numero de centrales con matenimientos']
-    lines += ['  %s' % number_of_units]
+    lines += ['  %s\n' % number_of_units]
     return lines
 
 
