@@ -247,7 +247,7 @@ def get_daily_indexed_df(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     # Get days in last month
     num_days = monthrange(
-        blo_eta.iloc[-1]['Year'],blo_eta.iloc[-1]['Month'])[1]
+        blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'])[1]
     ini_date = datetime(
         blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
     end_date = datetime(
