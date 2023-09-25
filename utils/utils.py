@@ -3,7 +3,7 @@
 Module to store all transversal utility functions
 '''
 import os
-import sys
+from calendar import monthrange
 from typing import TypedDict
 import pandas as pd
 from functools import wraps
@@ -245,8 +245,13 @@ def get_daily_indexed_df(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Get dataframe indexed by day within the timeframe
     '''
-    ini_date = datetime(blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
-    end_date = datetime(blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], 1)
+    # Get days in last month
+    num_days = monthrange(
+        blo_eta.iloc[-1]['Year'],blo_eta.iloc[-1]['Month'])[1]
+    ini_date = datetime(
+        blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
+    end_date = datetime(
+        blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], num_days)
     index = pd.date_range(start=ini_date, end=end_date, freq='D')
     df = pd.DataFrame(index=index, columns=['Year', 'Month', 'Day'])
     df['Year'] = df.index.year
