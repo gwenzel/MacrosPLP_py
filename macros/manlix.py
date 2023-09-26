@@ -102,7 +102,9 @@ def build_df_aux(mask_changes: pd.Series, line: str,
     df_aux['NomLin'] = line
     df_aux['EtaIni'] = list_eta_ini
     df_aux['EtaFin'] = list_eta_fin
-    df_aux['FOpeLin'] = 'T'
+    df_aux['FOpeLin'] = df_aux.apply(
+        lambda row: 'F' if (
+            (row['ManALin'] == 0) & (row['ManBLin'] == 0)) else 'T', axis=1)
     # Reorder columns
     return df_aux[col_names].reset_index(drop=True)
 
