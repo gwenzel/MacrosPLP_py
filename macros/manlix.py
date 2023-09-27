@@ -225,7 +225,7 @@ def get_dict_centrales_trf(iplp_path: Path) -> pd.DataFrame:
     and the values are lists of gas units
 
     Identify transformers with 'Trf_' prefix in field Barras,
-    and identify gas units with prefix 'Gas-' in field Fuel    
+    and identify gas units with prefix 'Gas-' in field Fuel
     '''
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
                        skiprows=4, usecols="B,C,AP,BG")
