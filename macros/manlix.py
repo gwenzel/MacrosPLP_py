@@ -219,6 +219,111 @@ def get_manlix_output(blo_eta: pd.DataFrame,
         return apply_func_per_etapa(blo_eta, df_nominal_mod, func)
 
 
+def get_dict_centrales_trf(iplp_path: Path) -> pd.DataFrame:
+    '''
+    Get dictionary, where the keys are the transformers,
+    and the values are lists of gas units
+
+    Identify transformers with 'Trf_' prefix in field Barras,
+    and identify gas units with prefix 'Gas-' in field Fuel    
+    '''
+    df = pd.read_excel(iplp_path, sheet_name="Centrales",
+                       skiprows=4, usecols="B,C,AP,BG")
+    # Filter out if X
+    df = df[df['Tipo de Central'] != 'X']
+    # Keep only Gas units
+    df = df[(df['Fuel'].str.startswith('Gas-')) & (~df['Fuel'].isna())]
+    df = df.rename(columns={'CENTRALES': 'Nombre'})
+    df = df[['Nombre', 'Barra']]
+    # Keep only Centrales in Trf
+    df = df[(df['Barra'].str.startswith('Trf_')) & (~df['Barra'].isna())]
+    transformers = df['Barra'].unique().tolist()
+    # Generate dict output
+    dict_trf_units = {}
+    for trf in transformers:
+        dict_trf_units[trf] = df[df['Barra'] == trf]['Nombre'].tolist()
+    return dict_trf_units
+
+
+def get_dict_trf_to_line(trf_list: list, df_lines: pd.DataFrame) -> dict:
+    '''
+    Get dictionary from transformer to line
+
+    This assumes a 1-1 relationship between transformers and lines
+    '''
+    dict_trf_to_line = {}
+    for trf in trf_list:
+        mask = df_lines['Nombre A->B'].str.contains(trf)
+        line_name = df_lines[mask]['Nombre A->B'].values[0]
+        dict_trf_to_line[trf] = line_name
+    return dict_trf_to_line
+
+
+def get_trf_capacity(iplp_path: Path, path_df: Path,
+                     df_lines: pd.DataFrame,
+                     df_capmax_ab: pd.DataFrame,
+                     df_capmax_ba: pd.DataFrame) -> (
+                         pd.DataFrame, pd.DataFrame
+                     ):
+    '''
+    Read mantcen data from existing csv file (coming from mantcen.py routine),
+    and get max pmax for each group of gas units in each transformer.
+
+    Paste additional columns to df_capmax_ab and df_capmax_ba dataframes
+
+    For transformers, B->A capacity is 0
+    '''
+    dict_trf_units = get_dict_centrales_trf(iplp_path)
+    trf_list = list(dict_trf_units.keys())
+    dict_trf_to_line = get_dict_trf_to_line(trf_list, df_lines)
+    df_mantcen_pmax = pd.read_csv(path_df / 'df_mantcen_pmax.csv')
+
+    mantcen_cols = df_mantcen_pmax.columns.tolist()
+
+    for trf, units_list in dict_trf_units.items():
+        # Filter units list if they are present in df_mantcen_pmax
+        units_list_filtered = [unit for unit in units_list
+                               if unit in mantcen_cols]
+        # Get pmax of all unit configurations
+        df_pmax_units = df_mantcen_pmax[['Etapa'] + units_list_filtered]
+        df_pmax_units = df_pmax_units.set_index('Etapa')
+        # Summarize using max function, and create series with the name
+        # of the transformer
+        df_pmax_trf = df_pmax_units.max(axis=1)
+        df_pmax_trf.name = dict_trf_to_line[trf]
+        # Join series to A->B Capacity dataframe
+        df_capmax_ab = df_capmax_ab.join(df_pmax_trf)
+        # Add zeros to B->A Capacity dataframe
+        df_capmax_ba[dict_trf_to_line[trf]] = 0.0
+
+        # Check errors
+        if df_capmax_ab[dict_trf_to_line[trf]].isna().any():
+            logger.error('Transformer %s has nan values ' % trf)
+
+    return df_capmax_ab, df_capmax_ba
+
+
+def add_trf_data(iplp_path: Path,
+                 df_lines: pd.DataFrame,
+                 df_v: pd.DataFrame,
+                 df_r: pd.DataFrame,
+                 df_x: pd.DataFrame) -> (
+                     pd.DataFrame, pd.DataFrame, pd.DataFrame
+                 ):
+    '''
+    Add transformers data to Voltage, R and X dataframes
+    '''
+    trf_list = list(get_dict_centrales_trf(iplp_path).keys())
+    dict_trf_to_line = get_dict_trf_to_line(trf_list, df_lines)
+
+    for trf in trf_list:
+        mask = df_lines['Nombre A->B'].str.contains(trf)
+        df_v[dict_trf_to_line[trf]] = df_lines[mask]['V [kV]'].values[0]
+        df_r[dict_trf_to_line[trf]] = df_lines[mask]['R[ohm]'].values[0]
+        df_x[dict_trf_to_line[trf]] = df_lines[mask]['X[ohm]'].values[0]
+    return df_v, df_r, df_x
+
+
 def main():
     '''
     Main routine
@@ -278,6 +383,17 @@ def main():
         blo_eta, df_manli, df_manlix, df_lines,
         id_col='LÍNEA', manli_col='X [ohms]',
         lines_value_col='X[ohm]', func='last')
+
+    logger.info('Read MantCen Pmax data for gas units and '
+                'add to transformers line capacity. Add them to '
+                'V, R and X dataframes too.')
+    df_capmax_ab, df_capmax_ba = get_trf_capacity(
+        iplp_path, path_df, df_lines,
+        df_capmax_ab, df_capmax_ba)
+
+    logger.info('Add missing transformer data')
+    df_v, df_r, df_x = add_trf_data(
+        iplp_path, df_lines, df_v, df_r, df_x)
 
     logger.info('Detect changes and get formatted dataframe')
     df_manlix_changes = get_manlix_changes(
