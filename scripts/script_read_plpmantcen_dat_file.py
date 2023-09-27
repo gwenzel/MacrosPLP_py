@@ -37,5 +37,5 @@ df_all_pivot_pmin = df_all.pivot(
 df_all_pivot_pmax = df_all.pivot(
     index='Bloque', columns='Cen', values=['PotMax'])
 
-df_all_pivot_pmin.to_csv('pmin.csv')
-df_all_pivot_pmax.to_csv('pmax.csv')
+df_all_pivot_pmin.to_csv('pmin_v11.csv')
+df_all_pivot_pmax.to_csv('pmax_v11.csv')
