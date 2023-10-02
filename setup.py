@@ -32,7 +32,8 @@ setup(
             "cvar = macros.cvar:main",
             "lin = macros.lin:main",
             "manli = macros.manli:main",
-            "manlix = macros.manlix:main"
+            "manlix = macros.manlix:main",
+            "afl = macros.inflows:main"
         ]
     },
     classifiers=[
