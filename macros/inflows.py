@@ -246,7 +246,7 @@ def main():
 
     logger.info('Getting dataframe with all data')
     df_all_inflows = get_df_all_inflows(iplp_path, blo_eta)
-    df_all_inflows.to_csv(path_df / 'df_all_inflows.csv')
+    # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv')
 
     logger.info('Shuffling inflows according to ConfigSim')
     df_configsim = read_configsim(iplp_path)
