@@ -135,8 +135,7 @@ def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
         lambda x: round(x, 2))
     df_aux = df_all_inflows.squeeze().unstack('INDHID')
     df_aux = df_aux.reset_index()
-    df_aux = df_aux.rename(
-        columns={'CENTRAL': 'NAME'})
+    df_aux = df_aux.rename(columns={'CENTRAL': 'NAME'})
     df_aux['PERIOD'] = 1
     df_aux = df_aux[
         ['NAME', 'YEAR', 'MONTH', 'DAY', 'PERIOD'] + list_of_hyd]
