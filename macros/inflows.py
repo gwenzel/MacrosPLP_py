@@ -53,13 +53,13 @@ def read_configsim(iplp_path: Path) -> pd.DataFrame:
 def read_days_per_week(iplp_path: Path) -> pd.DataFrame:
     return pd.read_excel(iplp_path,
                          sheet_name="TimeData",
-                         usecols="A:G")
+                         usecols="A:D")
 
 
 def read_dict_hidroyears(iplp_path: Path) -> dict:
     df = pd.read_excel(iplp_path,
                        sheet_name="TimeData",
-                       usecols="I:J")
+                       usecols="F:G")
     df = df.dropna().astype(int).set_index('AÑO')
     return df.to_dict()['INDHID']
 
