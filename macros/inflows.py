@@ -6,6 +6,7 @@ Generate Storage_NaturalInflow files for Plexos
 
 '''
 from datetime import datetime
+from pathlib import Path
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
@@ -18,7 +19,7 @@ import pandas as pd
 logger = create_logger('water_inflows')
 
 
-def read_plexos_end_date(iplp_path):
+def read_plexos_end_date(iplp_path: Path) -> datetime:
     value = pd.read_excel(iplp_path,
                           sheet_name="Path",
                           usecols='D',
@@ -27,7 +28,7 @@ def read_plexos_end_date(iplp_path):
     return pd.to_datetime(value)
 
 
-def read_inflow_data(iplp_path):
+def read_inflow_data(iplp_path: Path) -> pd.Series:
     df = pd.read_excel(iplp_path,
                        sheet_name="Caudales_full",
                        skiprows=4,
@@ -43,19 +44,19 @@ def read_inflow_data(iplp_path):
     return series
 
 
-def read_configsim(iplp_path):
+def read_configsim(iplp_path: Path) -> pd.DataFrame:
     return pd.read_excel(iplp_path,
                          sheet_name="ConfigSim",
                          usecols="A:U").set_index('Etapa')
 
 
-def read_days_per_week(iplp_path):
+def read_days_per_week(iplp_path: Path) -> pd.DataFrame:
     return pd.read_excel(iplp_path,
                          sheet_name="TimeData",
                          usecols="A:G")
 
 
-def read_dict_hidroyears(iplp_path):
+def read_dict_hidroyears(iplp_path: Path) -> dict:
     df = pd.read_excel(iplp_path,
                        sheet_name="TimeData",
                        usecols="I:J")
@@ -63,7 +64,8 @@ def read_dict_hidroyears(iplp_path):
     return df.to_dict()['INDHID']
 
 
-def plexos_daily_indexed_df(blo_eta, plexos_end_date):
+def plexos_daily_indexed_df(blo_eta: pd.DataFrame,
+                            plexos_end_date: datetime) -> pd.DataFrame:
     '''
     Get dataframe indexed by day within the timeframe of plexos
     '''
@@ -79,13 +81,15 @@ def plexos_daily_indexed_df(blo_eta, plexos_end_date):
     return df
 
 
-def get_week_name(row, df_days_per_week):
+def get_week_name(row: pd.DataFrame,
+                  df_days_per_week: pd.DataFrame) -> pd.DataFrame:
     mask1 = df_days_per_week['month'] == row['MONTH']
     mask2 = df_days_per_week['day'] <= row['DAY']
     return df_days_per_week[mask1 & mask2]['name'].values[-1]
 
 
-def get_df_daily(blo_eta, iplp_path):
+def get_df_daily(blo_eta: pd.DataFrame,
+                 iplp_path: Path) -> pd.DataFrame:
     df_days_per_week = read_days_per_week(iplp_path)
     plexos_end_date = read_plexos_end_date(iplp_path)
     df_daily = plexos_daily_indexed_df(blo_eta, plexos_end_date)
@@ -97,15 +101,16 @@ def get_df_daily(blo_eta, iplp_path):
     return df_daily
 
 
-def get_list_of_units(df_all_inflows):
+def get_list_of_units(df_all_inflows: pd.DataFrame) -> list:
     return df_all_inflows.index.get_level_values('CENTRAL').unique().tolist()
 
 
-def get_list_of_hyd(df_all_inflows):
+def get_list_of_hyd(df_all_inflows: pd.DataFrame) -> list:
     return df_all_inflows.index.get_level_values('INDHID').unique().tolist()
 
 
-def get_df_all_inflows(iplp_path, blo_eta):
+def get_df_all_inflows(iplp_path: Path,
+                       blo_eta: pd.DataFrame) -> pd.DataFrame:
     series_inflows = read_inflow_data(iplp_path)
     df_daily = get_df_daily(blo_eta, iplp_path)
     # Join dataframes using outer to keep all data
@@ -122,7 +127,8 @@ def get_df_all_inflows(iplp_path, blo_eta):
     return df_all_inflows
 
 
-def print_plexos_inflows_all(df_all_inflows, path_pib):
+def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
+                             path_pib:  Path):
     list_of_hyd = get_list_of_hyd(df_all_inflows)
     # format plexos, aux dataframe to unstack and print
     df_all_inflows['Inflows'] = df_all_inflows['Inflows'].apply(
@@ -138,7 +144,8 @@ def print_plexos_inflows_all(df_all_inflows, path_pib):
     df_aux.to_csv(path_pib / 'Storage_NaturalInflow.csv', index=False)
 
 
-def print_plexos_inflows_separate(df_all_inflows, path_pib):
+def print_plexos_inflows_separate(df_all_inflows: pd.DataFrame,
+                                  path_pib: Path):
     list_of_hyd = get_list_of_hyd(df_all_inflows)
     for indhid in list_of_hyd:
         mask = (df_all_inflows.index.get_level_values('INDHID') == indhid)
@@ -158,11 +165,13 @@ def print_plexos_inflows_separate(df_all_inflows, path_pib):
             path_pib / f'Storage_NaturalInflow_{indhid:02d}.csv', index=False)
 
 
-def get_shuffled_hydrologies(blo_eta, iplp_path, df_configsim):
+def get_shuffled_hydrologies(blo_eta: pd.DataFrame,
+                             iplp_path: Path,
+                             df_configsim: pd.DataFrame) -> pd.DataFrame:
     '''
     Get shuffled hydrologies per day
 
-    Data from configsim refers to Etapas, so we need to turn it into 
+    Data from configsim refers to Etapas, so we need to turn it into
     YEAR-MONTH-DAY data and get rid of Etapas
     '''
     df_configsim.index.names = ['ETAPA']
@@ -178,7 +187,10 @@ def get_shuffled_hydrologies(blo_eta, iplp_path, df_configsim):
     return df_shuffled_hyd
 
 
-def shuffle_hidrologies(blo_eta, iplp_path, df_configsim, df_all_inflows):
+def shuffle_hidrologies(blo_eta: pd.DataFrame,
+                        iplp_path: Path,
+                        df_configsim: pd.DataFrame,
+                        df_all_inflows: pd.DataFrame) -> pd.DataFrame:
     '''
     Shuffle hydrologies according to ConfigSim
     '''
