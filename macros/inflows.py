@@ -246,11 +246,13 @@ def main():
 
     logger.info('Getting dataframe with all data')
     df_all_inflows = get_df_all_inflows(iplp_path, blo_eta)
+    df_all_inflows.to_csv(path_df / 'df_all_inflows.csv')
 
     logger.info('Shuffling inflows according to ConfigSim')
     df_configsim = read_configsim(iplp_path)
     df_all_inflows = shuffle_hidrologies(
         blo_eta, iplp_path, df_configsim, df_all_inflows)
+    df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv')
 
     logger.info('Printing inflows in plexos format')
     print_plexos_inflows_all(df_all_inflows, path_pib)
