@@ -5,6 +5,7 @@ Generate plpaflce.dat file with water inflows
 Generate Storage_NaturalInflow files for Plexos
 
 '''
+import sys
 from datetime import datetime
 from pathlib import Path
 from utils.utils import (define_arg_parser,
@@ -26,6 +27,15 @@ def read_plexos_end_date(iplp_path: Path) -> datetime:
                           skiprows=21
                           ).iloc[0].apply(from_excel).values[0]
     return pd.to_datetime(value)
+
+
+def read_reduced_uncertainty_months(iplp_path: Path) -> datetime:
+    value = pd.read_excel(iplp_path,
+                          sheet_name="Path",
+                          usecols='A',
+                          skiprows=39
+                          ).iloc[0].values[0]
+    return int(value)
 
 
 def read_inflow_data(iplp_path: Path) -> pd.Series:
@@ -222,6 +232,52 @@ def shuffle_hidrologies(blo_eta: pd.DataFrame,
     return df_final
 
 
+def reduce_uncertainty(iplp_path: Path,
+                       df_all_inflows: pd.DataFrame) -> pd.DataFrame:
+    '''
+    For the first x months, use monthly average inflows for each week,
+    instead of using weekly data
+    '''
+    ru_months = read_reduced_uncertainty_months(iplp_path)
+
+    # Filter by year and month
+    # THIS STEP ASSUMES THAT R.U. MONTHS WILL FALL WITHIN THE INITIAL YEAR
+    # TODO make this more robust using datetime
+    df_aux = df_all_inflows.copy()
+    ini_year = df_aux.index.get_level_values('YEAR')[0]
+    ini_month = df_aux.index.get_level_values('MONTH')[0]
+
+    if ini_month + ru_months - 1 > 12:
+        logger.error('Reduced uncertainty months cross from one '
+                     ' year to another. Make sure they are all within '
+                     ' the first year')
+        sys.exit('Check reduced uncertainty months')
+
+    mask_year = df_aux.index.get_level_values('YEAR') == ini_year
+    mask_month = (df_aux.index.get_level_values('MONTH') <=
+                  ini_month + ru_months - 1)
+    df_aux = df_aux[mask_year & mask_month]
+
+    # Get average per month (select all indexes except day)
+    df_mean = df_aux.groupby(
+        ['CENTRAL', 'YEAR', 'MONTH', 'INDHID']).mean()
+
+    for idx, row in df_all_inflows[mask_year & mask_month].iterrows():
+        cen, year, month, indhid = idx[0], idx[1], idx[2], idx[4]
+        if (year == ini_year) and (month <= ini_month + ru_months - 1):
+            df_all_inflows.loc[idx, 'Inflows'] = df_mean.loc[
+                (cen, year, month, indhid), 'Inflows']
+
+    # Use df_mean to replace data in original df
+    df_final = df_all_inflows
+    return df_final
+
+
+def print_plp_inflows_all(df_all_inflows: pd.DataFrame,
+                          path_inputs: Path):
+    pass
+
+
 def main():
     '''
     Main routine
@@ -257,6 +313,12 @@ def main():
     logger.info('Printing inflows in plexos format')
     print_plexos_inflows_all(df_all_inflows, path_pib)
     print_plexos_inflows_separate(df_all_inflows, path_pib)
+
+    logger.info('Reducing uncertainty of first months')
+    df_all_inflows = reduce_uncertainty(iplp_path, df_all_inflows)
+
+    logger.info('Printing inflows in plp format')
+    print_plp_inflows_all(df_all_inflows, path_inputs)
 
     logger.info('Process finished successfully')
 
