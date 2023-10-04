@@ -2,6 +2,7 @@
 
 Generate PLPMANLIX.dat file with changes in line capacity
 '''
+import sys
 from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
@@ -279,7 +280,11 @@ def get_trf_capacity(iplp_path: Path, path_df: Path,
     dict_trf_units = get_dict_centrales_trf(iplp_path)
     trf_list = list(dict_trf_units.keys())
     dict_trf_to_line = get_dict_trf_to_line(trf_list, df_lines)
-    df_mantcen_pmax = pd.read_csv(path_df / 'df_mantcen_pmax.csv')
+    try:
+        df_mantcen_pmax = pd.read_csv(path_df / 'df_mantcen_pmax.csv')
+    except Exception as e:
+        logger.error(e)
+        sys.exit('Error reading df/df_mantcen_pmax.csv')
 
     mantcen_cols = df_mantcen_pmax.columns.tolist()
 
