@@ -127,6 +127,9 @@ def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
     if print_values:
         df_capmax_manlix_ab.to_csv(path_df / 'df_manlix_ab.csv')
         df_capmax_manlix_ba.to_csv(path_df / 'df_manlix_ba.csv')
+        df_v.to_csv(path_df / 'df_manlix_v.csv')
+        df_r.to_csv(path_df / 'df_manlix_r.csv')
+        df_x.to_csv(path_df / 'df_manlix_x.csv')
 
     for line in manlix_lines:
         # Get diff vector to detect changes
