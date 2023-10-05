@@ -5,19 +5,29 @@ Generate plpaflce.dat file with water inflows
 Generate Storage_NaturalInflow files for Plexos
 
 '''
-import sys
 from datetime import datetime
 from pathlib import Path
 from utils.utils import (define_arg_parser,
+                         get_daily_indexed_df,
                          get_iplp_input_path,
                          check_is_path,
-                         process_etapas_blocks)
+                         process_etapas_blocks,
+                         write_lines_appending,
+                         write_lines_from_scratch)
 from utils.logger import create_logger
 from openpyxl.utils.datetime import from_excel
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 
 logger = create_logger('water_inflows')
+
+formatters_plpaflce = {
+    "Etapa":        "  {:03d}".format,
+    "PotMaxAB":     "         {:8.1f}".format,
+    "PotMaxBA":     "  {:8.1f}".format,
+    "Operativa":     "        {:>}".format
+}
 
 
 def read_plexos_end_date(iplp_path: Path) -> datetime:
@@ -74,23 +84,6 @@ def read_dict_hidroyears(iplp_path: Path) -> dict:
     return df.to_dict()['INDHID']
 
 
-def plexos_daily_indexed_df(blo_eta: pd.DataFrame,
-                            plexos_end_date: datetime) -> pd.DataFrame:
-    '''
-    Get dataframe indexed by day within the timeframe of plexos
-    '''
-    ini_date = datetime(
-        blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
-    index = pd.date_range(start=ini_date, end=plexos_end_date, freq='D')
-    df = pd.DataFrame(index=index, columns=['YEAR', 'MONTH', 'DAY'])
-    df['YEAR'] = df.index.year
-    df['MONTH'] = df.index.month
-    df['DAY'] = df.index.day
-    # df['DATE'] = df.index
-    df = df.reset_index(drop=True)
-    return df
-
-
 def get_week_name(row: pd.DataFrame,
                   df_days_per_week: pd.DataFrame) -> pd.DataFrame:
     mask1 = df_days_per_week['month'] == row['MONTH']
@@ -101,8 +94,7 @@ def get_week_name(row: pd.DataFrame,
 def get_df_daily(blo_eta: pd.DataFrame,
                  iplp_path: Path) -> pd.DataFrame:
     df_days_per_week = read_days_per_week(iplp_path)
-    plexos_end_date = read_plexos_end_date(iplp_path)
-    df_daily = plexos_daily_indexed_df(blo_eta, plexos_end_date)
+    df_daily = get_daily_indexed_df(blo_eta, all_caps=True)
     df_daily['WEEK_NAME'] = df_daily.apply(
         lambda row: get_week_name(row, df_days_per_week), axis=1)
     year_ini = df_daily['YEAR'][0]
@@ -124,13 +116,13 @@ def get_df_all_inflows(iplp_path: Path,
     series_inflows = read_inflow_data(iplp_path)
     df_daily = get_df_daily(blo_eta, iplp_path)
     # Join dataframes using outer to keep all data
-    new_index = ['YEAR', 'MONTH', 'DAY', 'WEEK_NAME']
+    new_index = ['YEAR', 'MONTH', 'DAY', 'WEEK_NAME', 'DATE']
     df_all_inflows = df_daily.set_index(new_index)
     df_all_inflows = df_all_inflows.join(series_inflows, how='outer')
     # Remove WEEK_NAME from index
     df_all_inflows = df_all_inflows.reset_index().drop(
         ['WEEK_NAME', 'ETAPA'], axis=1)
-    new_index = ['CENTRAL', 'YEAR', 'MONTH', 'DAY', 'INDHID']
+    new_index = ['CENTRAL', 'YEAR', 'MONTH', 'DAY', 'DATE', 'INDHID']
     df_all_inflows = df_all_inflows.set_index(new_index)
     df_all_inflows = df_all_inflows.sort_index(
         level=['CENTRAL', 'YEAR', 'MONTH', 'DAY'])
@@ -138,13 +130,19 @@ def get_df_all_inflows(iplp_path: Path,
 
 
 def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
-                             path_pib:  Path):
-    list_of_hyd = get_list_of_hyd(df_all_inflows)
+                             path_pib:  Path,
+                             plexos_end_date: datetime):
+    # First, filter years before plexos_end_date
+    year_mask = df_all_inflows.index.get_level_values('YEAR') <= \
+        plexos_end_date.year
+    df_all_inflows = df_all_inflows[year_mask]
+
     # format plexos, aux dataframe to unstack and print
-    df_all_inflows['Inflows'] = df_all_inflows['Inflows'].apply(
+    list_of_hyd = get_list_of_hyd(df_all_inflows)
+    df_all_inflows.loc[:, 'Inflows'] = df_all_inflows['Inflows'].apply(
         lambda x: round(x, 2))
     df_aux = df_all_inflows.squeeze().unstack('INDHID')
-    df_aux = df_aux.reset_index()
+    df_aux = df_aux.reset_index().drop('DATE', axis=1)
     df_aux = df_aux.rename(columns={'CENTRAL': 'NAME'})
     df_aux['PERIOD'] = 1
     df_aux = df_aux[
@@ -154,20 +152,27 @@ def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
 
 
 def print_plexos_inflows_separate(df_all_inflows: pd.DataFrame,
-                                  path_pib: Path):
+                                  path_pib: Path,
+                                  plexos_end_date: datetime):
+    # First, filter years before plexos_end_date
+    year_mask = df_all_inflows.index.get_level_values('YEAR') <= \
+        plexos_end_date.year
+    df_all_inflows = df_all_inflows[year_mask]
+
+    # Adjust to plexos data format
     list_of_hyd = get_list_of_hyd(df_all_inflows)
     for indhid in list_of_hyd:
-        mask = (df_all_inflows.index.get_level_values('INDHID') == indhid)
-        inflows_aux = df_all_inflows[mask]
+        hyd_mask = (df_all_inflows.index.get_level_values('INDHID') == indhid)
+        inflows_aux = df_all_inflows[hyd_mask]
         # format
-        inflows_aux = inflows_aux.reset_index()
+        inflows_aux = inflows_aux.reset_index().drop('DATE', axis=1)
         inflows_aux = inflows_aux.rename(
             columns={'CENTRAL': 'NAME', 'Inflows': 'VALUE'})
         inflows_aux['BAND'] = 1
         inflows_aux['PERIOD'] = 1
         inflows_aux = inflows_aux[
             ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']]
-        inflows_aux['VALUE'] = inflows_aux['VALUE'].apply(
+        inflows_aux.loc[:, 'VALUE'] = inflows_aux['VALUE'].apply(
             lambda x: round(x, 2))
         # print
         inflows_aux.to_csv(
@@ -187,10 +192,13 @@ def get_shuffled_hydrologies(blo_eta: pd.DataFrame,
     df_daily = get_df_daily(blo_eta, iplp_path).drop('WEEK_NAME', axis=1)
     df_shuffled_hyd = df_daily.join(df_configsim, on='ETAPA')
     df_shuffled_hyd = df_shuffled_hyd.drop('ETAPA', axis=1)
-    df_shuffled_hyd = df_shuffled_hyd.set_index(['YEAR', 'MONTH', 'DAY'])
+    df_shuffled_hyd = df_shuffled_hyd.set_index(
+        ['YEAR', 'MONTH', 'DAY', 'DATE'])
 
+    # Stack and set new index and column names
     df_shuffled_hyd = df_shuffled_hyd.stack()
-    df_shuffled_hyd.index.names = ['YEAR', 'MONTH', 'DAY', 'SHUFFLED_HYD']
+    df_shuffled_hyd.index.names = [
+        'YEAR', 'MONTH', 'DAY', 'DATE', 'SHUFFLED_HYD']
     df_shuffled_hyd.name = 'INDHID'
     df_shuffled_hyd = df_shuffled_hyd.reset_index()
     return df_shuffled_hyd
@@ -227,7 +235,7 @@ def shuffle_hidrologies(blo_eta: pd.DataFrame,
     # Concatenate aux dataframes and reformat
     df_final = pd.concat(list_of_df)
     df_final = df_final.set_index(
-        ['CENTRAL', 'YEAR', 'MONTH', 'DAY', 'INDHID'])
+        ['CENTRAL', 'YEAR', 'MONTH', 'DAY', 'DATE', 'INDHID'])
 
     return df_final
 
@@ -240,42 +248,72 @@ def reduce_uncertainty(iplp_path: Path,
     '''
     ru_months = read_reduced_uncertainty_months(iplp_path)
 
-    # Filter by year and month
-    # THIS STEP ASSUMES THAT R.U. MONTHS WILL FALL WITHIN THE INITIAL YEAR
-    # TODO make this more robust using datetime
+    # Filter by date
     df_aux = df_all_inflows.copy()
-    ini_year = df_aux.index.get_level_values('YEAR')[0]
-    ini_month = df_aux.index.get_level_values('MONTH')[0]
+    ini_date = df_aux.index.get_level_values('DATE')[0]
+    end_date = ini_date + relativedelta(months=+ru_months)
+    mask_date = df_aux.index.get_level_values('DATE') < end_date
+    df_aux = df_aux[mask_date]
 
-    if ini_month + ru_months - 1 > 12:
-        logger.error('Reduced uncertainty months cross from one '
-                     ' year to another. Make sure they are all within '
-                     ' the first year')
-        sys.exit('Check reduced uncertainty months')
-
-    mask_year = df_aux.index.get_level_values('YEAR') == ini_year
-    mask_month = (df_aux.index.get_level_values('MONTH') <=
-                  ini_month + ru_months - 1)
-    df_aux = df_aux[mask_year & mask_month]
-
-    # Get average per month (select all indexes except day)
-    df_mean = df_aux.groupby(
-        ['CENTRAL', 'YEAR', 'MONTH', 'INDHID']).mean()
-
-    for idx, row in df_all_inflows[mask_year & mask_month].iterrows():
-        cen, year, month, indhid = idx[0], idx[1], idx[2], idx[4]
-        if (year == ini_year) and (month <= ini_month + ru_months - 1):
-            df_all_inflows.loc[idx, 'Inflows'] = df_mean.loc[
-                (cen, year, month, indhid), 'Inflows']
+    # Get average per month (select all indexes except day and date)
+    indexes_to_group = ['CENTRAL', 'YEAR', 'MONTH', 'INDHID']
+    df_mean = df_aux.groupby(indexes_to_group).mean()
 
     # Use df_mean to replace data in original df
-    df_final = df_all_inflows
-    return df_final
+    df_ru = df_all_inflows.copy()
+    for idx, row in df_all_inflows[mask_date].iterrows():
+        cen, year, month, indhid = idx[0], idx[1], idx[2], idx[5]
+        df_ru.loc[idx, 'Inflows'] = df_mean.loc[
+            (cen, year, month, indhid), 'Inflows']
+    return df_ru
 
 
-def print_plp_inflows_all(df_all_inflows: pd.DataFrame,
-                          path_inputs: Path):
+def build_df_aux(df_all_inflows, unit):
+    '''
+    Adjust df_all_inflows dataframe to print data in plp format
+    '''
+    cols_groupby = ['YEAR', 'MONTH', 'INDHID']
+    df_all_inflows.loc[unit].groupby(cols_groupby).mean().squeeze().unstack()
+
+    # update to hydromonths
+    # extend blocks index (339 to 4068)
+    # adjust decimals (round 2) and digits in months (2d) and blocks (3d)
     pass
+
+
+def write_plpaflce(path_inputs: Path,
+                   df_all_inflows: pd.DataFrame):
+    '''
+    Write plpaflce.dat file
+    '''
+    list_of_units = get_list_of_units(df_all_inflows)
+    list_of_hyd = get_list_of_hyd(df_all_inflows)
+
+    lines = ['# Archivo de caudales por etapa']
+    lines += ['# Nro. Cent. c/Caudales Estoc. (EstocNVar2) y Nro. Hidrologias'
+              ' (NClase)']
+    lines += ['  %s                                         %s' % (
+        len(list_of_units), len(list_of_hyd))]
+
+    # Write dat file from scratch
+    write_lines_from_scratch(lines, path_inputs / 'plpaflce.dat')
+
+    for unit in list_of_units:
+        # Build df_aux from both dataframes, for each line
+        import pdb; pdb.set_trace()
+        df_aux = build_df_aux(df_all_inflows, unit)
+        # Print data
+        lines = ['\n# Nombre de la central']
+        lines += ["'%s'" % unit]
+        lines += ['#   Numero de bloques con caudales']
+        lines += ['  %03d' % len(df_aux)]
+        lines += ['# Mes   Bloque    Caudal']
+        if len(df_aux) > 0:
+            # Add data as string using predefined format
+            lines += [df_aux.to_string(
+                index=False, header=False, formatters=formatters_plpaflce)]
+        # Write data for current line
+        write_lines_appending(lines, path_inputs / 'plpaflce.dat')
 
 
 def main():
@@ -308,17 +346,18 @@ def main():
     df_configsim = read_configsim(iplp_path)
     df_all_inflows = shuffle_hidrologies(
         blo_eta, iplp_path, df_configsim, df_all_inflows)
-    df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv')
+    # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv')
 
     logger.info('Printing inflows in plexos format')
-    print_plexos_inflows_all(df_all_inflows, path_pib)
-    print_plexos_inflows_separate(df_all_inflows, path_pib)
+    plexos_end_date = read_plexos_end_date(iplp_path)
+    print_plexos_inflows_all(df_all_inflows, path_pib, plexos_end_date)
+    print_plexos_inflows_separate(df_all_inflows, path_pib, plexos_end_date)
 
     logger.info('Reducing uncertainty of first months')
     df_all_inflows = reduce_uncertainty(iplp_path, df_all_inflows)
 
     logger.info('Printing inflows in plp format')
-    print_plp_inflows_all(df_all_inflows, path_inputs)
+    write_plpaflce(path_inputs, df_all_inflows)
 
     logger.info('Process finished successfully')
 
