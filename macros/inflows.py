@@ -15,6 +15,7 @@ from utils.utils import (define_arg_parser,
                          write_lines_appending,
                          write_lines_from_scratch)
 from utils.logger import create_logger
+from utils.utils import translate_to_hydromonth
 from openpyxl.utils.datetime import from_excel
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -23,10 +24,27 @@ from dateutil.relativedelta import relativedelta
 logger = create_logger('water_inflows')
 
 formatters_plpaflce = {
-    "Etapa":        "  {:03d}".format,
-    "PotMaxAB":     "         {:8.1f}".format,
-    "PotMaxBA":     "  {:8.1f}".format,
-    "Operativa":     "        {:>}".format
+    "Month": "  {:02d}".format,
+    "BLOCK": "  {::04d}".format,
+    "2":     "  {:8.2f}".format,
+    "3":     "  {:8.2f}".format,
+    "4":     "  {:8.2f}".format,
+    "5":     "  {:8.2f}".format,
+    "6":     "  {:8.2f}".format,
+    "7":     "  {:8.2f}".format,
+    "8":     "  {:8.2f}".format,
+    "9":     "  {:8.2f}".format,
+    "10":     "  {:8.2f}".format,
+    "11":     "  {:8.2f}".format,
+    "12":     "  {:8.2f}".format,
+    "13":     "  {:8.2f}".format,
+    "14":     "  {:8.2f}".format,
+    "15":     "  {:8.2f}".format,
+    "16":     "  {:8.2f}".format,
+    "17":     "  {:8.2f}".format,
+    "18":     "  {:8.2f}".format,
+    "19":     "  {:8.2f}".format,
+    "20":     "  {:8.2f}".format,
 }
 
 
@@ -268,17 +286,44 @@ def reduce_uncertainty(iplp_path: Path,
     return df_ru
 
 
-def build_df_aux(df_all_inflows, unit):
+def build_df_aux(df_all_inflows, unit, nblocks=12):
     '''
     Adjust df_all_inflows dataframe to print data in plp format
     '''
+    # Get monthly mean
     cols_groupby = ['YEAR', 'MONTH', 'INDHID']
-    df_all_inflows.loc[unit].groupby(cols_groupby).mean().squeeze().unstack()
+    df_mean = df_all_inflows.loc[unit].groupby(cols_groupby).mean()
 
+    # format to square matrix
+    df_mean = df_mean.squeeze().unstack('INDHID')
+
+    # Add BLOCK index repeating Inflow values
+    # First calculate new index (mux)
+    nmonths = 12
+    mux = pd.MultiIndex.from_product(
+        [df_mean.index.get_level_values('YEAR').unique().tolist(),
+         range(1, nmonths + 1),
+         range(1, nblocks + 1),
+         ], names=['YEAR', 'MONTH', 'BLOCK'])
+    # Remove Year-Month entries after last date
+    matrix_length = len(df_mean) * nblocks
+    mux = mux[:matrix_length]
+
+    # Then add BLOCK index using reindex with forward fill
+    df_mean['BLOCK'] = 1
+    df_mean = df_mean.reset_index().set_index(
+        ['YEAR', 'MONTH', 'BLOCK'])
+    df_mean = df_mean.reindex(mux, method='ffill')
+    # Replace Block values by row number
+    df_mean = df_mean.reset_index()
+    df_mean['BLOCK'] = df_mean.index + 1
+    # Format, remove year and rename MONTH to use translate_to_hydromonth
+    df_mean = df_mean.rename(columns={'MONTH': 'Month'})
+    df_mean = df_mean.drop('YEAR', axis=1)
     # update to hydromonths
-    # extend blocks index (339 to 4068)
-    # adjust decimals (round 2) and digits in months (2d) and blocks (3d)
-    pass
+    df_mean = translate_to_hydromonth(df_mean)
+
+    return df_mean
 
 
 def write_plpaflce(path_inputs: Path,
@@ -300,7 +345,6 @@ def write_plpaflce(path_inputs: Path,
 
     for unit in list_of_units:
         # Build df_aux from both dataframes, for each line
-        import pdb; pdb.set_trace()
         df_aux = build_df_aux(df_all_inflows, unit)
         # Print data
         lines = ['\n# Nombre de la central']
