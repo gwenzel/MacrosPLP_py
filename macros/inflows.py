@@ -24,28 +24,28 @@ from dateutil.relativedelta import relativedelta
 logger = create_logger('water_inflows')
 
 formatters_plpaflce = {
-    "Month": "  {:02d}".format,
-    "BLOCK": "  {:04d}".format,
-    "1":     "  {:8.2f}".format,
-    "2":     "  {:8.2f}".format,
-    "3":     "  {:8.2f}".format,
-    "4":     "  {:8.2f}".format,
-    "5":     "  {:8.2f}".format,
-    "6":     "  {:8.2f}".format,
-    "7":     "  {:8.2f}".format,
-    "8":     "  {:8.2f}".format,
-    "9":     "  {:8.2f}".format,
-    "10":     "  {:8.2f}".format,
-    "11":     "  {:8.2f}".format,
-    "12":     "  {:8.2f}".format,
-    "13":     "  {:8.2f}".format,
-    "14":     "  {:8.2f}".format,
-    "15":     "  {:8.2f}".format,
-    "16":     "  {:8.2f}".format,
-    "17":     "  {:8.2f}".format,
-    "18":     "  {:8.2f}".format,
-    "19":     "  {:8.2f}".format,
-    "20":     "  {:8.2f}".format,
+    "Month": "  {:03d}".format,
+    "BLOCK": "   {:03d}".format,
+    "1":     "{:7.2f}".format,
+    "2":     "{:7.2f}".format,
+    "3":     "{:7.2f}".format,
+    "4":     "{:7.2f}".format,
+    "5":     "{:7.2f}".format,
+    "6":     "{:7.2f}".format,
+    "7":     "{:7.2f}".format,
+    "8":     "{:7.2f}".format,
+    "9":     "{:7.2f}".format,
+    "10":     "{:7.2f}".format,
+    "11":     "{:7.2f}".format,
+    "12":     "{:7.2f}".format,
+    "13":     "{:7.2f}".format,
+    "14":     "{:7.2f}".format,
+    "15":     "{:7.2f}".format,
+    "16":     "{:7.2f}".format,
+    "17":     "{:7.2f}".format,
+    "18":     "{:7.2f}".format,
+    "19":     "{:7.2f}".format,
+    "20":     "{:7.2f}".format,
 }
 
 
@@ -323,6 +323,9 @@ def build_df_aux(df_all_inflows, unit, nblocks=12):
     df_mean = df_mean.drop('YEAR', axis=1)
     # update to hydromonths
     df_mean = translate_to_hydromonth(df_mean)
+
+    # Column names as strings
+    df_mean.columns = df_mean.columns.map(str)
 
     return df_mean
 
