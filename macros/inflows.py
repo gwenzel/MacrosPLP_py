@@ -25,7 +25,8 @@ logger = create_logger('water_inflows')
 
 formatters_plpaflce = {
     "Month": "  {:02d}".format,
-    "BLOCK": "  {::04d}".format,
+    "BLOCK": "  {:04d}".format,
+    "1":     "  {:8.2f}".format,
     "2":     "  {:8.2f}".format,
     "3":     "  {:8.2f}".format,
     "4":     "  {:8.2f}".format,
