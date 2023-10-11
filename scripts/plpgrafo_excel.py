@@ -156,9 +156,9 @@ def main():
 
     # Leer barras
     busbar_data = read_busbar_data(ruta)
-    lineas_data = read_line_data(ruta, year)
+    lines_data = read_line_data(ruta, year)
 
-    build_graph(busbar_data, lineas_data, ruta, year, itension)
+    build_graph(busbar_data, lines_data, ruta, year, itension)
 
 
 if __name__ == "__main__":
