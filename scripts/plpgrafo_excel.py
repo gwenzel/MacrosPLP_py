@@ -19,7 +19,7 @@ def read_busbar_data(ruta):
     for line in range(4, nro_lines, 1):
         words = lineas[line].split()
         busbar_data['busbar_index'].append(int(words[0]))
-        busbar_data['busbar_name'].append(str(words[1]).replace("'",""))
+        busbar_data['busbar_name'].append(str(words[1]).replace("'", ""))
         busbar_data['busbar_vol'].append(int(words[2]))
         busbar_data['busbar_load'].append(int(words[3]))
         busbar_data['busbar_iny'].append(int(words[4]))
@@ -60,14 +60,14 @@ def read_line_data(ruta, year):
 def build_graph(busbar_data, lines_data, ruta, year, itension):
     tension = itension + ".0"
     # GRAFICO
-    Gpgv=pgv.AGraph(strict=False,
-                    directed=False,
-                    splines='ortho',
-                    ranksep='1.5',
-                    maxiter=300,
-                    rankdir='TB',
-                    overlap='false',
-                    overlap_shrink='false')
+    Gpgv = pgv.AGraph(strict=False,
+                      directed=False,
+                      splines='ortho',
+                      ranksep='1.5',
+                      maxiter=300,
+                      rankdir='TB',
+                      overlap='false',
+                      overlap_shrink='false')
     Gpgv.node_attr['shape'] = 'rect'
     Gpgv.node_attr['style'] = 'filled'
     Gpgv.node_attr['color'] = 'grey96'
@@ -103,7 +103,8 @@ def build_graph(busbar_data, lines_data, ruta, year, itension):
             estilo = 'dashed'
             pw = 0.5
 
-        if (tension == '0.0') or (lines_data['lineas_tension'][lin] == tension):
+        if (tension == '0.0') or (lines_data[
+                'lineas_tension'][lin] == tension):
             bus_indexA = int(lines_data['lineas_busbarA'][lin])-1
             bus_indexB = int(lines_data['lineas_busbarB'][lin])-1
 
@@ -142,7 +143,7 @@ def build_graph(busbar_data, lines_data, ruta, year, itension):
                 n.attr['shape'] = 'octagon'
 
     # Gpgv.layout() # default to neato
-    Gpgv.layout(prog='dot') # use dot
+    Gpgv.layout(prog='dot')  # use dot
     Gpgv.draw(ruta + '\\plpcnfli_' + year + '_' + itension + '_diagram.png')
 
 
