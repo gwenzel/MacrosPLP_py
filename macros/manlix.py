@@ -26,7 +26,7 @@ LINE_CHANGE_TOLERANCE = 0.1
 formatters_plpmanlix = {
     "NomLin":   "'{}'".format,
     "EtaIni":   "{:d}".format,
-    "EtaFin":   "{:04d}".format,
+    "EtaFin":   "{:d}".format,
     "ManALin":  "{:.1f}".format,
     "ManBLin":  "{:.1f}".format,
     "VNomLin":  "{:.1f}".format,
