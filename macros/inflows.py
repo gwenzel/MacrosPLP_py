@@ -13,10 +13,10 @@ from utils.utils import (define_arg_parser,
                          check_is_path,
                          process_etapas_blocks,
                          write_lines_appending,
-                         write_lines_from_scratch)
+                         write_lines_from_scratch,
+                         read_plexos_end_date)
 from utils.logger import create_logger
 from utils.utils import translate_to_hydromonth
-from openpyxl.utils.datetime import from_excel
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
@@ -47,15 +47,6 @@ formatters_plpaflce = {
     "19":     "{:7.2f}".format,
     "20":     "{:7.2f}".format,
 }
-
-
-def read_plexos_end_date(iplp_path: Path) -> datetime:
-    value = pd.read_excel(iplp_path,
-                          sheet_name="Path",
-                          usecols='D',
-                          skiprows=21
-                          ).iloc[0].apply(from_excel).values[0]
-    return pd.to_datetime(value)
 
 
 def read_reduced_uncertainty_months(iplp_path: Path) -> datetime:

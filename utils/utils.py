@@ -14,6 +14,7 @@ from shutil import copyfile
 import time
 from datetime import datetime
 from utils.logger import create_logger
+from openpyxl.utils.datetime import from_excel
 
 
 logger = create_logger('utils')
@@ -268,3 +269,12 @@ def get_daily_indexed_df(blo_eta: pd.DataFrame,
         df['Date'] = df.index
     df = df.reset_index(drop=True)
     return df
+
+
+def read_plexos_end_date(iplp_path: Path) -> datetime:
+    value = pd.read_excel(iplp_path,
+                          sheet_name="Path",
+                          usecols='D',
+                          skiprows=21
+                          ).iloc[0].apply(from_excel).values[0]
+    return pd.to_datetime(value)
