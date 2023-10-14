@@ -109,6 +109,8 @@ def build_df_aux(mask_changes: pd.Series, line: str,
         lambda row: 'F' if (
             (row['ManALin'] == 0) & (row['ManBLin'] == 0)) else 'T', axis=1)
     '''
+    # Remove 0 rows
+    df_aux = df_aux[~((df_aux['ManALin'] == 0) & (df_aux['ManBLin'] == 0))]
     # Reorder columns
     return df_aux[col_names].reset_index(drop=True)
 
