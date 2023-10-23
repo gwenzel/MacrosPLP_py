@@ -33,7 +33,8 @@ setup(
             "lin = macros.lin:main",
             "manli = macros.manli:main",
             "manlix = macros.manlix:main",
-            "afl = macros.inflows:main"
+            "afl = macros.inflows:main",
+            "plx = macros.csv_plexos:main"
         ]
     },
     classifiers=[
