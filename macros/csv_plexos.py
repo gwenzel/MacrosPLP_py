@@ -135,8 +135,9 @@ def main():
 
     # GeneratorFor - lista de centrales
     # GeneratorRating - centrales con pmax inicial
+    logger.info('Processing plexos Generator files')
     print_generator_files(iplp_path, df_daily, path_csv)
-
+    
     # Line_MaxFlow
     # Line_MinFlow = -1*Line_MaxFlow
 
