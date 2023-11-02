@@ -101,8 +101,8 @@ def print_dfs(path_df: Path,
               df_capmax_ab: pd.DataFrame,
               df_capmax_ba: pd.DataFrame):
     # Print data if requested
-    df_capmax_ab.to_csv(path_df / 'df_manli_ab.csv')
-    df_capmax_ba.to_csv(path_df / 'df_manli_ba.csv')
+    df_capmax_ab.to_csv(path_df / 'df_manli_ab.csv', index=False)
+    df_capmax_ba.to_csv(path_df / 'df_manli_ba.csv', index=False)
 
 
 def filter_lines(df_lines: pd.DataFrame,

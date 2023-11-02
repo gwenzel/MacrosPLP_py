@@ -299,7 +299,7 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
 
 
 def print_df_dda_por_barra(path_df: Path, df_dda_por_barra: pd.DataFrame):
-    df_dda_por_barra.to_csv(path_df / 'df_dda_por_barra.csv')
+    df_dda_por_barra.to_csv(path_df / 'df_dda_por_barra.csv', index=False)
 
 
 @timeit

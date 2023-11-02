@@ -65,7 +65,7 @@ def get_all_profiles(blo_eta: pd.DataFrame, profiles_dict: dict,
         if len(df) > 0:
             df_out = replicate_profiles(df_out, df, type=type)
     # Print to csv
-    df_out.to_csv(path_df / 'df_ernc_all_profiles.csv')
+    df_out.to_csv(path_df / 'df_ernc_all_profiles.csv', index=False)
     return df_out
 
 
@@ -109,12 +109,12 @@ def get_rating_factors(ernc_data: dict, blo_eta: pd.DataFrame,
     ini_eta = blo_eta.groupby(['Year', 'Month']).min().to_dict()['Etapa']
     df_rf['Initial_Eta'] = df_rf['Year-Month'].map(ini_eta)
 
-    df_rf.to_csv(path_df / 'df_ernc_rf_initial.csv')
+    df_rf.to_csv(path_df / 'df_ernc_rf_initial.csv', index=False)
 
     df_rf = process_semi_months(df_rf)
 
     # Print to csv
-    df_rf.to_csv(path_df / 'df_ernc_rf_final.csv')
+    df_rf.to_csv(path_df / 'df_ernc_rf_final.csv', index=False)
 
     return df_rf
 
@@ -188,5 +188,5 @@ def get_scaled_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file
-    df_profiles.to_csv(path_df / 'df_ernc_scaled_profiles.csv')
+    df_profiles.to_csv(path_df / 'df_ernc_scaled_profiles.csv', index=False)
     return df_profiles

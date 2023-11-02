@@ -347,8 +347,8 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
 
     # Print data if requested
     if printdata:
-        df_pmax.to_csv(path_df / 'df_mantcen_pmax.csv')
-        df_pmin.to_csv(path_df / 'df_mantcen_pmin.csv')
+        df_pmax.to_csv(path_df / 'df_mantcen_pmax.csv', index=False)
+        df_pmin.to_csv(path_df / 'df_mantcen_pmin.csv', index=False)
 
     # Read dicts
     pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
