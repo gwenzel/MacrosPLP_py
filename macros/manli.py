@@ -126,32 +126,30 @@ def validate_manli(df_manli: pd.DataFrame, df_lines: pd.DataFrame):
 
 
 def get_nominal_values_dict(df_lineas: pd.DataFrame,
-                            value: str = 'A->B') -> dict:
+                            lines_value_col: str = 'A->B') -> dict:
     '''
     Get dictionary with Capmax for each line
     '''
     centrales_dict = df_lineas.set_index('Nombre A->B').to_dict()
-    return centrales_dict[value]
+    return centrales_dict[lines_value_col]
 
 
-def build_df_nominal(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
-                     df_lineas: pd.DataFrame, id_col: str,
+def build_df_nominal(blo_eta: pd.DataFrame, line_names: list,
+                     df_lineas: pd.DataFrame,
                      lines_value_col: str) -> pd.DataFrame:
     '''
-    Build matrix with all nominal values for each line in mantcen
+    Build matrix with all nominal values for each line in line_names
     '''
-    # Get line names
-    manli_line_names = df_manli[id_col].unique().tolist()
     # Get nominal value dictionaries
     nominal_values_dict = get_nominal_values_dict(df_lineas, lines_value_col)
     # Get base dataframes
     df_nominal = get_daily_indexed_df(blo_eta)
     # Add empty columns
     df_nominal = df_nominal.reindex(
-        columns=df_nominal.columns.tolist() + manli_line_names)
+        columns=df_nominal.columns.tolist() + line_names)
     # Add default values
-    df_nominal[manli_line_names] = [
-        nominal_values_dict[line] for line in manli_line_names]
+    df_nominal[line_names] = [
+        nominal_values_dict[line] for line in line_names]
     return df_nominal
 
 
@@ -201,12 +199,15 @@ def apply_func_per_etapa(blo_eta: pd.DataFrame, df: pd.DataFrame,
 
 
 def get_manli_output(blo_eta: pd.DataFrame, df_manli: pd.DataFrame,
-                     df_lines: pd.DataFrame, id_col: str = 'LÍNEA',
-                     manli_col: str = 'A-B', lines_value_col: str = 'A->B',
+                     df_lines: pd.DataFrame,
+                     id_col: str = 'LÍNEA',
+                     manli_col: str = 'A-B',
+                     lines_value_col: str = 'A->B',
                      func: str = 'mean') -> pd.DataFrame:
     # 1. Build default dataframes
-    df_nominal = build_df_nominal(blo_eta, df_manli, df_lines,
-                                  id_col, lines_value_col)
+    line_names = df_manli[id_col].unique().tolist()
+    df_nominal = build_df_nominal(blo_eta, line_names, df_lines,
+                                  lines_value_col)
     # 2. Add df_manli data in row-by-row order
     # Note that filters have a daily resolution
     df_nominal_modified = add_manli_data_row_by_row(

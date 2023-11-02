@@ -17,7 +17,8 @@ from macros.lin import read_df_lines
 from macros.manli import (get_df_manli,
                           build_df_nominal,
                           add_manli_data_row_by_row,
-                          apply_func_per_etapa)
+                          apply_func_per_etapa,
+                          get_nominal_values_dict)
 
 
 logger = create_logger('manlix')
@@ -73,9 +74,12 @@ def validate_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
             logger.error('Line %s has negative X' % row['LÍNEA'])
 
 
-def build_df_aux(mask_changes: pd.Series, line: str,
+def build_df_aux(mask_changes: pd.Series,
+                 line: str,
                  df_capmax_ab: pd.DataFrame,
                  df_capmax_ba: pd.DataFrame,
+                 nominal_line_capacity_ab: dict,
+                 nominal_line_capacity_ba: dict,
                  df_v: pd.DataFrame,
                  df_r: pd.DataFrame,
                  df_x: pd.DataFrame) -> pd.DataFrame:
@@ -104,19 +108,20 @@ def build_df_aux(mask_changes: pd.Series, line: str,
     df_aux['EtaIni'] = list_eta_ini
     df_aux['EtaFin'] = list_eta_fin
     df_aux['FOpeLin'] = 'T'
-    '''
-    df_aux['FOpeLin'] = df_aux.apply(
-        lambda row: 'F' if (
-            (row['ManALin'] == 0) & (row['ManBLin'] == 0)) else 'T', axis=1)
-    '''
     # Remove 0 rows
-    df_aux = df_aux[~((df_aux['ManALin'] == 0) & (df_aux['ManBLin'] == 0))]
+    df_aux = df_aux[~((df_aux['ManALin'] == 0) &
+                      (df_aux['ManBLin'] == 0))]
+    # Remove row if capacity is nominal
+    df_aux = df_aux[~((df_aux['ManALin'] == nominal_line_capacity_ab[line]) &
+                      (df_aux['ManBLin'] == nominal_line_capacity_ba[line]))]
     # Reorder columns
     return df_aux[col_names].reset_index(drop=True)
 
 
 def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
                        df_capmax_manlix_ba: pd.DataFrame,
+                       nominal_line_capacity_ab: dict,
+                       nominal_line_capacity_ba: dict,
                        df_v: pd.DataFrame,
                        df_r: pd.DataFrame,
                        df_x: pd.DataFrame,
@@ -150,7 +155,9 @@ def get_manlix_changes(df_capmax_manlix_ab: pd.DataFrame,
                        (df_diff_ab.isna())
         if mask_changes.any():
             df_aux = build_df_aux(
-                mask_changes, line, df_capmax_manlix_ab, df_capmax_manlix_ba,
+                mask_changes, line,
+                df_capmax_manlix_ab, df_capmax_manlix_ba,
+                nominal_line_capacity_ab, nominal_line_capacity_ba,
                 df_v, df_r, df_x)
             list_of_dfs.append(df_aux.copy())
     # Concat all dataframes
@@ -208,8 +215,9 @@ def get_manlix_output(blo_eta: pd.DataFrame,
                       lines_value_col: str = 'A->B',
                       func: str = 'mean') -> pd.DataFrame:
     # 1. Get nominal data for all lines in manlix
+    line_names = df_manlix[id_col].unique().tolist()
     df_nominal = build_df_nominal(
-            blo_eta, df_manlix, df_lines, id_col, lines_value_col)
+            blo_eta, line_names, df_lines, lines_value_col)
     if manli_col == 'A-B' or manli_col == 'B-A':
         # 2. If dealing with Max Capacity,
         # Add df_manli and manlix data in row-by-row order
@@ -337,6 +345,17 @@ def add_trf_data(iplp_path: Path,
     return df_v, df_r, df_x
 
 
+def get_nominal_line_capacity(df_lineas: pd.DataFrame):
+    '''
+    Get nominal line capacities
+    '''
+    nominal_line_capacity_ab = get_nominal_values_dict(
+        df_lineas, lines_value_col='A->B')
+    nominal_line_capacity_ba = get_nominal_values_dict(
+        df_lineas, lines_value_col='B->A')
+    return nominal_line_capacity_ab, nominal_line_capacity_ba
+
+
 def main():
     '''
     Main routine
@@ -363,6 +382,10 @@ def main():
     # Get df_manlix
     logger.info('Getting df_manlix')
     df_manlix = get_df_manlix(iplp_path, df_lines)
+
+    # Get nominal data for all lines in manlix
+    nominal_line_capacity_ab, nominal_line_capacity_ba = \
+        get_nominal_line_capacity(df_lines)
 
     # Get data from Manli routine to know when lines exist
     logger.info('Getting df_manli')
@@ -411,6 +434,7 @@ def main():
     logger.info('Detect changes and get formatted dataframe')
     df_manlix_changes = get_manlix_changes(
         df_capmax_ab, df_capmax_ba,
+        nominal_line_capacity_ab, nominal_line_capacity_ba,
         df_v, df_r, df_x, path_df)
 
     # Write data
