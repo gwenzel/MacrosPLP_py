@@ -384,7 +384,7 @@ def main():
     logger.info('Getting df_manlix')
     df_manlix = get_df_manlix(iplp_path, df_lines)
 
-    # Get nominal data for all lines in manlix
+    # Get nominal data for all lines
     nominal_line_capacity_ab, nominal_line_capacity_ba = \
         get_nominal_line_capacity(df_lines)
 
