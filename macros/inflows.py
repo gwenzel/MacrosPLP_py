@@ -392,7 +392,7 @@ def main():
     logger.info('Printing inflows in plexos format')
     plexos_end_date = read_plexos_end_date(iplp_path)
     print_plexos_inflows_all(df_all_inflows, path_pib, plexos_end_date)
-    print_plexos_inflows_separate(df_all_inflows, path_pib, plexos_end_date)
+    # print_plexos_inflows_separate(df_all_inflows, path_pib, plexos_end_date)
 
     logger.info('Reducing uncertainty of first months')
     df_all_inflows = reduce_uncertainty(iplp_path, df_all_inflows)
