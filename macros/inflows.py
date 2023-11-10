@@ -382,6 +382,12 @@ def main():
     # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv',
     #   index=False)
 
+    # logger.info('Reducing uncertainty of first months (only for plp)')
+    # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
+
+    logger.info('Printing inflows in plp format')
+    write_plpaflce(path_inputs, df_all_inflows)
+
     logger.info('Shuffling inflows according to ConfigSim')
     df_configsim = read_configsim(iplp_path)
     df_all_inflows = shuffle_hidrologies(
@@ -394,11 +400,7 @@ def main():
     print_plexos_inflows_all(df_all_inflows, path_pib, plexos_end_date)
     # print_plexos_inflows_separate(df_all_inflows, path_pib, plexos_end_date)
 
-    logger.info('Reducing uncertainty of first months')
-    df_all_inflows = reduce_uncertainty(iplp_path, df_all_inflows)
 
-    logger.info('Printing inflows in plp format')
-    write_plpaflce(path_inputs, df_all_inflows)
 
     logger.info('Process finished successfully')
 
