@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpaflce_py.dat"
+filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202301 - PMT V2'23\1_Caso_Base\comparaciones\plpaflce_py_nc_v20.dat"
 
 list_of_cen = []
 dict_cen_values = {}
@@ -19,7 +19,7 @@ with open(filename) as f:
             value_cen = [list(line.split()) for line in text_cen]
             dict_cen_values[current_cen] = value_cen
             columns = ['Mes', 'Bloque']
-            columns += ['H%s' % i for i in range(1,21)]
+            columns += ['H%s' % i for i in range(1, 21)]
             df = pd.DataFrame(
                 dict_cen_values[current_cen],
                 columns=columns)
@@ -31,4 +31,4 @@ df_all['Mes'] = df_all['Mes'].astype(int)
 df_all['Bloque'] = df_all['Bloque'].astype(int)
 
 
-df_all.to_csv('afluentes_py.csv')
+df_all.to_csv('afluentes_py_nc_v20.csv')
