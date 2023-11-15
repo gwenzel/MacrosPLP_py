@@ -49,7 +49,7 @@ formatters_plpaflce = {
 }
 
 
-def read_reduced_uncertainty_months(iplp_path: Path) -> datetime:
+def read_reduced_uncertainty_months(iplp_path: Path) -> int:
     value = pd.read_excel(iplp_path,
                           sheet_name="Path",
                           usecols='A',
