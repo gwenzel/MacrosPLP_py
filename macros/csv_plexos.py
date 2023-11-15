@@ -13,9 +13,11 @@ from utils.utils import (define_arg_parser,
                          check_is_path,
                          get_daily_indexed_df,
                          process_etapas_blocks,
-                         read_plexos_end_date)
+                         read_plexos_end_date,
+                         get_scenarios)
 import pandas as pd
 from pathlib import Path
+from openpyxl.utils.datetime import from_excel
 
 logger = create_logger('csv_plexos')
 
@@ -232,6 +234,62 @@ def print_line_files(
     df_line_x.to_csv(path_csv / 'Line_X.csv')
 
 
+def print_gas_files(
+        iplp_path: Path,
+        df_daily: pd.DataFrame,
+        path_csv: Path):
+    '''
+    Print all gas volumes
+    '''
+    # leer path d8 escenario combustible
+    scenarios = get_scenarios(iplp_path)
+    scen = scenarios['Combustible']
+    check_is_path(path_csv / ('GNL_' + scen))
+
+    # read gnl sheet PLPGNL_PolCom y seleccionar escenario
+    df_gnl = pd.read_excel(iplp_path, sheet_name='PLPGNL_PolCom',
+                           skiprows=1, header=[0, 1])
+    df_gnl = df_gnl.dropna(axis=1)
+
+    df_gnl[('Unnamed: 1_level_0', 'Fecha')] = df_gnl[
+        ('Unnamed: 1_level_0', 'Fecha')].apply(from_excel)
+    df_gnl = df_gnl.set_index(('Unnamed: 1_level_0', 'Fecha'))
+    df_gnl.index = df_gnl.index.rename('Fecha')
+
+    # Get list of contracts and monthly volumes
+    list_of_contracts = df_gnl.stack().columns.tolist()
+
+    # Finish reshaping
+    df_gnl = df_gnl.stack().reset_index()
+    df_gnl = df_gnl.rename(columns={'level_1': 'Scenario'})
+    df_gnl = df_gnl.fillna(0)
+
+    # Add new columns
+    df_gnl['YEAR'] = df_gnl['Fecha'].dt.year
+    df_gnl['MONTH'] = df_gnl['Fecha'].dt.month
+    df_gnl['DAY'] = 1
+    df_gnl['PERIOD'] = 1
+
+    # filter dates
+    mask_ini = df_gnl['Fecha'] >= df_daily['DATE'].iloc[0]
+    mask_end = df_gnl['Fecha'] <= df_daily['DATE'].iloc[-1]
+    df_gnl = df_gnl[mask_ini & mask_end]
+
+    # filter scenario
+    df_gnl = df_gnl[df_gnl['Scenario'] == scen]
+
+    # for each contract, get:
+    # YEAR	MONTH	DAY	PERIOD	VALUE
+    # and print file to csv in folder
+
+    for contract in list_of_contracts:
+        list_of_cols = ['YEAR', 'MONTH', 'DAY', 'PERIOD', contract]
+        df_aux = df_gnl[list_of_cols].copy()
+        df_aux = df_aux.rename(columns={contract: 'VALUE'})
+        df_aux.to_csv(path_csv / ('GNL_' + scen) / (contract + '.csv'),
+                      index=False)
+
+
 def main():
     '''
     Main routine
@@ -266,6 +324,8 @@ def main():
     print_line_files(iplp_path, df_daily, path_csv)
 
     # GNL Base - volumen mensual de cada estanque de gas
+    logger.info('Processing plexos Gas volumes')
+    print_gas_files(iplp_path, df_daily, path_csv)
 
     logger.info('CSV plexos completed successfully')
 
