@@ -10,6 +10,7 @@ from pathlib import Path
 from utils.utils import (define_arg_parser,
                          get_daily_indexed_df,
                          get_iplp_input_path,
+                         get_plp_plx_booleans,
                          check_is_path,
                          process_etapas_blocks,
                          write_lines_appending,
@@ -122,9 +123,17 @@ def get_list_of_hyd(df_all_inflows: pd.DataFrame) -> list:
 
 
 def get_df_all_inflows(iplp_path: Path,
-                       blo_eta: pd.DataFrame) -> pd.DataFrame:
+                       blo_eta: pd.DataFrame,
+                       plp_enable: bool,
+                       plx_enable: bool) -> pd.DataFrame:
     series_inflows = read_inflow_data(iplp_path)
     df_daily = get_df_daily(blo_eta, iplp_path)
+
+    # Filter if plp is not enabled and plexos is
+    if plx_enable & ~plp_enable:
+        plexos_end_date = read_plexos_end_date(iplp_path)
+        df_daily = df_daily[df_daily['DATE'] <= plexos_end_date] 
+
     # Join dataframes using outer to keep all data
     new_index = ['YEAR', 'MONTH', 'DAY', 'WEEK_NAME', 'DATE']
     df_all_inflows = df_daily.set_index(new_index)
@@ -140,12 +149,7 @@ def get_df_all_inflows(iplp_path: Path,
 
 
 def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
-                             path_pib:  Path,
-                             plexos_end_date: datetime):
-    # First, filter years before plexos_end_date
-    year_mask = df_all_inflows.index.get_level_values('YEAR') <= \
-        plexos_end_date.year
-    df_all_inflows = df_all_inflows[year_mask]
+                             path_pib:  Path):
 
     # format plexos, aux dataframe to unstack and print
     list_of_hyd = get_list_of_hyd(df_all_inflows)
@@ -355,14 +359,27 @@ def write_plpaflce(path_inputs: Path,
         write_lines_appending(lines, path_inputs / 'plpaflce.dat')
 
 
+def filter_df_all_inflows(iplp_path: Path,
+                          df_all_inflows: pd.DataFrame):
+    '''
+    Filter df for plx process
+    '''
+    plexos_end_date = read_plexos_end_date(iplp_path)
+    year_mask = df_all_inflows.index.get_level_values('YEAR') <= \
+        plexos_end_date.year
+    df_all_inflows = df_all_inflows[year_mask]
+
+    return df_all_inflows
+
+
 def main():
     '''
     Main routine
     '''
     # Get input file path
     logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
+    parser = define_arg_parser(plp=True, plx=True)
+    iplp_path = get_iplp_input_path(parser)    
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
@@ -372,35 +389,52 @@ def main():
     path_pib = iplp_path.parent / "Temp" / "PIB"
     check_is_path(path_pib)
 
+    # Get PLP/PLX enabling booleans
+    plp_enable, plx_enable = get_plp_plx_booleans(parser)
+    if plp_enable:
+        logger.info('PLP enabled')
+    else:
+        logger.info('PLP disabled')
+    if plx_enable:
+        logger.info('PLX enabled')
+    else:
+        logger.info('PLX disabled')
+
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
     blo_eta, _, _ = process_etapas_blocks(path_dat)
     blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
     logger.info('Getting dataframe with all data')
-    df_all_inflows = get_df_all_inflows(iplp_path, blo_eta)
+    df_all_inflows = get_df_all_inflows(iplp_path, blo_eta,
+                                        plp_enable, plx_enable)
     # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv',
     #   index=False)
 
-    # logger.info('Reducing uncertainty of first months (only for plp)')
-    # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
+    if plp_enable:
+        # logger.info('Reducing uncertainty of first months (only for plp)')
+        # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
+        logger.info('Printing inflows in plp format')
+        write_plpaflce(path_inputs, df_all_inflows)
 
-    logger.info('Printing inflows in plp format')
-    write_plpaflce(path_inputs, df_all_inflows)
+    if plx_enable:
+        if plp_enable:
+            logger.info('Filtering inflows dataframe (PLP was enabled)')
+            # Otherwise, it was already filtered in get_df_all_inflows
+            df_all_inflows = filter_df_all_inflows(
+                iplp_path, df_all_inflows)
 
-    logger.info('Shuffling inflows according to ConfigSim')
-    df_configsim = read_configsim(iplp_path)
-    df_all_inflows = shuffle_hidrologies(
-        blo_eta, iplp_path, df_configsim, df_all_inflows)
-    # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv',
-    #   index=False)
+        logger.info('Shuffling inflows according to ConfigSim')
+        df_configsim = read_configsim(iplp_path)
+        df_all_inflows = shuffle_hidrologies(
+            blo_eta, iplp_path, df_configsim, df_all_inflows)
+        # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv',
+        #   index=False)
 
-    logger.info('Printing inflows in plexos format')
-    plexos_end_date = read_plexos_end_date(iplp_path)
-    print_plexos_inflows_all(df_all_inflows, path_pib, plexos_end_date)
-    # print_plexos_inflows_separate(df_all_inflows, path_pib, plexos_end_date)
-
-
+        logger.info('Printing inflows in plexos format')
+        print_plexos_inflows_all(df_all_inflows, path_pib)
+        # print_plexos_inflows_separate(df_all_inflows, path_pib,
+        #                               plexos_end_date)
 
     logger.info('Process finished successfully')
 

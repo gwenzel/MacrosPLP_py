@@ -9,7 +9,7 @@ import pandas as pd
 from functools import wraps
 from pathlib import Path
 from numpy import ceil
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 from shutil import copyfile
 import time
 from datetime import datetime
@@ -131,7 +131,9 @@ def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
         return Path(arg)
 
 
-def define_arg_parser(ext: bool = False) -> ArgumentParser:
+def define_arg_parser(ext: bool = False,
+                      plp: bool = False,
+                      plx: bool = False) -> ArgumentParser:
     parser = ArgumentParser(description="Get PLP input filepaths")
     parser.add_argument('-f', dest='iplp_path', required=False,
                         help='IPLP input file path',
@@ -142,6 +144,14 @@ def define_arg_parser(ext: bool = False) -> ArgumentParser:
                             help='External inputs path',
                             metavar="EXT_INPUTS_PATH",
                             type=lambda x: is_valid_file(parser, x))
+    if plp:
+        parser.add_argument('--plp', dest='plp',
+                            help='PLP outputs flag',
+                            action="store_true")
+    if plx:
+        parser.add_argument('--plx', dest='plx',
+                            help='PLX outputs flag',
+                            action="store_true")
     return parser
 
 
@@ -163,6 +173,11 @@ def get_ext_inputs_path(parser: ArgumentParser) -> Path:
     ext_path = input_path("External inputs path")
     check_is_path(ext_path)
     return ext_path
+
+
+def get_plp_plx_booleans(parser: ArgumentParser) -> (bool, bool):
+    args = parser.parse_args()
+    return args.plp, args.plx
 
 
 def remove_blank_lines(text_file: Path):
