@@ -9,7 +9,7 @@ import pandas as pd
 from functools import wraps
 from pathlib import Path
 from numpy import ceil
-from argparse import ArgumentParser, BooleanOptionalAction
+from argparse import ArgumentParser
 from shutil import copyfile
 import time
 from datetime import datetime
