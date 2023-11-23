@@ -285,6 +285,7 @@ def print_gas_files(
     for contract in list_of_contracts:
         list_of_cols = ['YEAR', 'MONTH', 'DAY', 'PERIOD', contract]
         df_aux = df_gnl[list_of_cols].copy()
+        df_aux[contract] = df_aux[contract].round(2)
         df_aux = df_aux.rename(columns={contract: 'VALUE'})
         df_aux.to_csv(path_csv / ('GNL_' + scen) / (contract + '.csv'),
                       index=False)
