@@ -8,7 +8,8 @@ from macros.manli import (add_manli_data_row_by_row,
                           get_nominal_values_dict)
 from macros.manlix import get_df_manlix
 from utils.logger import create_logger
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          get_daily_indexed_df,
@@ -42,7 +43,7 @@ def read_centrales_plexos(iplp_path: Path) -> pd.DataFrame:
 
 
 def read_df_mantcen_pmax(path_df: Path):
-    return pd.read_csv(path_df / 'df_mantcen_pmax.csv')
+    return pd.read_csv(path_df / 'df_mantcen_pmax_plexos.csv')
 
 
 def read_df_manlix_ab(path_df: Path):
@@ -87,12 +88,11 @@ def print_generator_rating(df_daily: pd.DataFrame,
     # Para renovables, usar Pmax desde el vector en df_centrales
     df_gen_rating = df_daily.copy()
     df_pmax = read_df_mantcen_pmax(path_df)
-
-    df_pmax = df_pmax.set_index(['Year', 'Month'])\
-                     .groupby(['Year', 'Month']).max()\
-                     .drop(['Etapa', 'Block', 'Block_Len'], axis=1)\
+    df_pmax = df_pmax.set_index(['Year', 'Month', 'Day'])\
+                     .groupby(['Year', 'Month', 'Day']).max()\
                      .reset_index()\
-                     .rename(columns={'Year': 'YEAR', 'Month': 'MONTH'})
+                     .rename(columns={'Year': 'YEAR', 'Month': 'MONTH',
+                                      'Day': 'DAY'})
     df_gen_rating = df_gen_rating.merge(df_pmax)\
                                  .set_index(['YEAR', 'MONTH', 'DAY'])\
                                  .drop('DATE', axis=1)
@@ -291,6 +291,7 @@ def print_gas_files(
                       index=False)
 
 
+@timeit
 def main():
     '''
     Main routine

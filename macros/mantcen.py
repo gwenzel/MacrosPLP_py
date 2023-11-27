@@ -138,18 +138,20 @@ def read_extra_mant_ciclicos(iplp_path: Path,
     )
     df_ciclicos = shape_extra_mant_no_gas(
         df_ciclicos, description='Cíclicos')
-    # Repeat yearly, making sure all years are covered
-    ini_year = df_ciclicos['INICIAL'].min().year
-    end_year = blo_eta.iloc[-1]['Year']
-    period_length = end_year - ini_year + 1
-    # Build list of df and concat all in one
-    list_of_dfs = []
-    for offset in range(period_length):
-        df_offset = df_ciclicos.copy()
-        df_offset['INICIAL'] += pd.offsets.DateOffset(years=offset)
-        df_offset['FINAL'] += pd.offsets.DateOffset(years=offset)
-        list_of_dfs.append(df_offset)
-    df_ciclicos = pd.concat(list_of_dfs, ignore_index=True)
+    # Check if df is not empty
+    if len(df_ciclicos) > 0:
+        # Repeat yearly, making sure all years are covered
+        ini_year = df_ciclicos['INICIAL'].min().year
+        end_year = blo_eta.iloc[-1]['Year']
+        period_length = end_year - ini_year + 1
+        # Build list of df and concat all in one
+        list_of_dfs = []
+        for offset in range(period_length):
+            df_offset = df_ciclicos.copy()
+            df_offset['INICIAL'] += pd.offsets.DateOffset(years=offset)
+            df_offset['FINAL'] += pd.offsets.DateOffset(years=offset)
+            list_of_dfs.append(df_offset)
+        df_ciclicos = pd.concat(list_of_dfs, ignore_index=True)
     return df_ciclicos
 
 
@@ -189,8 +191,11 @@ def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
     df_no_ciclicos = read_extra_mant_no_ciclicos(iplp_path)
     df_ciclicos = read_extra_mant_ciclicos(iplp_path, blo_eta)
     df_gas = read_extra_mant_gas(iplp_path, blo_eta)
-    # Append new dataframes to df_mantcen
-    list_of_dfs = [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]
+    # Append new dataframes to df_mantcen if they are not empty
+    list_of_dfs = []
+    for df in [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]:
+        if len(df) > 0:
+            list_of_dfs.append(df)
     df_mantcen = pd.concat(list_of_dfs, ignore_index=True)
     return df_mantcen
 
@@ -241,7 +246,8 @@ def build_df_pmin_pmax(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
 
 def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
                        df_centrales: pd.DataFrame) -> \
-                       (pd.DataFrame, pd.DataFrame):
+                       (pd.DataFrame, pd.DataFrame,
+                        pd.DataFrame, pd.DataFrame):
     # 1. Build default dataframes
     df_pmin, df_pmax = build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales)
     # 2. Add df_mantcen data in row-by-row order
@@ -261,14 +267,19 @@ def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmax']
         df_pmin.loc[pmin_mask_ini & pmin_mask_end,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
-    # 3. Average per Etapa and drop Day column
+    # 3. Get daily output for plexos
+    groupby_cols = ['Year', 'Month', 'Day']
+    df_pmax_plexos = df_pmax.groupby(groupby_cols).mean(numeric_only=True)
+    df_pmin_plexos = df_pmin.groupby(groupby_cols).mean(numeric_only=True)
+    # 4. Average per Etapa and drop Day column
     on_cols = ['Month', 'Year']
     groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
-    df_pmax = pd.merge(blo_eta, df_pmax, how='left', on=on_cols).groupby(
+    df_pmax_plp = pd.merge(blo_eta, df_pmax, how='left', on=on_cols).groupby(
         groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
-    df_pmin = pd.merge(blo_eta, df_pmin, how='left', on=on_cols).groupby(
+    df_pmin_plp = pd.merge(blo_eta, df_pmin, how='left', on=on_cols).groupby(
         groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
-    return df_pmin, df_pmax
+
+    return df_pmin_plp, df_pmax_plp, df_pmin_plexos, df_pmax_plexos
 
 
 def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
@@ -364,6 +375,16 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
     write_lines_appending(lines_units, plpmance_path)
 
 
+def write_plexos(df_pmin_plexos: pd.DataFrame,
+                 df_pmax_plexos: pd.DataFrame,
+                 path_df: Path):
+    '''
+    Write dataframes in plexos format
+    '''
+    df_pmax_plexos.round(2).to_csv(path_df / 'df_mantcen_pmax_plexos.csv')
+    df_pmin_plexos.round(2).to_csv(path_df / 'df_mantcen_pmin_plexos.csv')
+
+
 @timeit
 def main():
     '''
@@ -416,12 +437,14 @@ def main():
 
     # Generate arrays with pmin/pmax data
     logger.info('Generating pmin and pmax data')
-    df_pmin, df_pmax = get_mantcen_output(blo_eta, df_mantcen, df_centrales)
+    df_pmin_plp, df_pmax_plp, df_pmin_plexos, df_pmax_plexos = \
+        get_mantcen_output(blo_eta, df_mantcen, df_centrales)
 
     # Write data
     logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_pmin, df_pmax, iplp_path, path_df,
+    write_plpmance_ini_dat(df_pmin_plp, df_pmax_plp, iplp_path, path_df,
                            printdata=True)
+    write_plexos(df_pmin_plexos, df_pmax_plexos, path_df)
 
     logger.info('Process finished successfully')
 
