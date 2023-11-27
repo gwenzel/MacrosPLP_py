@@ -116,7 +116,7 @@ def print_generator_rating(df_daily: pd.DataFrame,
     new_index = ['YEAR', 'MONTH', 'DAY', 'PERIOD']
     df_gen_rating = df_gen_rating.reset_index()\
                                  .set_index(new_index)\
-                                 .round(1)\
+                                 .round(2)\
                                  .reset_index()
     # print
     df_gen_rating.to_csv(path_csv / 'Generator_Rating.csv', index=False)
