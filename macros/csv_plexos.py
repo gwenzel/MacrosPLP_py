@@ -32,14 +32,30 @@ def get_df_daily_plexos(blo_eta: pd.DataFrame,
     return df_daily[year_mask]
 
 
-def read_centrales_plexos(iplp_path: Path) -> pd.DataFrame:
-    df = pd.read_excel(iplp_path, sheet_name="Centrales",
-                       skiprows=4, usecols="B,C,AB")
+def read_centrales_plexos(iplp_path: Path,
+                          add_specs: bool = False) -> pd.DataFrame:
+    if not add_specs:
+        # Get only Pmax
+        df = pd.read_excel(iplp_path, sheet_name="Centrales",
+                           skiprows=4, usecols="B,C,AB")
+        df = df.rename(columns={
+            'CENTRALES': 'Nombre',
+            'Máxima.1': 'Pmax'})
+    else:
+        # Get MinTecNeto, MinDown, MinUp, ShutDownCost, StartCost
+        df = pd.read_excel(iplp_path, sheet_name="Centrales",
+                           skiprows=4, usecols="B,C,AA,AU:AX")
+        df = df.rename(columns={
+            'CENTRALES': 'Nombre',
+            'Mínima.1': 'MinTecNeto',
+            'Start Cost': 'StartCost',
+            'Shutdown Cost': 'ShutDownCost',
+            'Min Up Time': 'MinUp',
+            'Min Down Time': 'MinDown'})
+        df = df.fillna(0)
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
-    df = df.rename(columns={
-        'CENTRALES': 'Nombre', 'Máxima.1': 'Pmax'})
-    df = df[['Nombre', 'Pmax']]
+    df = df.drop('Tipo de Central', axis=1)
     return df
 
 
@@ -78,15 +94,34 @@ def print_generator_for(df_daily: pd.DataFrame,
     df_gen_for.to_csv(path_csv / 'Generator_For.csv', index=False)
 
 
+def print_generator_other(df_daily: pd.DataFrame,
+                          iplp_path: Path,
+                          path_csv: Path):
+    '''
+    Print other Gen Specs:
+    MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto
+    '''
+    df_centrales = read_centrales_plexos(iplp_path, add_specs=True)
+
+    list_of_specs = ['MinDown', 'MinUp', 'ShutDownCost',
+                     'StartCost', 'MinTecNeto']
+    for spec in list_of_specs:
+        df_aux = df_centrales[['Nombre', spec]].copy()
+        df_aux = df_aux.rename(columns={'Nombre': 'NAME',
+                                        spec: 'VALUE'})
+        df_aux['YEAR'] = df_daily['YEAR'][0]
+        df_aux['MONTH'] = 1
+        df_aux['DAY'] = 1
+        df_aux['PERIOD'] = 1
+        df_aux = df_aux[['NAME', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']]
+        df_aux.to_csv(path_csv / (spec + '.csv'), index=False)
+
+
 def print_generator_rating(df_daily: pd.DataFrame,
                            iplp_path: Path,
                            path_csv: Path,
                            path_df: Path):
-    df_centrales = read_centrales_plexos(iplp_path)
-    dict_centrales_pmax = df_centrales.set_index('Nombre').to_dict()['Pmax']
-
     # Leer desde Temp/df/df_mantcen_pmax para no renovables
-    # Para renovables, usar Pmax desde el vector en df_centrales
     df_gen_rating = df_daily.copy()
     df_pmax = read_df_mantcen_pmax(path_df)
     df_pmax = df_pmax.set_index(['Year', 'Month', 'Day'])\
@@ -98,8 +133,11 @@ def print_generator_rating(df_daily: pd.DataFrame,
                                  .set_index(['YEAR', 'MONTH', 'DAY'])\
                                  .drop('DATE', axis=1)
 
-    # Merge for non ernc units (those in mantcen)
+    # Para renovables, usar Pmax desde el vector en df_centrales
     # filter out units in mantcen
+    # This assumes that Pmax Net is ok for these units, no reserve added
+    df_centrales = read_centrales_plexos(iplp_path)
+    dict_centrales_pmax = df_centrales.set_index('Nombre').to_dict()['Pmax']
     dict_centrales_pmax = {unit: pmax
                            for unit, pmax in dict_centrales_pmax.items()
                            if unit not in df_gen_rating.columns}
@@ -136,6 +174,10 @@ def print_generator_files(iplp_path: Path,
     print_generator_maxcapacity(path_inputs, path_csv)
     # Generator RatingFactor
     print_generator_rating_factor(iplp_path, path_inputs, path_csv)
+    # Generator HeatRate (Variable Cost)
+    # print_generator_heatrate()
+    # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
+    print_generator_other(df_daily, iplp_path, path_csv)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
