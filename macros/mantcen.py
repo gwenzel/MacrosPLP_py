@@ -44,13 +44,19 @@ formatters_plpmance = {
 }
 
 
-def get_centrales(iplp_path: Path) -> pd.DataFrame:
+def get_centrales(iplp_path: Path, plx: bool = False) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
-                       skiprows=4, usecols="B,C,AA,AB")
+                       skiprows=4, usecols="B,C,AA,AB,DK")
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
+    # Rename columns
     df = df.rename(columns={
         'CENTRALES': 'Nombre', 'Mínima.1': 'Pmin', 'Máxima.1': 'Pmax'})
+    if plx:
+        # Add Reserva to Pmax if Plexos
+        df = df.fillna(0)
+        df['Pmax'] += df['Reserva MW']
+    # Drop all rows without name
     df = df[['Nombre', 'Pmin', 'Pmax']]
     return df
 
@@ -245,9 +251,9 @@ def build_df_pmin_pmax(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
 
 
 def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
-                       df_centrales: pd.DataFrame) -> \
-                       (pd.DataFrame, pd.DataFrame,
-                        pd.DataFrame, pd.DataFrame):
+                       df_centrales: pd.DataFrame,
+                       plp_or_plexos: str = 'PLP') -> \
+                       (pd.DataFrame, pd.DataFrame):
     # 1. Build default dataframes
     df_pmin, df_pmax = build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales)
     # 2. Add df_mantcen data in row-by-row order
@@ -267,19 +273,27 @@ def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmax']
         df_pmin.loc[pmin_mask_ini & pmin_mask_end,
                     df_mantcen.iloc[i]['Nombre']] = df_mantcen.iloc[i]['Pmin']
-    # 3. Get daily output for plexos
-    groupby_cols = ['Year', 'Month', 'Day']
-    df_pmax_plexos = df_pmax.groupby(groupby_cols).mean(numeric_only=True)
-    df_pmin_plexos = df_pmin.groupby(groupby_cols).mean(numeric_only=True)
-    # 4. Average per Etapa and drop Day column
-    on_cols = ['Month', 'Year']
-    groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
-    df_pmax_plp = pd.merge(blo_eta, df_pmax, how='left', on=on_cols).groupby(
-        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
-    df_pmin_plp = pd.merge(blo_eta, df_pmin, how='left', on=on_cols).groupby(
-        groupby_cols).mean(numeric_only=True).drop(['Day'], axis=1)
-
-    return df_pmin_plp, df_pmax_plp, df_pmin_plexos, df_pmax_plexos
+    if plp_or_plexos == 'PLP':
+        # 3. Average per Etapa and drop Day column
+        on_cols = ['Month', 'Year']
+        groupby_cols = ['Etapa', 'Year', 'Month', 'Block', 'Block_Len']
+        df_pmax_plp = pd.merge(blo_eta, df_pmax, how='left', on=on_cols)\
+            .groupby(groupby_cols)\
+            .mean(numeric_only=True)\
+            .drop(['Day'], axis=1)
+        df_pmin_plp = pd.merge(blo_eta, df_pmin, how='left', on=on_cols)\
+            .groupby(groupby_cols)\
+            .mean(numeric_only=True)\
+            .drop(['Day'], axis=1)
+        return df_pmin_plp, df_pmax_plp
+    elif plp_or_plexos == 'PLEXOS':
+        # 3. Get daily output for plexos
+        groupby_cols = ['Year', 'Month', 'Day']
+        df_pmax_plexos = df_pmax.groupby(groupby_cols).mean(numeric_only=True)
+        df_pmin_plexos = df_pmin.groupby(groupby_cols).mean(numeric_only=True)
+        return df_pmin_plexos, df_pmax_plexos
+    else:
+        sys.exit('plp_or_plexos must be either PLP or PLEXOS')
 
 
 def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
@@ -336,7 +350,8 @@ def get_header_data(number_of_units: int) -> list:
     return lines
 
 
-def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
+def write_plpmance_ini_dat(df_centrales: pd.DataFrame,
+                           df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
                            iplp_path: Path, path_df: Path,
                            printdata: bool = False):
     '''
@@ -362,7 +377,7 @@ def write_plpmance_ini_dat(df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
         df_pmin.to_csv(path_df / 'df_mantcen_pmin.csv', index=False)
 
     # Read dicts
-    pmin_dict, pmax_dict = get_pmin_pmax_dict(get_centrales(iplp_path))
+    pmin_dict, pmax_dict = get_pmin_pmax_dict(df_centrales)
 
     # Get mantcen data
     lines_units, number_of_units = get_mantcen_data(
@@ -435,15 +450,28 @@ def main():
     logger.info('Validating mantcen data')
     validate_mantcen(df_centrales, df_mantcen)
 
+    # PLP
     # Generate arrays with pmin/pmax data
-    logger.info('Generating pmin and pmax data')
-    df_pmin_plp, df_pmax_plp, df_pmin_plexos, df_pmax_plexos = \
-        get_mantcen_output(blo_eta, df_mantcen, df_centrales)
-
+    logger.info('Generating pmin and pmax data PLP')
+    df_pmin_plp, df_pmax_plp = \
+        get_mantcen_output(blo_eta, df_mantcen, df_centrales,
+                           plp_or_plexos='PLP')
     # Write data
     logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_pmin_plp, df_pmax_plp, iplp_path, path_df,
+    write_plpmance_ini_dat(df_centrales,
+                           df_pmin_plp, df_pmax_plp,
+                           iplp_path, path_df,
                            printdata=True)
+    # Plexos
+    # Generate arrays with pmin/pmax data
+    # Redefine nominal Pmax for Plexos, adding reserves
+    df_centrales = get_centrales(iplp_path, plx=True)
+    logger.info('Generating pmin and pmax data Plexos')
+    df_pmin_plexos, df_pmax_plexos = \
+        get_mantcen_output(blo_eta, df_mantcen, df_centrales,
+                           plp_or_plexos='PLEXOS')
+    # Write data
+    logger.info('Writing data to plexos csv files')
     write_plexos(df_pmin_plexos, df_pmax_plexos, path_df)
 
     logger.info('Process finished successfully')
