@@ -385,6 +385,7 @@ def main():
     # GeneratorFor - lista de centrales
     # GeneratorRating - centrales con pmax inicial
     # Generator MaxCapacity - Rating Centrales ERNC
+    # Generator RatingFactor - ERNC profiles
     logger.info('Processing plexos Generator files')
     print_generator_files(iplp_path, df_daily, path_csv,
                           path_df, path_inputs)
