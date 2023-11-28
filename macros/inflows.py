@@ -379,7 +379,7 @@ def main():
     # Get input file path
     logger.info('Getting input file path')
     parser = define_arg_parser(plp=True, plx=True)
-    iplp_path = get_iplp_input_path(parser)    
+    iplp_path = get_iplp_input_path(parser)
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
