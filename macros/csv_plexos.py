@@ -125,11 +125,14 @@ def print_generator_rating(df_daily: pd.DataFrame,
 def print_generator_files(iplp_path: Path,
                           df_daily: pd.DataFrame,
                           path_csv: Path,
-                          path_df: Path):
+                          path_df: Path,
+                          path_inputs: Path):
     # Generator_For
     print_generator_for(df_daily, iplp_path, path_csv)
     # Generator Rating
     print_generator_rating(df_daily, iplp_path, path_csv, path_df)
+    # Generator MaxCapacity
+    print_generator_maxcapacity(path_inputs, path_csv)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -291,6 +294,26 @@ def print_gas_files(
                       index=False)
 
 
+def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
+    '''
+    Print file that shows ERNC generator max capacity, based on ERNC tab
+    '''
+    df_ernc_rating_factor = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
+    df_ernc_rating_factor = df_ernc_rating_factor.rename(
+        columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
+    df_ernc_rating_factor['DateFrom'] = pd.to_datetime(
+        df_ernc_rating_factor['DateFrom'])
+    df_ernc_rating_factor['YEAR'] = df_ernc_rating_factor['DateFrom'].dt.year
+    df_ernc_rating_factor['MONTH'] = df_ernc_rating_factor['DateFrom'].dt.month
+    df_ernc_rating_factor['DAY'] = df_ernc_rating_factor['DateFrom'].dt.day
+    df_ernc_rating_factor['PERIOD'] = 1
+    df_ernc_rating_factor['BAND'] = 1
+    ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
+    df_ernc_rating_factor = df_ernc_rating_factor[ordered_cols]
+    df_ernc_rating_factor.to_csv(path_csv / 'Generator_MaxCapacity.csv',
+                                 index=False)
+
+
 @timeit
 def main():
     '''
@@ -318,8 +341,10 @@ def main():
 
     # GeneratorFor - lista de centrales
     # GeneratorRating - centrales con pmax inicial
+    # Generator MaxCapacity - Rating Centrales ERNC
     logger.info('Processing plexos Generator files')
-    print_generator_files(iplp_path, df_daily, path_csv, path_df)
+    print_generator_files(iplp_path, df_daily, path_csv,
+                          path_df, path_inputs)
 
     # Line files
     logger.info('Processing plexos Line files')
