@@ -7,6 +7,7 @@ from macros.manli import (add_manli_data_row_by_row,
                           get_df_manli,
                           get_nominal_values_dict)
 from macros.manlix import get_df_manlix
+from macros.ernc import get_input_names
 from utils.logger import create_logger
 from utils.utils import (timeit,
                          define_arg_parser,
@@ -133,6 +134,8 @@ def print_generator_files(iplp_path: Path,
     print_generator_rating(df_daily, iplp_path, path_csv, path_df)
     # Generator MaxCapacity
     print_generator_maxcapacity(path_inputs, path_csv)
+    # Generator RatingFactor
+    print_generator_rating_factor(iplp_path, path_inputs, path_csv)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -296,7 +299,7 @@ def print_gas_files(
 
 def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
     '''
-    Print file that shows ERNC generator max capacity, based on ERNC tab
+    Print file with ERNC generator max capacity, based on ERNC tab
     '''
     df_ernc_rating_factor = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
     df_ernc_rating_factor = df_ernc_rating_factor.rename(
@@ -312,6 +315,46 @@ def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
     df_ernc_rating_factor = df_ernc_rating_factor[ordered_cols]
     df_ernc_rating_factor.to_csv(path_csv / 'Generator_MaxCapacity.csv',
                                  index=False)
+
+
+def print_generator_rating_factor(iplp_path: Path, path_inputs: Path, path_csv: Path):
+    '''
+    Print file with ERNC profiles
+    '''
+    input_names = get_input_names(iplp_path)
+
+    # Hourly Profiles
+    h_profiles = pd.read_csv(
+        path_inputs / input_names["H_PROFILES_FILENAME"])
+    h_profiles = h_profiles.drop('MES', axis=1)\
+                           .set_index('PERIODO')\
+                           .stack()\
+                           .reset_index()\
+                           .rename(columns={'level_1': 'NAME',
+                                            0: 'VALUE'})
+    h_profiles = h_profiles.sort_values(['NAME', 'PERIODO'])
+    h_profiles['PATTERN'] = h_profiles['PERIODO'].apply(
+        lambda x: 'H%s' % x)
+    h_profiles = h_profiles[['NAME', 'PATTERN', 'VALUE']]
+    h_profiles['VALUE'] = h_profiles['VALUE'] * 100
+
+    # Hourly-Monthly Profiles
+    hm_profiles = pd.read_csv(
+        path_inputs / input_names["HM_PROFILES_FILENAME"])
+    hm_profiles = hm_profiles.set_index(['MES', 'PERIODO'])\
+                             .stack()\
+                             .reset_index()\
+                             .rename(columns={'level_2': 'NAME',
+                                              0: 'VALUE'})
+    hm_profiles = hm_profiles.sort_values(['NAME', 'MES', 'PERIODO'])
+    hm_profiles['PATTERN'] = hm_profiles.apply(
+        lambda x: 'M%s,H%s' % (x['MES'], x['PERIODO']), axis=1)
+    hm_profiles = hm_profiles[['NAME', 'PATTERN', 'VALUE']]
+    hm_profiles['VALUE'] = hm_profiles['VALUE'] * 100
+    # Concat both dataframes
+    df_profiles = pd.concat([h_profiles, hm_profiles])
+    # Print to csv
+    df_profiles.to_csv(path_csv / 'Generator_RatingFactor.csv', index=False)
 
 
 @timeit
