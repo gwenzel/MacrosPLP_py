@@ -27,7 +27,6 @@ def get_input_paths():
 def get_blo_eta(path_dat):
     logger.info('Processing csv inputs')
     blo_eta, _, _ = process_etapas_blocks(path_dat)
-    blo_eta = blo_eta.drop(['Tasa'], axis=1)
     return blo_eta
 
 

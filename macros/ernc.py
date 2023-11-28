@@ -63,7 +63,6 @@ def get_inputs(iplp_path: Path, path_inputs: Path, path_dat: Path,
     logger.info('Processing csv inputs')
     ernc_data = read_ernc_files(path_inputs, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
-    blo_eta = blo_eta.drop(['Tasa'], axis=1)
     valid_unit_names = get_valid_unit_names(ernc_data, iplp_path)
     return ernc_data, blo_eta, block2day, valid_unit_names
 

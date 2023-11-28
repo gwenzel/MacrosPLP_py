@@ -378,7 +378,6 @@ def main():
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
     blo_eta, _, _ = process_etapas_blocks(path_dat)
-    blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
     df_daily = get_df_daily_plexos(blo_eta, iplp_path)
 

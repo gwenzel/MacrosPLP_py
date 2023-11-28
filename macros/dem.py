@@ -321,7 +321,6 @@ def main():
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
-    blo_eta = blo_eta.drop(['Tasa'], axis=1)
 
     # Sheet "DdaPorBarra" to row format
     logger.info('Processing DdaPorBarra sheet')

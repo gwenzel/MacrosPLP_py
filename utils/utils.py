@@ -69,8 +69,8 @@ def timeit(func):
     return timeit_wrapper
 
 
-def process_etapas_blocks(path_dat: Path) -> (pd.DataFrame, pd.Series,
-                                              pd.DataFrame):
+def process_etapas_blocks(path_dat: Path, droptasa: bool = True) -> (
+        pd.DataFrame, pd.Series, pd.DataFrame):
     '''
     Get blocks to etapas definition and tasa
     '''
@@ -95,6 +95,9 @@ def process_etapas_blocks(path_dat: Path) -> (pd.DataFrame, pd.Series,
     blo_eta = blo_eta.sort_values(by=["Etapa"])
     blo_eta = blo_eta.reset_index(drop=True)
     tasa = plpetapas["Tasa"]
+    # Drop Tasa from blo_eta if not needed
+    if droptasa:
+        blo_eta = blo_eta.drop(['Tasa'], axis=1)
     return blo_eta, tasa, block2day
 
 

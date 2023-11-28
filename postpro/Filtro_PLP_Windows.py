@@ -53,7 +53,7 @@ def main():
     path_dat, _, path_out, path_case = define_directories()
 
     # Block - Etapa definition
-    blo_eta, tasa, _ = process_etapas_blocks(path_dat)
+    blo_eta, tasa, _ = process_etapas_blocks(path_dat, droptasa=False)
 
     # Marginales
     marginal_costs_converter(path_case, path_out, blo_eta)
