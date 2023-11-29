@@ -289,6 +289,39 @@ def get_daily_indexed_df(blo_eta: pd.DataFrame,
     return df
 
 
+def get_hourly_indexed_df(blo_eta: pd.DataFrame,
+                          all_caps: bool = False) -> pd.DataFrame:
+    '''
+    Get dataframe indexed by hour within the timeframe
+    '''
+    # Get days in last month
+    num_days = monthrange(
+        blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'])[1]
+    ini_date = datetime(
+        blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
+    end_date = datetime(
+        blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], num_days)
+    index = pd.date_range(start=ini_date, end=end_date, freq='H')
+    if all_caps:
+        df = pd.DataFrame(index=index,
+                          columns=['YEAR', 'MONTH', 'DAY', 'HOUR'])
+        df['YEAR'] = df.index.year
+        df['MONTH'] = df.index.month
+        df['DAY'] = df.index.day
+        df['HOUR'] = df.index.hour + 1
+        df['DATE'] = df.index
+    else:
+        df = pd.DataFrame(index=index,
+                          columns=['Year', 'Month', 'Day', 'Hour'])
+        df['Year'] = df.index.year
+        df['Month'] = df.index.month
+        df['Day'] = df.index.day
+        df['Hour'] = df.index.hour + 1
+        df['Date'] = df.index
+    df = df.reset_index(drop=True)
+    return df
+
+
 def read_plexos_end_date(iplp_path: Path) -> datetime:
     value = pd.read_excel(iplp_path,
                           sheet_name="Path",

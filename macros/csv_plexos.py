@@ -14,6 +14,7 @@ from utils.utils import (timeit,
                          get_iplp_input_path,
                          check_is_path,
                          get_daily_indexed_df,
+                         get_hourly_indexed_df,
                          process_etapas_blocks,
                          read_plexos_end_date,
                          get_scenarios)
@@ -30,6 +31,14 @@ def get_df_daily_plexos(blo_eta: pd.DataFrame,
     df_daily = get_daily_indexed_df(blo_eta, all_caps=True)
     year_mask = df_daily['YEAR'] <= plexos_end_date.year
     return df_daily[year_mask]
+
+
+def get_df_hourly_plexos(blo_eta: pd.DataFrame,
+                         iplp_path: Path) -> pd.DataFrame:
+    plexos_end_date = read_plexos_end_date(iplp_path)
+    df_hourly = get_hourly_indexed_df(blo_eta, all_caps=False)
+    year_mask = df_hourly['Year'] <= plexos_end_date.year
+    return df_hourly[year_mask]
 
 
 def read_centrales_plexos(iplp_path: Path,
@@ -161,6 +170,10 @@ def print_generator_rating(df_daily: pd.DataFrame,
     df_gen_rating.to_csv(path_csv / 'Generator_Rating.csv', index=False)
 
 
+def print_generator_heatrate():
+    pass
+
+
 def print_generator_files(iplp_path: Path,
                           df_daily: pd.DataFrame,
                           path_csv: Path,
@@ -175,7 +188,7 @@ def print_generator_files(iplp_path: Path,
     # Generator RatingFactor
     print_generator_rating_factor(iplp_path, path_inputs, path_csv)
     # Generator HeatRate (Variable Cost)
-    # print_generator_heatrate()
+    print_generator_heatrate()
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
 
@@ -343,23 +356,24 @@ def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
     '''
     Print file with ERNC generator max capacity, based on ERNC tab
     '''
-    df_ernc_rating_factor = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
-    df_ernc_rating_factor = df_ernc_rating_factor.rename(
+    df = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
+    df = df.rename(
         columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
-    df_ernc_rating_factor['DateFrom'] = pd.to_datetime(
-        df_ernc_rating_factor['DateFrom'])
-    df_ernc_rating_factor['YEAR'] = df_ernc_rating_factor['DateFrom'].dt.year
-    df_ernc_rating_factor['MONTH'] = df_ernc_rating_factor['DateFrom'].dt.month
-    df_ernc_rating_factor['DAY'] = df_ernc_rating_factor['DateFrom'].dt.day
-    df_ernc_rating_factor['PERIOD'] = 1
-    df_ernc_rating_factor['BAND'] = 1
+    df['DateFrom'] = pd.to_datetime(
+        df['DateFrom'])
+    df['YEAR'] = df['DateFrom'].dt.year
+    df['MONTH'] = df['DateFrom'].dt.month
+    df['DAY'] = df['DateFrom'].dt.day
+    df['PERIOD'] = 1
+    df['BAND'] = 1
     ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
-    df_ernc_rating_factor = df_ernc_rating_factor[ordered_cols]
-    df_ernc_rating_factor.to_csv(path_csv / 'Generator_MaxCapacity.csv',
-                                 index=False)
+    df = df[ordered_cols]
+    df.to_csv(path_csv / 'Generator_MaxCapacity.csv', index=False)
 
 
-def print_generator_rating_factor(iplp_path: Path, path_inputs: Path, path_csv: Path):
+def print_generator_rating_factor(iplp_path: Path,
+                                  path_inputs: Path,
+                                  path_csv: Path):
     '''
     Print file with ERNC profiles
     '''
@@ -399,6 +413,36 @@ def print_generator_rating_factor(iplp_path: Path, path_inputs: Path, path_csv: 
     df_profiles.to_csv(path_csv / 'Generator_RatingFactor.csv', index=False)
 
 
+def print_node_load(df_hourly, path_csv, path_df):
+    '''
+    Print Node Load
+    '''
+    # Get node load
+    df = pd.read_csv(path_df / 'df_dda_all_profiles_plexos.csv')
+    # Filter dates
+    mask_ini = df['Year'] >= df_hourly['Date'].iloc[0].year
+    mask_end = df['Year'] <= df_hourly['Date'].iloc[-1].year
+    df = df[mask_ini & mask_end]
+
+    # Use merge to repeat hourly profiles for each day
+    df = pd.merge(df_hourly, df, on=['Year', 'Month', 'Hour'])
+    df = df.drop('Date', axis=1)
+    df = df.sort_values(['Year', 'Month', 'Day', 'Hour'])
+
+    # Use nodes as column names
+    df = df.set_index(['Barra Consumo', 'Year', 'Month', 'Day', 'Hour'])\
+           .unstack('Barra Consumo')\
+           .reset_index()
+    # Rename index columns
+    df.columns = df.columns.droplevel()
+    df.columns.values[0] = 'YEAR'
+    df.columns.values[1] = 'MONTH'
+    df.columns.values[2] = 'DAY'
+    df.columns.values[3] = 'PERIOD'
+    # Print
+    df.to_csv(path_csv / 'Node_Load.csv', index=False)
+
+
 @timeit
 def main():
     '''
@@ -422,11 +466,13 @@ def main():
     blo_eta, _, _ = process_etapas_blocks(path_dat)
 
     df_daily = get_df_daily_plexos(blo_eta, iplp_path)
+    df_hourly = get_df_hourly_plexos(blo_eta, iplp_path)
 
-    # GeneratorFor - lista de centrales
-    # GeneratorRating - centrales con pmax inicial
-    # Generator MaxCapacity - Rating Centrales ERNC
-    # Generator RatingFactor - ERNC profiles
+    # Print Node Load (Demand)
+    logger.info('Processing plexos Node Load')
+    print_node_load(df_hourly, path_csv, path_df)
+
+    # Generator files
     logger.info('Processing plexos Generator files')
     print_generator_files(iplp_path, df_daily, path_csv,
                           path_df, path_inputs)
@@ -439,6 +485,7 @@ def main():
     logger.info('Processing plexos Gas volumes')
     print_gas_files(iplp_path, df_daily, path_csv)
 
+    # Finish
     logger.info('CSV plexos completed successfully')
 
 

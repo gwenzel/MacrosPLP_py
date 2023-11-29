@@ -85,7 +85,10 @@ def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
     return df_dda_por_barra
 
 
-def get_monthly_demand(iplp_path: Path) -> pd.DataFrame:
+def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
+    '''
+    Get monthly demand and add timedata
+    '''
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
     # Drop rows if column # is nan
     df = df.dropna(subset=['#'], how='any')
@@ -103,6 +106,11 @@ def get_monthly_demand(iplp_path: Path) -> pd.DataFrame:
     df = demand_series.reset_index()
     # parse dates
     df['Date'] = df['Date'].apply(from_excel)
+    # If plexos, filter out all BESS, Carnot and PHS clients
+    if plexos:
+        df = df[~df['Cliente'].str.contains('BESS|CARNOTx|PHSx')]
+    # add timedata
+    df = add_timedata_to_monthly_demand(df)
     return df
 
 
@@ -118,16 +126,17 @@ def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
     profile_series.name = 'PowerFactor'
     df = profile_series.reset_index()
     df = df.replace(to_replace={"Mes": MONTH_2_NUMBER, "Hora": HORA_DICT})
+    df = df.rename(
+        columns={'Perfil día tipo': 'Profile',
+                 'Mes': 'Month',
+                 'Hora': 'Hour'})
     return df
 
 
 def get_blockly_profiles(df_hourly_profiles: pd.DataFrame,
                          block2day: pd.DataFrame) -> pd.DataFrame:
-    df = df_hourly_profiles.rename(
-        columns={'Perfil día tipo': 'Profile',
-                 'Mes': 'Month',
-                 'Hora': 'Hour'})
-    df = pd.merge(df, block2day, on=['Month', 'Hour'], how='left')
+    df = pd.merge(df_hourly_profiles, block2day, on=['Month', 'Hour'],
+                  how='left')
     df = df.drop('Hour', axis=1)
     df = df.groupby(['Profile', 'Month', 'Block']).sum().reset_index()
     return df
@@ -144,14 +153,19 @@ def calculate_consumption(x):
     return num / den
 
 
-def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
-                     df_monthly_demand: pd.DataFrame,
-                     df_hourly_profiles: pd.DataFrame,
-                     df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
+def calculate_consumption_plexos(x):
+    # Consumption is calculated as follows:
+    # [Monthly demand] * [% of demand in current bus] *
+    #   [% of demand in current block] * 1000
+    # divided by
+    #  ([Days in Month] * [Hours per day in current block])
+    num = x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000
+    den = (x['DaysInMonth'] * 1)
+    return num / den
 
-    # Turn hourly profiles to profiles by block
-    df_blockly_profiles = get_blockly_profiles(df_hourly_profiles, block2day)
 
+def add_timedata_to_monthly_demand(
+        df_monthly_demand: pd.DataFrame) -> pd.DataFrame:
     # Add data to monthly demand df
     df_monthly_demand['Year'] = pd.to_datetime(
         df_monthly_demand['Date']).dt.year
@@ -160,6 +174,57 @@ def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
     df_monthly_demand['DaysInMonth'] = pd.to_datetime(
         df_monthly_demand['Date']).dt.daysinmonth
     df_monthly_demand = df_monthly_demand.drop(['Date'], axis=1)
+    return df_monthly_demand
+
+
+def get_consumption_per_barra(df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Calculate consumption, group by Barra and sum
+    Then reorder and sort
+    '''
+    df['Consumo'] = df.apply(lambda x: calculate_consumption(x), axis=1)
+    cols_to_drop = ['Demand', 'Factor Barra Consumo', 'PowerFactor',
+                    'Block_Len', 'DaysInMonth']
+    cols_for_groupby = ['Year', 'Month', 'Block', 'Etapa', 'Barra Consumo']
+    df = df.drop(cols_to_drop, axis=1)
+    df = df.groupby(cols_for_groupby).sum(numeric_only=True).reset_index()
+        # Reorder columns and sort
+    cols_to_select = ['Barra Consumo', 'Year', 'Month', 'Block',
+                      'Etapa', 'Consumo']
+    cols_to_sort = ['Barra Consumo', 'Year', 'Month', 'Block', 'Etapa']
+    df = df[cols_to_select]
+    df = df.sort_values(by=cols_to_sort).reset_index(drop=True)
+    return df
+
+
+def get_consumption_per_barra_plexos(df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Calculate consumption, group by Barra and sum
+    Then reorder and sort
+    '''
+    df['Consumo'] = df.apply(lambda x: calculate_consumption_plexos(x), axis=1)
+    cols_to_drop = ['Demand', 'Factor Barra Consumo', 'PowerFactor',
+                    'DaysInMonth']
+    cols_for_groupby = ['Year', 'Month', 'Hour', 'Barra Consumo']
+    df = df.drop(cols_to_drop, axis=1)
+    df = df.groupby(cols_for_groupby).sum(numeric_only=True).reset_index()
+    # Reorder columns and sort
+    cols_to_select = ['Barra Consumo', 'Year', 'Month', 'Hour', 'Consumo']
+    cols_to_sort = ['Barra Consumo', 'Year', 'Month', 'Hour']
+    df = df[cols_to_select]
+    df = df.sort_values(by=cols_to_sort).reset_index(drop=True)
+    return df
+
+
+def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
+                     df_monthly_demand: pd.DataFrame,
+                     df_hourly_profiles: pd.DataFrame,
+                     df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Get all profiles with block resolution for PLP
+    '''
+    # Turn hourly profiles to profiles by block
+    df_blockly_profiles = get_blockly_profiles(df_hourly_profiles, block2day)
 
     # Merge dataframes
     df = pd.merge(
@@ -167,22 +232,23 @@ def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
     df = pd.merge(df, df_blockly_profiles, on=['Profile', 'Month'])
     df = pd.merge(df, blo_eta, on=['Year', 'Month', 'Block'])
 
-    # Calculate consumption, group by Barra and sum
+    # Calculate consumption, group by Barra and sum, reorder and sort
+    df = get_consumption_per_barra(df)
+    return df
 
-    df['Consumo'] = df.apply(lambda x: calculate_consumption(x), axis=1)
 
-    cols_to_drop = ['Demand', 'Factor Barra Consumo', 'PowerFactor',
-                    'Block_Len', 'DaysInMonth']
-    cols_for_groupby = ['Year', 'Month', 'Block', 'Etapa', 'Barra Consumo']
-    df = df.drop(cols_to_drop, axis=1)
-    df = df.groupby(cols_for_groupby).sum(numeric_only=True).reset_index()
-
-    # Reorder columns and sort
-    cols_to_select = ['Barra Consumo', 'Year', 'Month', 'Block',
-                      'Etapa', 'Consumo']
-    cols_to_sort = ['Barra Consumo', 'Year', 'Month', 'Block', 'Etapa']
-    df = df[cols_to_select]
-    df = df.sort_values(by=cols_to_sort).reset_index(drop=True)
+def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
+                            df_hourly_profiles: pd.DataFrame,
+                            df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Get all profiles with hourly resolution for Plexos
+    '''
+    # Merge dataframes
+    df = pd.merge(
+        df_monthly_demand, df_dda_por_barra, on=['Coordinado', 'Cliente'])
+    df = pd.merge(df, df_hourly_profiles, on=['Profile', 'Month'])
+    # Calculate consumption, group by Barra and sum, reorder and sort
+    df = get_consumption_per_barra_plexos(df)
     return df
 
 
@@ -349,6 +415,22 @@ def main():
     # Get failure units and generate plpfal.prn
     logger.info('Printing plpfal.prn')
     write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
+
+    # Plexos outputs
+    # Get monthly demand from Sheet "DdaEnergia"
+    logger.info('Processing DdaEnergia sheet for plexos')
+    df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
+
+    # Generate dataframe with profiles per Etapa
+    logger.info('Generating dataframes with profiles per Etapa per'
+                ' Barra for plexos')
+    df_all_profiles = get_all_profiles_plexos(
+        df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
+
+    # Print df_all_profiles to csv to be used in plexos
+    logger.info('Printing df_all_profiles.csv for plexos')
+    df_all_profiles.to_csv(path_df / 'df_dda_all_profiles_plexos.csv',
+                           index=False)
 
     logger.info('Process finished successfully')
 
