@@ -428,11 +428,11 @@ def print_node_load(df_hourly, path_csv, path_df):
     df = pd.merge(df_hourly, df, on=['Year', 'Month', 'Hour'])
     df = df.drop('Date', axis=1)
     df = df.sort_values(['Year', 'Month', 'Day', 'Hour'])
-
     # Use nodes as column names
     df = df.set_index(['Barra Consumo', 'Year', 'Month', 'Day', 'Hour'])\
            .unstack('Barra Consumo')\
            .reset_index()
+    df = df.round(4)
     # Rename index columns
     df.columns = df.columns.droplevel()
     df.columns.values[0] = 'YEAR'
