@@ -250,24 +250,36 @@ def get_df_line_maxflow_minflow(
     return df_line_maxflow, df_line_minflow
 
 
+def add_per_unit_r_and_x(df: pd.DataFrame,
+                         ohms_unit: str = '[ohm]') -> pd.DataFrame:
+    '''
+    Add per unit data for R and X to dataframe
+    '''
+    df['R [0/1]'] = df['R%s' % ohms_unit] * 100 / df['V [kV]']**2
+    df['X [0/1]'] = df['X%s' % ohms_unit] * 100 / df['V [kV]']**2
+    return df
+
+
 def get_df_line_r_x(
         iplp_path: Path,
         df_daily: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
     # 0. Add PERIOD to df_daily
     df_daily['PERIOD'] = 1
-    # 1. Get nominal data for all lines
+    # 1. Get nominal data for all lines in p.u.
     df_lines = read_df_lines(iplp_path)
     line_names = df_lines['Nombre A->B'].unique().tolist()
+    df_lines = add_per_unit_r_and_x(df_lines, ohms_unit='[ohm]')
     df_nominal_r = build_df_nominal_plexos(
-        df_daily, line_names, df_lines, lines_value_col='R[ohm]')
+        df_daily, line_names, df_lines, lines_value_col='R [0/1]')
     df_nominal_x = build_df_nominal_plexos(
-        df_daily, line_names, df_lines, lines_value_col='X[ohm]')
+        df_daily, line_names, df_lines, lines_value_col='X [0/1]')
     # 2. Modify != nominal and !=0 with manlix
     df_manlix = get_df_manlix(iplp_path, df_lines)
+    df_manlix = add_per_unit_r_and_x(df_manlix, ohms_unit=' [ohms]')
     df_r_manlix = add_manli_data_row_by_row(
-        df_nominal_r, df_manlix, id_col='LÍNEA', manli_col='R [ohms]')
+        df_nominal_r, df_manlix, id_col='LÍNEA', manli_col='R [0/1]')
     df_x_manlix = add_manli_data_row_by_row(
-        df_nominal_x, df_manlix, id_col='LÍNEA', manli_col='X [ohms]')
+        df_nominal_x, df_manlix, id_col='LÍNEA', manli_col='X [0/1]')
     # 3. Set index
     new_index = ['YEAR', 'MONTH', 'DAY', 'PERIOD']
     df_r_manlix = df_r_manlix.set_index(new_index)
