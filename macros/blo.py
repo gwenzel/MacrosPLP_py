@@ -23,7 +23,6 @@ formatter_plpblo = {
     'Ano': "   {:03d}".format,
     'Mes': "   {:03d}".format,
     'TipoBloque': "   '{:s}'".format,
-
 }
 
 
