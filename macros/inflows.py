@@ -132,7 +132,7 @@ def get_df_all_inflows(iplp_path: Path,
     # Filter if plp is not enabled and plexos is
     if plx_enable & ~plp_enable:
         plexos_end_date = read_plexos_end_date(iplp_path)
-        df_daily = df_daily[df_daily['DATE'] <= plexos_end_date] 
+        df_daily = df_daily[df_daily['DATE'] <= plexos_end_date]
 
     # Join dataframes using outer to keep all data
     new_index = ['YEAR', 'MONTH', 'DAY', 'WEEK_NAME', 'DATE']
