@@ -1,7 +1,6 @@
 '''
 Generate Plexos files in CSV folder
 '''
-
 from macros.lin import read_df_lines
 from macros.manli import (add_manli_data_row_by_row,
                           get_df_manli,
@@ -68,26 +67,6 @@ def read_centrales_plexos(iplp_path: Path,
     return df
 
 
-def read_df_mantcen_pmax(path_df: Path):
-    return pd.read_csv(path_df / 'df_mantcen_pmax_plexos.csv')
-
-
-def read_df_manlix_ab(path_df: Path):
-    return pd.read_csv(path_df / 'df_manlix_ab.csv')
-
-
-def read_df_manlix_ba(path_df: Path):
-    return pd.read_csv(path_df / 'df_manlix_ba.csv')
-
-
-def read_df_manli_ab(path_df: Path):
-    return pd.read_csv(path_df / 'df_manli_ab.csv')
-
-
-def read_df_manli_ba(path_df: Path):
-    return pd.read_csv(path_df / 'df_manli_ba.csv')
-
-
 def print_generator_for(df_daily: pd.DataFrame,
                         iplp_path: Path,
                         path_csv: Path):
@@ -132,7 +111,10 @@ def print_generator_rating(df_daily: pd.DataFrame,
                            path_df: Path):
     # Leer desde Temp/df/df_mantcen_pmax para no renovables
     df_gen_rating = df_daily.copy()
-    df_pmax = read_df_mantcen_pmax(path_df)
+    try:
+        df_pmax = pd.read_csv(path_df / 'df_mantcen_pmax_plexos.csv')
+    except FileNotFoundError:
+        logger.error('File df_mantcen_pmax_plexos.csv not found')
     df_pmax = df_pmax.set_index(['Year', 'Month', 'Day'])\
                      .groupby(['Year', 'Month', 'Day']).max()\
                      .reset_index()\
@@ -180,15 +162,21 @@ def print_generator_files(iplp_path: Path,
                           path_df: Path,
                           path_inputs: Path):
     # Generator_For
+    logger.info('Processing plexos Generator files')
     print_generator_for(df_daily, iplp_path, path_csv)
     # Generator Rating
+    logger.info('Processing plexos Generator Rating')
     print_generator_rating(df_daily, iplp_path, path_csv, path_df)
     # Generator MaxCapacity
+    logger.info('Processing plexos Generator MaxCapacity')
     print_generator_maxcapacity(path_inputs, path_csv)
     # Generator RatingFactor
+    logger.info('Processing plexos Generator RatingFactor')
     print_generator_rating_factor(iplp_path, path_inputs, path_csv)
     # Generator HeatRate (Variable Cost)
+    logger.info('Processing plexos Generator HeatRate')
     print_generator_heatrate()
+    logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
 
@@ -368,7 +356,11 @@ def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
     '''
     Print file with ERNC generator max capacity, based on ERNC tab
     '''
-    df = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
+    try:
+        df = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
+    except FileNotFoundError:
+        logger.error('File ernc_RatingFactor.csv not found')
+        return
     df = df.rename(
         columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
     df['DateFrom'] = pd.to_datetime(
@@ -392,8 +384,12 @@ def print_generator_rating_factor(iplp_path: Path,
     input_names = get_input_names(iplp_path)
 
     # Hourly Profiles
-    h_profiles = pd.read_csv(
-        path_inputs / input_names["H_PROFILES_FILENAME"])
+    try:
+        h_profiles = pd.read_csv(
+            path_inputs / input_names["H_PROFILES_FILENAME"])
+    except FileNotFoundError:
+        logger.error('File %s not found' % input_names["H_PROFILES_FILENAME"])
+        return
     h_profiles = h_profiles.drop('MES', axis=1)\
                            .set_index('PERIODO')\
                            .stack()\
@@ -407,8 +403,12 @@ def print_generator_rating_factor(iplp_path: Path,
     h_profiles['VALUE'] = h_profiles['VALUE'] * 100
 
     # Hourly-Monthly Profiles
-    hm_profiles = pd.read_csv(
-        path_inputs / input_names["HM_PROFILES_FILENAME"])
+    try:
+        hm_profiles = pd.read_csv(
+            path_inputs / input_names["HM_PROFILES_FILENAME"])
+    except FileNotFoundError:
+        logger.error('File %s not found' % input_names["HM_PROFILES_FILENAME"])
+        return
     hm_profiles = hm_profiles.set_index(['MES', 'PERIODO'])\
                              .stack()\
                              .reset_index()\
@@ -430,7 +430,11 @@ def print_node_load(df_hourly, path_csv, path_df):
     Print Node Load
     '''
     # Get node load
-    df = pd.read_csv(path_df / 'df_dda_all_profiles_plexos.csv')
+    try:
+        df = pd.read_csv(path_df / 'df_dda_all_profiles_plexos.csv')
+    except FileNotFoundError:
+        logger.error('File df_dda_all_profiles_plexos.csv not found')
+        return
     # Filter dates
     mask_ini = df['Year'] >= df_hourly['Date'].iloc[0].year
     mask_end = df['Year'] <= df_hourly['Date'].iloc[-1].year
