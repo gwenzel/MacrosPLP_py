@@ -5,15 +5,14 @@ This module calculates the variable cost for each unit in the system.
 It stores the data in csv files, and then it prints
 the plpcosce.dat file with the data.
 '''
-from utils.utils import (   timeit,
-                            define_arg_parser,
-                            get_iplp_input_path,
-                            check_is_path,
-                            process_etapas_blocks,
-                            translate_to_hydromonth,
-                            write_lines_from_scratch,
-                            write_lines_appending
-)
+from utils.utils import (timeit,
+                         define_arg_parser,
+                         get_iplp_input_path,
+                         check_is_path,
+                         process_etapas_blocks,
+                         translate_to_hydromonth,
+                         write_lines_from_scratch,
+                         write_lines_appending)
 from utils.logger import create_logger
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
@@ -46,17 +45,22 @@ def read_fuel_price_iplp(iplp_path, fuel):
     df = pd.read_excel(
         iplp_path, sheet_name=fuel2sheetname[fuel])
     df = df.set_index(['Combustible', 'Unidad'])
-    # Fill gaps with expensive price so that it's not used
-    # TODO CHECK THIS
-    df = df.fillna(99999)
-    df = df.stack()
+    # Warn if there are missing values
+    for row in df.index:
+        if df.loc[row].T.isna().any():
+            logger.warning('Fuel %s has missing values, which'
+                           ' will be filled with previous value' % row[0])
+    df = df.stack(dropna=False)
     df = df.reset_index()
     df = df.rename(columns={'level_2': 'Date', 0: 'Variable Cost USD/Unit'})
     df['Date'] = df['Date'].apply(from_excel)
     df['Year'] = df['Date'].dt.year
     df['Month'] = df['Date'].dt.month
-    df = df[['Combustible', 'Unidad', 'Year', 'Month', 'Variable Cost USD/Unit']]
+    df = df[['Combustible', 'Unidad', 'Year', 'Month',
+             'Variable Cost USD/Unit']]
     df = df.rename(columns={'Combustible': 'Fuel Name', 'Unidad': 'Unit'})
+    # Fill missing values using ffill first, then bfill
+    df = df.ffill().bfill()
     return df
 
 
@@ -102,6 +106,12 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path):
                        usecols='B,D:E')
     df = df.rename(columns={'Rendimiento': 'Heat Rate',
                             'Combustible OSE': 'Fuel Name'})
+    # Filter out missing units
+    df_cen = pd.read_excel(iplp_path, sheet_name='Centrales',
+                           usecols='B:C', skiprows=4)
+    df = df.merge(df_cen, left_on='Central', right_on='CENTRALES')
+    df = df[df['Tipo de Central'] == 'T']
+    df = df.drop(columns=['Tipo de Central', 'CENTRALES'])
     return df
 
 
@@ -144,8 +154,8 @@ def calculate_cvar(path_df, blo_eta, df_fuel_prices,
     # Merge with df_fuel_prices
     df = df.merge(df_fuel_prices,
                   on=['Year', 'Month', 'Fuel Name'], how='left')
-    # Use ffill to fill gaps, especially those in Coal (<=2040)
-    # Warning: for this to work, dataframes must be merged in the right orde
+    # Use ffill to fill gaps (Coal has no values after 2040)
+    # Warning: for this to work, dataframes must be merged in the right order
     df = df.ffill()
     # Drop rows if price could not be calculated
     df = df.dropna(subset=['Variable Cost USD/Unit'])
@@ -185,7 +195,6 @@ def print_plpcosce(path_inputs, df_cvar_with_emissions):
     write_lines_from_scratch(lines, path_plpcosce)
     df = df_cvar_with_emissions[['Central', 'Month', 'Etapa',
                                  'Variable Cost USD/MWh']]
-
     for central in df['Central'].unique():
         # Filter and select columns
         df_aux = df[df['Central'] == central]
