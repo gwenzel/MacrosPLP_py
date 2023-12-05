@@ -41,7 +41,8 @@ def get_df_hourly_plexos(blo_eta: pd.DataFrame,
 
 
 def read_centrales_plexos(iplp_path: Path,
-                          add_specs: bool = False) -> pd.DataFrame:
+                          add_specs: bool = False,
+                          only_thermal: bool = False) -> pd.DataFrame:
     if not add_specs:
         # Get only Pmax
         df = pd.read_excel(iplp_path, sheet_name="Centrales",
@@ -63,6 +64,8 @@ def read_centrales_plexos(iplp_path: Path,
         df = df.fillna(0)
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
+    if only_thermal:
+        df = df[df['Tipo de Central'] == 'T']
     df = df.drop('Tipo de Central', axis=1)
     return df
 
@@ -115,6 +118,8 @@ def print_generator_rating(df_daily: pd.DataFrame,
         df_pmax = pd.read_csv(path_df / 'df_mantcen_pmax_plexos.csv')
     except FileNotFoundError:
         logger.error('File df_mantcen_pmax_plexos.csv not found')
+        logger.error('File Generator_Rating could not be printed')
+        return
     df_pmax = df_pmax.set_index(['Year', 'Month', 'Day'])\
                      .groupby(['Year', 'Month', 'Day']).max()\
                      .reset_index()\
@@ -152,8 +157,50 @@ def print_generator_rating(df_daily: pd.DataFrame,
     df_gen_rating.to_csv(path_csv / 'Generator_Rating.csv', index=False)
 
 
-def print_generator_heatrate():
-    pass
+def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
+    '''
+    Read df_cvar_with_emissions.csv file and print
+    Generator HeatRate (Variable Cost) with plexos format
+    '''
+    try:
+        df = pd.read_csv(path_df / 'df_cvar_with_emissions.csv')
+    except FileNotFoundError:
+        logger.error('File df_mantcen_pmax_plexos.csv not found')
+        logger.error('File Generator_HeatRate could not be printed')
+        return
+    # Format dataframe
+    # Recalculate Month (not hydromonth)
+    df['Date'] = pd.to_datetime(df['Date'])
+    df['Month'] = df['Date'].dt.month
+    # Rename columns
+    df = df.rename(columns={'Year': 'YEAR', 'Month': 'MONTH',
+                            'Date': 'DATE', 'Central': 'NAME',
+                            'Variable Cost + CO2 Tax USD/MWh': 'VALUE'})
+    # Keep relevant columns
+    df = df[['YEAR', 'MONTH', 'NAME', 'VALUE']]
+    # Merge with df_daily
+    df = df_daily.merge(df, on=['YEAR', 'MONTH'], how='left')
+    df = df.sort_values(['NAME', 'YEAR', 'MONTH', 'DAY'])
+    df = df.pivot(index=['YEAR', 'MONTH', 'DAY'],
+                  columns='NAME', values='VALUE')
+    df = df.reset_index()\
+           .rename_axis(None, axis=1)
+    # Read complete list of generators and add the ones that are missing
+    # with 0 variable cost
+    df_centrales = read_centrales_plexos(iplp_path)
+    list_of_centrales = df_centrales['Nombre'].unique().tolist()
+    list_of_centrales_in_df = df.columns.tolist()[3:]
+    list_of_centrales_missing = [
+        unit for unit in list_of_centrales
+        if unit not in list_of_centrales_in_df]
+    df_aux = pd.DataFrame(0, index=df.index, columns=list_of_centrales_missing)
+    df = pd.concat([df, df_aux], axis=1)
+    # Format
+    df['PERIOD'] = 1
+    new_index = ['YEAR', 'MONTH', 'DAY', 'PERIOD']
+    df = df.set_index(new_index)
+    # Print
+    df.to_csv(path_csv / 'Generator_HeatRate.csv')
 
 
 def print_generator_files(iplp_path: Path,
@@ -162,7 +209,7 @@ def print_generator_files(iplp_path: Path,
                           path_df: Path,
                           path_inputs: Path):
     # Generator_For
-    logger.info('Processing plexos Generator files')
+    logger.info('Processing plexos Generator For')
     print_generator_for(df_daily, iplp_path, path_csv)
     # Generator Rating
     logger.info('Processing plexos Generator Rating')
@@ -175,7 +222,7 @@ def print_generator_files(iplp_path: Path,
     print_generator_rating_factor(iplp_path, path_inputs, path_csv)
     # Generator HeatRate (Variable Cost)
     logger.info('Processing plexos Generator HeatRate')
-    print_generator_heatrate()
+    print_generator_heatrate(df_daily, iplp_path, path_csv, path_df)
     logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
@@ -360,6 +407,7 @@ def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
         df = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
     except FileNotFoundError:
         logger.error('File ernc_RatingFactor.csv not found')
+        logger.error('File Generator_MaxCapacity could not be printed')
         return
     df = df.rename(
         columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
@@ -389,6 +437,7 @@ def print_generator_rating_factor(iplp_path: Path,
             path_inputs / input_names["H_PROFILES_FILENAME"])
     except FileNotFoundError:
         logger.error('File %s not found' % input_names["H_PROFILES_FILENAME"])
+        logger.error('File Generator_RatingFactor could not be printed')
         return
     h_profiles = h_profiles.drop('MES', axis=1)\
                            .set_index('PERIODO')\
@@ -408,6 +457,7 @@ def print_generator_rating_factor(iplp_path: Path,
             path_inputs / input_names["HM_PROFILES_FILENAME"])
     except FileNotFoundError:
         logger.error('File %s not found' % input_names["HM_PROFILES_FILENAME"])
+        logger.error('File Generator_RatingFactor could not be printed')
         return
     hm_profiles = hm_profiles.set_index(['MES', 'PERIODO'])\
                              .stack()\
