@@ -56,7 +56,7 @@ def read_fuel_price_iplp(iplp_path, fuel):
     df['Date'] = df['Date'].apply(from_excel)
     df['Year'] = df['Date'].dt.year
     df['Month'] = df['Date'].dt.month
-    df = df[['Combustible', 'Unidad', 'Year', 'Month',
+    df = df[['Combustible', 'Unidad', 'Year', 'Month', 'Date',
              'Variable Cost USD/Unit']]
     df = df.rename(columns={'Combustible': 'Fuel Name', 'Unidad': 'Unit'})
     # Fill missing values using ffill first, then bfill
@@ -103,15 +103,19 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path):
     - Diesel ton/MWh
     '''
     df = pd.read_excel(iplp_path, sheet_name='Rendimientos y CVarNcomb',
-                       usecols='B,D:E')
-    df = df.rename(columns={'Rendimiento': 'Heat Rate',
-                            'Combustible OSE': 'Fuel Name'})
+                       usecols='B,D:F')
+    df = df.rename(columns={
+        'Rendimiento': 'Heat Rate',
+        'Combustible OSE': 'Fuel Name',
+        'Costo Variable No Combustible': 'Non-Fuel Cost'})
     # Filter out missing units
     df_cen = pd.read_excel(iplp_path, sheet_name='Centrales',
                            usecols='B:C', skiprows=4)
     df = df.merge(df_cen, left_on='Central', right_on='CENTRALES')
     df = df[df['Tipo de Central'] == 'T']
     df = df.drop(columns=['Tipo de Central', 'CENTRALES'])
+    if df.isna().any().any():
+        logger.error('Heatrate and fuel mapping has missing values')
     return df
 
 
@@ -160,9 +164,10 @@ def calculate_cvar(path_df, blo_eta, df_fuel_prices,
     # Drop rows if price could not be calculated
     df = df.dropna(subset=['Variable Cost USD/Unit'])
     df['Variable Cost USD/MWh'] = \
-        (df['Variable Cost USD/Unit'] * df['Heat Rate']).round(1)
+        (df['Variable Cost USD/Unit'] * df['Heat Rate'] +
+         df['Non-Fuel Cost']).round(1)
     # Select columns to keep
-    df = df[['Etapa', 'Year', 'Month', 'Central', 'Heat Rate',
+    df = df[['Etapa', 'Year', 'Month', 'Date', 'Central', 'Heat Rate',
              'Fuel Name', 'Variable Cost USD/MWh']]
     # Translate month to hydromonth
     df = translate_to_hydromonth(df)
