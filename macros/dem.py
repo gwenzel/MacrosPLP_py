@@ -188,7 +188,7 @@ def get_consumption_per_barra(df: pd.DataFrame) -> pd.DataFrame:
     cols_for_groupby = ['Year', 'Month', 'Block', 'Etapa', 'Barra Consumo']
     df = df.drop(cols_to_drop, axis=1)
     df = df.groupby(cols_for_groupby).sum(numeric_only=True).reset_index()
-        # Reorder columns and sort
+    # Reorder columns and sort
     cols_to_select = ['Barra Consumo', 'Year', 'Month', 'Block',
                       'Etapa', 'Consumo']
     cols_to_sort = ['Barra Consumo', 'Year', 'Month', 'Block', 'Etapa']
