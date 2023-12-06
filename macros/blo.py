@@ -1,9 +1,11 @@
 '''PLPBLO
 
-Generate PLPBLO.dat file from IPLP input file
+Generate PLPBLO.dat file from IPLP input file, as well as
+PLPETA.dat and Etapa2Dates.csv files.
 
 '''
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          process_etapas_blocks,
@@ -26,23 +28,77 @@ formatter_plpblo = {
 }
 
 
-def transform_blo_eta(blo_eta):
+formatter_plpetapas = {
+    'Ano': "  {:03d}".format,
+    'Mes': " {:03d}".format,
+    'Etapa': "   {:03d}".format,
+    'FDesh': "    {:s}".format,
+    'NHoras': "     {:03d}".format,
+    'FactTasa': "  {:.6f}".format,
+    'TipoEtapa': "   '{:s}'".format
+}
+
+
+def get_df_bloques(blo_eta):
     '''
     Transform blo_eta to plpblo format
     '''
-    blo_eta['Date'] = pd.to_datetime(
-        dict(year=blo_eta['Year'], month=blo_eta['Month'], day=1))
-    blo_eta['DaysInMonth'] = blo_eta['Date'].dt.days_in_month
-    blo_eta['NHoras'] = blo_eta['Block_Len'] * blo_eta['DaysInMonth']
-    blo_eta['TipoBloque'] = blo_eta['Block'].apply(lambda x: "Bloque %02d" % x)
-    blo_eta = translate_to_hydromonth(blo_eta)
-    blo_eta['Year'] = blo_eta['Year'] - blo_eta['Year'][0] + 1
-    blo_eta = blo_eta.rename(columns={'Etapa': 'Bloque',
-                                      'Block': 'Etapa',
-                                      'Year': 'Ano',
-                                      'Month': 'Mes'})
-    return blo_eta[['Bloque', 'Etapa', 'NHoras',
-                    'Ano', 'Mes', 'TipoBloque']]
+    df = blo_eta.copy()
+    df['Date'] = pd.to_datetime(
+        dict(year=df['Year'], month=df['Month'], day=1))
+    df['DaysInMonth'] = df['Date'].dt.days_in_month
+    df['NHoras'] = df['Block_Len'] * df['DaysInMonth']
+    df['TipoBloque'] = df['Block'].apply(lambda x: "Bloque %02d" % x)
+    df = translate_to_hydromonth(df)
+    df['Year'] = df['Year'] - df['Year'][0] + 1
+    df = df.rename(columns={'Etapa': 'Bloque',
+                            'Block': 'Etapa',
+                            'Year': 'Ano',
+                            'Month': 'Mes'})
+    return df[['Bloque', 'Etapa', 'NHoras',
+               'Ano', 'Mes', 'TipoBloque']]
+
+
+def get_df_etapas(blo_eta):
+    '''
+    Transform blo_eta to plpeta format
+    '''
+    df = blo_eta.copy()
+    tipo_etapa = int(24 / df.loc[0, 'Block_Len'])
+    # Groupby Year Month, redefine Etapa,
+    # then keep Tasa, and add Hours in Month
+    df = df.groupby(['Year', 'Month']).agg(
+        {'Tasa': 'first'}).reset_index()
+    df['Etapa'] = df.index + 1
+    df['Date'] = pd.to_datetime(
+        dict(year=df['Year'], month=df['Month'], day=1))
+    df['DaysInMonth'] = df['Date'].dt.days_in_month
+    df['NHoras'] = 24 * df['DaysInMonth']
+    df['FDesh'] = 'F'
+    df['TipoEtapa'] = "%02d Bloques" % tipo_etapa
+    df = translate_to_hydromonth(df)
+    df['Ano'] = df['Year'] - df['Year'][0] + 1
+    df = df.rename(columns={'Month': 'Mes',
+                            'Tasa': 'FactTasa'})
+    return df[['Ano', 'Mes', 'Etapa', 'FDesh',
+               'NHoras', 'FactTasa', 'TipoEtapa']]
+
+
+def get_df_etapa2dates(blo_eta):
+    '''
+    Transform blo_eta to Etapa2Dates.csv format
+    '''
+    df = blo_eta.copy()
+    df = df.groupby(['Year', 'Month']).agg(
+        {'Block': 'first'}).reset_index()
+    df['Etapa'] = df.index + 1
+    df['PERIOD'] = 1
+    df['DR'] = 1
+    df = df.rename(columns={'Etapa': 'Etapa',
+                            'Year': 'YEAR',
+                            'Month': 'MONTH',
+                            'Block': 'DAY'})
+    return df[['Etapa', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'DR']]
 
 
 def print_plpblo(path_inputs: Path, df_blo_eta: pd.DataFrame):
@@ -55,10 +111,34 @@ def print_plpblo(path_inputs: Path, df_blo_eta: pd.DataFrame):
     lines += ['    %s' % len(df_blo_eta)]
     lines += ['# Bloque   Etapa   NHoras  Ano   Mes  TipoBloque']
     lines += [df_blo_eta.to_string(
-            index=False, header=False, formatters=formatter_plpblo)]
+        index=False, header=False, formatters=formatter_plpblo)]
     write_lines_from_scratch(lines, path_plpblo)
 
 
+def print_plpeta(path_inputs: Path, df_etapas: pd.DataFrame):
+    '''
+    Print plpeta.dat file
+    '''
+    path_plpeta = path_inputs / 'plpeta.dat'
+    lines = ['# Archivo con la duracion de las etapas']
+    lines += ['# Etapas']
+    lines += ["     %s   'H'" % len(df_etapas)]
+    lines += ['# Ano  Mes  Etapa FDesh   NHoras    FactTasa    TipoEtapa']
+    lines += [df_etapas.to_string(
+        index=False, header=False, formatters=formatter_plpetapas)]
+    write_lines_from_scratch(lines, path_plpeta)
+
+
+def print_etapa2dates(path_inputs: Path, df_etapa2dates: pd.DataFrame):
+    '''
+    Print Etapa2Dates.csv file
+    '''
+    path_etapa2dates = path_inputs / 'Etapa2Dates.csv'
+    df = df_etapa2dates.copy()
+    df.to_csv(path_etapa2dates, index=False)
+
+
+@timeit
 def main():
     '''
     Main routine
@@ -74,15 +154,22 @@ def main():
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+    blo_eta, _, _ = process_etapas_blocks(path_dat, droptasa=False)
 
-    # Transform blo_eta
-    logger.info('Transforming blo_eta')
-    df_blo_eta = transform_blo_eta(blo_eta)
-
-    # Print blo_eta to file
+    # Print blo_eta to file plpblo.dat
     logger.info('Printing blo_eta to file')
-    print_plpblo(path_inputs, df_blo_eta)
+    df_bloques = get_df_bloques(blo_eta)
+    print_plpblo(path_inputs, df_bloques)
+
+    # Print plpeta.dat
+    logger.info('Printing plpeta.dat')
+    df_etapas = get_df_etapas(blo_eta)
+    print_plpeta(path_inputs, df_etapas)
+
+    # Pring Etapa2Dates.csv
+    logger.info('Printing Etapa2Dates.csv')
+    df_etapa2dates = get_df_etapa2dates(blo_eta)
+    print_etapa2dates(path_inputs, df_etapa2dates)
 
     logger.info('Process finished successfully')
 
