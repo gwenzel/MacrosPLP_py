@@ -7,7 +7,7 @@ from macros.manli import (add_manli_data_row_by_row,
                           get_nominal_values_dict)
 from macros.manlix import get_df_manlix
 from macros.ernc import get_input_names
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 from utils.utils import (timeit,
                          define_arg_parser,
                          get_iplp_input_path,
@@ -526,6 +526,11 @@ def main():
     check_is_path(path_df)
     path_csv = iplp_path.parent / "Temp" / "CSV"
     check_is_path(path_csv)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'csv_plexos', path_log)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')

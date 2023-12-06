@@ -8,7 +8,7 @@ from utils.utils import (timeit,
                          get_iplp_input_path,
                          check_is_path,
                          write_lines_from_scratch)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 from pathlib import Path
 import pandas as pd
 
@@ -102,6 +102,11 @@ def main():
     iplp_path = get_iplp_input_path(parser)
     path_inputs = iplp_path.parent / "Temp"
     check_is_path(path_inputs)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'lineas', path_log)
 
     logger.info('Write uni_plpcnfli.dat')
     print_uni_plpcnfli(path_inputs, iplp_path)

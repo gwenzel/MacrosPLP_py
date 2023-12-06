@@ -11,7 +11,7 @@ from utils.utils import (timeit,
                          process_etapas_blocks,
                          translate_to_hydromonthyear,
                          write_lines_from_scratch)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 import pandas as pd
 from pathlib import Path
 
@@ -159,6 +159,11 @@ def main():
     check_is_path(path_inputs)
     path_dat = iplp_path.parent / "Temp" / "Dat"
     check_is_path(path_dat)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'plpblo', path_log)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')

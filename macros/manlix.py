@@ -10,7 +10,7 @@ from utils.utils import (timeit,
                          process_etapas_blocks,
                          add_time_info,
                          write_lines_from_scratch)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 import pandas as pd
 from pathlib import Path
 from openpyxl.utils.datetime import from_excel
@@ -373,6 +373,11 @@ def main():
     check_is_path(path_dat)
     path_df = iplp_path.parent / "Temp" / "df"
     check_is_path(path_df)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'manlix', path_log)
 
     logger.info('Read existing lines data')
     df_lines = read_df_lines(iplp_path)

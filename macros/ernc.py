@@ -10,7 +10,7 @@ from utils.utils import (timeit,
                          get_iplp_input_path,
                          check_is_path,
                          get_scenarios)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 from macros.ernc_read_write import (read_ernc_files,
                                     write_plpmance_ernc_dat,
                                     generate_max_capacity_csv,
@@ -109,6 +109,11 @@ def main():
     # Get input file path
     iplp_path, path_inputs, path_dat, path_df =\
         get_input_paths()
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'ernc', path_log)
 
     # Get ERNC scenario and input file names
     input_names = get_input_names(iplp_path)

@@ -30,3 +30,19 @@ def create_logger(logname: str):
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
     return logger
+
+
+def add_file_handler(logger, logname: str, path_log: Path):
+    # set formatter
+    formatter = logging.Formatter(
+        '%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+
+    # define file and set format
+    formatter = logging.Formatter(
+        '%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+    filepath = path_log / ('log_%s.log' % logname)
+    file_handler = logging.FileHandler(filepath, mode='w')
+    file_handler.setFormatter(formatter)
+
+    # add file and handler to logger
+    logger.addHandler(file_handler)

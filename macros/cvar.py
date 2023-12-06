@@ -13,7 +13,7 @@ from utils.utils import (timeit,
                          translate_to_hydromonth,
                          write_lines_from_scratch,
                          write_lines_appending)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 import pandas as pd
 from openpyxl.utils.datetime import from_excel
 
@@ -232,6 +232,11 @@ def main():
     check_is_path(path_df)
     path_csv = iplp_path.parent / "Temp" / "CSV"
     check_is_path(path_csv)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'cvariable', path_log)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')

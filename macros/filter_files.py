@@ -6,7 +6,7 @@ from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          timeit)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 
 logger = create_logger('filter_files')
 
@@ -153,6 +153,11 @@ def main():
     logger.info('Getting input file path')
     parser = define_arg_parser()
     iplp_path = get_iplp_input_path(parser)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'filter_files', path_log)
 
     logger.info('Checking if folders exist, create them otherwise')
 

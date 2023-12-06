@@ -23,7 +23,7 @@ from utils.utils import (timeit,
                          write_lines_from_scratch,
                          write_lines_appending,
                          translate_to_hydromonth)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 
 logger = create_logger('demanda')
 
@@ -383,6 +383,11 @@ def main():
     check_is_path(path_dat)
     path_df = iplp_path.parent / "Temp" / "df"
     check_is_path(path_df)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'demanda', path_log)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')

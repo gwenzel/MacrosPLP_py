@@ -17,7 +17,7 @@ from utils.utils import (timeit,
                          write_lines_appending,
                          write_lines_from_scratch,
                          read_plexos_end_date)
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 from utils.utils import translate_to_hydromonth
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -390,6 +390,11 @@ def main():
     check_is_path(path_df)
     path_pib = iplp_path.parent / "Temp" / "PIB"
     check_is_path(path_pib)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'water_inflows', path_log)
 
     # Get PLP/PLX enabling booleans
     plp_enable, plx_enable = get_plp_plx_booleans(parser)

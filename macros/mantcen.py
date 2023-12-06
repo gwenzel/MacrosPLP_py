@@ -22,7 +22,7 @@ from utils.utils import (define_arg_parser,
                          timeit,
                          add_time_info
                          )
-from utils.logger import create_logger
+from utils.logger import add_file_handler, create_logger
 
 POWER_CHANGE_TOLERANCE = 0.01
 
@@ -415,6 +415,11 @@ def main():
     check_is_path(path_dat)
     path_df = iplp_path.parent / "Temp" / "df"
     check_is_path(path_df)
+
+    # Add destination folder to logger
+    path_log = iplp_path.parent / "Temp" / "log"
+    check_is_path(path_log)
+    add_file_handler(logger, 'mantcen', path_log)
 
     # Get Hour-Blocks-Etapas definition
     logger.info('Processing block to etapas files')
