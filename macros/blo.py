@@ -9,7 +9,7 @@ from utils.utils import (timeit,
                          get_iplp_input_path,
                          check_is_path,
                          process_etapas_blocks,
-                         translate_to_hydromonth,
+                         translate_to_hydromonthyear,
                          write_lines_from_scratch)
 from utils.logger import create_logger
 import pandas as pd
@@ -51,14 +51,13 @@ def get_df_bloques(blo_eta):
     df['TipoBloque'] = df['Block'].apply(lambda x: "Bloque %02d" % x)
     df = df.rename(columns={'Etapa': 'Bloque'})
     # Add Etapa, as the index of each Year-Month pair
-    df_year_month_to_etapa = df.groupby(['Year', 'Month']).first().reset_index()
+    df_year_month_to_etapa = df.groupby(['Year', 'Month'])\
+                               .first().reset_index()
     df_year_month_to_etapa['Etapa'] = df_year_month_to_etapa.index + 1
     df_year_month_to_etapa = df_year_month_to_etapa[['Year', 'Month', 'Etapa']]
     df = df.merge(df_year_month_to_etapa, on=['Year', 'Month'], how='left')
     # Translate to hydromonth and hydroyear
-    df = translate_to_hydromonth(df)
-    df['Year'] = df['Year'] - df['Year'][0] + \
-        1 * (df['Month'] >= 10) + 2 * (df['Month'] < 10)
+    df = translate_to_hydromonthyear(df)
     # Rename columns
     df = df.rename(columns={'Year': 'Ano',
                             'Month': 'Mes'})
@@ -84,11 +83,10 @@ def get_df_etapas(blo_eta):
     df['FDesh'] = 'F'
     df['TipoEtapa'] = "%02d Bloques" % tipo_etapa
     # Translate to hydromonth and hydroyear
-    df = translate_to_hydromonth(df)
-    df['Ano'] = df['Year'] - df['Year'][0] + \
-        1 * (df['Month'] >= 10) + 2 * (df['Month'] < 10)
+    df = translate_to_hydromonthyear(df)
     # Rename columns
-    df = df.rename(columns={'Month': 'Mes',
+    df = df.rename(columns={'Year': 'Ano',
+                            'Month': 'Mes',
                             'Tasa': 'FactTasa'})
     return df[['Ano', 'Mes', 'Etapa', 'FDesh',
                'NHoras', 'FactTasa', 'TipoEtapa']]

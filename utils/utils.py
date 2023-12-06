@@ -237,7 +237,22 @@ def write_lines_appending(lines: str, filepath: Path):
 
 
 def translate_to_hydromonth(df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Translate to hydromonth
+    df needs to have Month column
+    '''
     return df.replace({'Month': MONTH_TO_HIDROMONTH})
+
+
+def translate_to_hydromonthyear(df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Translate to hydromonth and hydroyear
+    df needs to have Year and Month columns
+    '''
+    df = df.replace({'Month': MONTH_TO_HIDROMONTH})
+    df['Year'] = df['Year'] - df['Year'][0] + \
+        1 * (df['Month'] >= 10) + 2 * (df['Month'] < 10)
+    return df
 
 
 def append_rows(df: pd.DataFrame, *rows: pd.Series) -> pd.DataFrame:
