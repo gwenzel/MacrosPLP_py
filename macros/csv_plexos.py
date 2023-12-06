@@ -165,7 +165,7 @@ def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
     try:
         df = pd.read_csv(path_df / 'df_cvar_with_emissions.csv')
     except FileNotFoundError:
-        logger.error('File df_mantcen_pmax_plexos.csv not found')
+        logger.error('File df_cvar_with_emissions.csv not found')
         logger.error('File Generator_HeatRate could not be printed')
         return
     # Format dataframe
