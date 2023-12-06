@@ -44,7 +44,6 @@ def define_directories():
     return path_dat, path_sal, path_out, path_case
 
 
-
 @timeit
 def main():
     '''

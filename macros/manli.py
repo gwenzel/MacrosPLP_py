@@ -4,7 +4,8 @@ Generate PLPMANLI.dat file with line availability data
 
 '''
 import sys
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          process_etapas_blocks,
@@ -234,6 +235,7 @@ def get_df_manli(iplp_path: Path, df_lines: pd.DataFrame) -> pd.DataFrame:
     return df_manli
 
 
+@timeit
 def main():
     '''
     Main routine

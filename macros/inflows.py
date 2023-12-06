@@ -7,7 +7,8 @@ Generate Storage_NaturalInflow files for Plexos
 '''
 from datetime import datetime
 from pathlib import Path
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_daily_indexed_df,
                          get_iplp_input_path,
                          get_plp_plx_booleans,
@@ -372,6 +373,7 @@ def filter_df_all_inflows(iplp_path: Path,
     return df_all_inflows
 
 
+@timeit
 def main():
     '''
     Main routine

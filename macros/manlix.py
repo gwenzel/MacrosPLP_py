@@ -3,7 +3,8 @@
 Generate PLPMANLIX.dat file with changes in line capacity
 '''
 import sys
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          process_etapas_blocks,
@@ -357,6 +358,7 @@ def get_nominal_line_capacity(df_lineas: pd.DataFrame):
     return nominal_line_capacity_ab, nominal_line_capacity_ba
 
 
+@timeit
 def main():
     '''
     Main routine

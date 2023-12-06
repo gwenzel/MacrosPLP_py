@@ -3,7 +3,8 @@
 Generate PLPCNFLI.dat file with information from tab Lineas
 
 '''
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          write_lines_from_scratch)
@@ -90,6 +91,7 @@ def print_plpcnfli(path_inputs: Path, iplp_path: Path, df_lines: pd.DataFrame):
     write_lines_from_scratch(lines, path_inputs / 'plpcnfli.dat')
 
 
+@timeit
 def main():
     '''
     Main routine

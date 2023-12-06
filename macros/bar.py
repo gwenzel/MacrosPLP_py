@@ -5,7 +5,8 @@ Module to generate:
 - uni_plpbar.dat
 - plpbar_full.dat
 '''
-from utils.utils import (define_arg_parser,
+from utils.utils import (timeit,
+                         define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          write_lines_from_scratch)
@@ -87,6 +88,7 @@ def get_barras_info(iplp_path: Path):
                          skiprows=4, usecols="A:C,E:F")
 
 
+@timeit
 def main():
     '''
     Main routine
