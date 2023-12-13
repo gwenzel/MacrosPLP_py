@@ -36,6 +36,7 @@ setup(
             "afl = macros.inflows:main",
             "plx = macros.csv_plexos:main",
             "blo = macros.blo:main",
+            "cen = macros.cen:main",
         ]
     },
     classifiers=[
