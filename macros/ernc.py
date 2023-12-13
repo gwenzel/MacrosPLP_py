@@ -50,18 +50,18 @@ def get_input_names(iplp_path: Path) -> dict:
     return input_names
 
 
-def generate_csv_files(iplp_path: Path, path_inputs: Path, input_names: dict):
+def generate_csv_files(iplp_path: Path, path_df: Path, input_names: dict):
     logger.info('Generating input csv files')
-    generate_max_capacity_csv(iplp_path, path_inputs, input_names)
-    generate_min_capacity_csv(iplp_path, path_inputs, input_names)
-    generate_rating_factor_csv(iplp_path, path_inputs, input_names)
-    generate_profiles_csv(iplp_path, path_inputs, input_names)
+    generate_max_capacity_csv(iplp_path, path_df, input_names)
+    generate_min_capacity_csv(iplp_path, path_df, input_names)
+    generate_rating_factor_csv(iplp_path, path_df, input_names)
+    generate_profiles_csv(iplp_path, path_df, input_names)
 
 
-def get_inputs(iplp_path: Path, path_inputs: Path, path_dat: Path,
+def get_inputs(iplp_path: Path, path_df: Path, path_dat: Path,
                input_names: dict) -> (dict, pd.DataFrame, pd.DataFrame, list):
     logger.info('Processing csv inputs')
-    ernc_data = read_ernc_files(path_inputs, input_names)
+    ernc_data = read_ernc_files(path_df, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
     valid_unit_names = get_valid_unit_names(ernc_data, iplp_path)
     return ernc_data, blo_eta, block2day, valid_unit_names
@@ -120,11 +120,11 @@ def main():
 
     # Generate csv files
     generate_csv_files(
-        iplp_path, path_inputs, input_names)
+        iplp_path, path_df, input_names)
 
     # Get inputs
     ernc_data, blo_eta, block2day, valid_unit_names =\
-        get_inputs(iplp_path, path_inputs, path_dat, input_names)
+        get_inputs(iplp_path, path_df, path_dat, input_names)
 
     # Get profiles and rating factors
     df_all_profiles, df_rf = get_profiles_and_rating_factors(
