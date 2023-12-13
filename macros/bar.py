@@ -83,9 +83,13 @@ def print_plpbar_full(path_inputs: Path, df_barras: pd.DataFrame):
     write_lines_from_scratch(lines, path_plpbar_full)
 
 
-def get_barras_info(iplp_path: Path):
-    return pd.read_excel(iplp_path, sheet_name="Barras",
-                         skiprows=4, usecols="A:C,E:F")
+def get_barras_info(iplp_path: Path, add_flag_falla: bool = False):
+    if not add_flag_falla:
+        return pd.read_excel(iplp_path, sheet_name="Barras",
+                             skiprows=4, usecols="A:C,E:F")
+    else:
+        return pd.read_excel(iplp_path, sheet_name="Barras",
+                             skiprows=4, usecols="A:C,E:G")
 
 
 @timeit
