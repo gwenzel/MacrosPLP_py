@@ -56,7 +56,7 @@ def read_centrales_plexos(iplp_path: Path,
                            skiprows=4, usecols="B,C,AA,AU:AX")
         df = df.rename(columns={
             'CENTRALES': 'Nombre',
-            'Mínima.1': 'MinTecNeto',
+            'MinTec Neto': 'MinTecNeto',
             'Start Cost': 'StartCost',
             'Shutdown Cost': 'ShutDownCost',
             'Min Up Time': 'MinUp',
