@@ -98,6 +98,7 @@ def read_df_centrales_all(iplp_path: Path):
         'Máxima.1': 'Pmax',
         'Mínimo.1': 'VertMin',
         'Máximo.1': 'VertMax',
+        'Afluente Primera Semana': 'Afluen',
         'Función Costo Futuro': 'EmbCFUE',
         'Independencia Hidrológica': 'Hid_Indep'})
     # Fill data
@@ -108,10 +109,14 @@ def read_df_centrales_all(iplp_path: Path):
     df['EmbCFUE'] = df[
         'EmbCFUE'].apply(
         lambda x: 'T' if x == 1 else 'F')
-    df['Afluente Primera Semana'] = df['Afluente Primera Semana'].fillna(0)
+    df['Afluen'] = df[
+        'Afluen'].fillna(0)
+    df['Generación'] = df['Generación'].fillna(0)
+    df['Vertimiento'] = df['Vertimiento'].fillna(0)
+    df['VertMin'] = df['VertMin'].fillna(0)
+    df['VertMax'] = df['VertMax'].fillna(0)
     # Add new fields
     # Select columns
-    # df = df[['Nombre', 'Pmin', 'Pmax']]
     return df
 
 
@@ -143,8 +148,15 @@ def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
     df_centrales_falla['Nombre'] = list_failure_names
     df_centrales_falla['Tipo de Central'] = 'F'
     df_centrales_falla['CosVar'] = cost
+    df_centrales_falla['Rendi'] = 1
     df_centrales_falla['Conectada a la Barra'] = list_bus_conected
     df_centrales_falla['Pmax'] = 9999
+    df_centrales_falla['Pmin'] = 0
+    df_centrales_falla['VertMin'] = 0
+    df_centrales_falla['VertMax'] = 0
+    df_centrales_falla['Generación'] = 0
+    df_centrales_falla['Vertimiento'] = 0
+    df_centrales_falla['Afluen'] = 0
     df = pd.concat([df_centrales, df_centrales_falla], axis=0)
     return df
 
@@ -167,15 +179,15 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     lines += ['# Interm Min.Tec. Cos.Arr.Det. FFaseSinMT EtapaCambioFase']
     lines += ['  F      F        F            F          00']
     lines += ['# Caracteristicas Centrales']
-    lines += lines_dam(df_centrales)
-    lines += lines_series(df_centrales)
-    lines += lines_runofriver(df_centrales)
-    lines += lines_thermal(df_centrales)
-    lines += lines_failure(df_centrales)
+    lines += lines_dam(df_centrales[df_centrales['Tipo de Central'] == 'E'])
+    lines += lines_central(df_centrales, type='S')
+    lines += lines_central(df_centrales, type='P')
+    lines += lines_central(df_centrales, type='T')
+    lines += lines_central(df_centrales, type='F')
     write_lines_from_scratch(lines, path_plpcnfce)
 
 
-def calculate_dam_es(idx: int, row: pd.Series):
+def apply_plp_functions(row: pd.Series):
     # Apply Vol functions
     if row['Nombre'] in dict_dam_volfunc.keys():
         vol_func = dict_dam_volfunc[row['Nombre']]
@@ -198,7 +210,44 @@ def calculate_dam_es(idx: int, row: pd.Series):
             else row['Rendi']
     else:
         logger.error('Rendi function for %s not found' % row['Nombre'])
+    return row, factor_escala
+
+
+def lines_dam(df: pd.DataFrame):
+    df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
+    lines = ['# Centrales de Embalse']
+    for idx, row in df.iterrows():
+        # Calculations
+        dict1, dict2, dict3 = calculate_cen_data(idx, row, type='E')
+        # Write lines
+        lines += ["                                                      "
+                  "IPot MinTec  Inter   FCAD    Cen_MTTdHrz Hid_Indep"
+                  "  Cen_NEtaArr Cen_NEtaDet"]
+        lines += ["  {num_cen:>02d} {nom_cen:<48} {IPot:<4} {MinTec:<7} "
+                  "{Inter:<7} {FCAD:<7} {Cen_MTTdHrz:<11} {Hid_Indep:<10} "
+                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<11}".format(**dict1)]
+        lines += ["          PotMin  PotMax VertMin VertMax"]
+        lines += ["           {PotMin:>05.1f}   {PotMax:>05.1f}"
+                  "  {VertMin:>06.1f}  {VertMax:>06.1f}".format(**dict2)]
+        lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
+        lines += ["           0       0    F       0     "
+                  "          Pot.           Volumen    Volumen    Volumen"
+                  "    Volumen  Factor"]
+        lines += ["          CosVar  Rendi  Barra Genera Vertim    t<0"
+                  "  Afluen    Inicial      Final     Minimo     Maximo"
+                  "  Escala EmbCFUE"]
+        lines += ["{CosVar:>16.1f} {Rendi:>6.3f} {Barra:>6} "
+                  "{Genera:>6} {Vertim:>6} {pot:>6.1f} {Afluen:>7.1f} "
+                  "{VolIni:>10.7f} {VolFin:>10.7f} {VolMin:>10.7f} "
+                  "{VolMax:>10.7f} "
+                  "{FEscala:>.1e} {EmbCFUE:>7}".format(**dict3)]
+    return lines
+
+
+def calculate_cen_data(idx: int, row: pd.Series, type: str):
     # Build dicts
+    if type == 'E':
+        row, factor_escala = apply_plp_functions(row)
     dict1 = {'num_cen': idx + 1,
              'nom_cen': row['Nombre'],
              'IPot': 1,
@@ -218,27 +267,41 @@ def calculate_dam_es(idx: int, row: pd.Series):
     dict3 = {'CosVar': row['CosVar'],
              'Rendi': row['Rendi'],
              'Barra': row['Conectada a la Barra'],
-             'Genera': row['Generación'],
-             'Vertim': row['Vertimiento'],
              'pot': 0,
-             'Afluen': row['Afluente Primera Semana'],
-             'VolIni': row['VolIni'] / factor_escala,
-             'VolFin': row['VolFin'] / factor_escala,
-             'VolMin': row['VolMin'] / factor_escala,
-             'VolMax': row['VolMax'] / factor_escala,
-             'FEscala': factor_escala,
-             'EmbCFUE': row['EmbCFUE']
+             'Afluen': row['Afluen']
              }
+    if type == 'E':
+        dict3['Genera'] = int(row['Generación'])
+        dict3['Vertim'] = int(row['Vertimiento'])
+        dict3['VolIni'] = row['VolIni'] / factor_escala
+        dict3['VolFin'] = row['VolFin'] / factor_escala
+        dict3['VolMin'] = row['VolMin'] / factor_escala
+        dict3['VolMax'] = row['VolMax'] / factor_escala
+        dict3['FEscala'] = factor_escala
+        dict3['EmbCFUE'] = row['EmbCFUE']
+    else:
+        dict3['SerHid'] = int(row['Generación'])
+        dict3['SerVer'] = int(row['Vertimiento'])
     return dict1, dict2, dict3
 
 
-def lines_dam(df_centrales: pd.DataFrame):
-    df_dam = df_centrales[df_centrales['Tipo de Central'] == 'E']
-    df_dam.loc[:, 'Nombre'] = df_dam['Nombre'].apply(lambda x: "'%s'" % x)
-    lines = ['# Centrales de Embalse']
-    for idx, row in df_dam.iterrows():
+def lines_central(df: pd.DataFrame, type: str):
+    df = df[df['Tipo de Central'] == type]
+    df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
+    if type == 'S':
+        lines = ['# Centrales Serie Hidraulica']
+    elif type == 'P':
+        lines = ['# Centrales Pasada Puras']
+    elif type == 'T':
+        lines = ['# Centrales Termicas o Embalses Equivalentes']
+    elif type == 'F':
+        lines = ['# Centrales de Falla']
+    else:
+        logger.error('Tipo %s not valid' % type)
+        lines = []
+    for idx, row in df.iterrows():
         # Calculations
-        dict1, dict2, dict3 = calculate_dam_es(idx, row)
+        dict1, dict2, dict3 = calculate_cen_data(idx, row, type)
         # Write lines
         lines += ["                                                      "
                   "IPot MinTec  Inter   FCAD    Cen_MTTdHrz Hid_Indep"
@@ -247,52 +310,15 @@ def lines_dam(df_centrales: pd.DataFrame):
                   "{Inter:<7} {FCAD:<7} {Cen_MTTdHrz:<11} {Hid_Indep:<10} "
                   "{Cen_NEtaArr:<11} {Cen_NEtaDet:<11}".format(**dict1)]
         lines += ["          PotMin  PotMax VertMin VertMax"]
-        lines += ["           {PotMin:>05.1f}   {PotMax:>05.1f}"
+        lines += ["           {PotMin:>05.1f}  {PotMax:>06.1f}"
                   "  {VertMin:>06.1f}  {VertMax:>06.1f}".format(**dict2)]
         lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
         lines += ["           0       0    F       0     "
-                  "          Pot.           Volumen    Volumen    Volumen"
-                  "    Volumen  Factor"]
-        lines += ["          CosVar  Rendi  Barra Genera Vertim    t<0"
-                  "  Afluen    Inicial      Final     Minimo     Maximo"
-                  "  Escala EmbCFUE"]
-        lines += ["{CosVar:>13.1f} {Rendi:>9.3f} {Barra:>6} "
-                  "{Genera:>6} {Vertim:>6} {pot:>6.1f} {Afluen:>7.1f} "
-                  "{VolIni:>10.7f} {VolFin:>10.7f} {VolMin:>10.7f} "
-                  "{VolMax:>10.7f} "
-                  "{FEscala:>.1e} {EmbCFUE:>7}".format(**dict3)]
-    return lines
-
-
-def lines_series(df_centrales: pd.DataFrame):
-    # TODO format df
-    lines = ['# Centrales Serie Hidraulica']
-    lines += [df_centrales[df_centrales['Tipo de Central'] == 'S'].to_string(
-                index=False, header=False, formatters=formatter_plpcnfce)]
-    return lines
-
-
-def lines_runofriver(df_centrales: pd.DataFrame):
-    # TODO format df
-    lines = ['# Centrales Pasada Puras']
-    lines += [df_centrales[df_centrales['Tipo de Central'] == 'P'].to_string(
-                index=False, header=False, formatters=formatter_plpcnfce)]
-    return lines
-
-
-def lines_thermal(df_centrales: pd.DataFrame):
-    # TODO format df
-    lines = ['# Centrales Termicas o Embalses Equivalentes']
-    lines += [df_centrales[df_centrales['Tipo de Central'] == 'T'].to_string(
-                index=False, header=False, formatters=formatter_plpcnfce)]
-    return lines
-
-
-def lines_failure(df_centrales: pd.DataFrame):
-    # TODO format df
-    lines = ['# Centrales de Falla']
-    lines += [df_centrales[df_centrales['Tipo de Central'] == 'F'].to_string(
-                index=False, header=False, formatters=formatter_plpcnfce)]
+                  "          Pot."]
+        lines += ["          CosVar  Rendi  Barra SerHid SerVer    t<0  Afluen"]
+        lines += ["{CosVar:>16.1f} {Rendi:>6.3f} {Barra:>6} "
+                  "{SerHid:>6} {SerVer:>6} {pot:>6.1f} {Afluen:>7.1f} ".format(
+                    **dict3)]
     return lines
 
 
