@@ -173,7 +173,8 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
 
     path_plpcnfce = path_inputs / 'plpcnfce.dat'
     lines = ['# Archivo de configuracion de las centrales (plpcnfce.dat)']
-    lines += ['# Num.Centrales  Num.Embalses Num.Serie Num.Fallas Num.Pas.Pur.']
+    lines += [
+        '# Num.Centrales  Num.Embalses Num.Serie Num.Fallas Num.Pas.Pur.']
     lines += ["     %s             %s           %s       %s        %s" %
               (num_gen, num_dam, num_series, num_failure, num_runofriver)]
     lines += ['# Interm Min.Tec. Cos.Arr.Det. FFaseSinMT EtapaCambioFase']
