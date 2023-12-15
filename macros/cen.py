@@ -3,18 +3,54 @@
 Generate plpcnfce.dat file from IPLP input file with data from
 sheet centrales.
 '''
+import math
 from utils.utils import (timeit,
                          define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          write_lines_from_scratch)
 from macros.bar import get_barras_info
+from macros.func_cdec.lmaule import Vol_LMAULE, Rend_LMAULE
+from macros.func_cdec.cipreses import Vol_CIPRESES, Rend_CIPRESES
+from macros.func_cdec.pehuenche import Vol_PEHUENCHE, Rend_PEHUENCHE
+from macros.func_cdec.colbun import Vol_COLBUN, Rend_COLBUN
+from macros.func_cdec.eltoro import Vol_ELTORO, Rend_ELTORO
+from macros.func_cdec.rapel import Vol_RAPEL, Rend_RAPEL
+from macros.func_cdec.canutillar import Vol_CANUTILLAR, Rend_CANUTILLAR
+from macros.func_cdec.ralco import Vol_RALCO, Rend_RALCO
+from macros.func_cdec.pangue import Vol_PANGUE, Rend_PANGUE
+
 from utils.logger import add_file_handler, create_logger
 import pandas as pd
 from pathlib import Path
 
 
 logger = create_logger('cen')
+
+dict_dam_volfunc = {
+    "'LMAULE'": Vol_LMAULE,
+    "'CIPRESES'": Vol_CIPRESES,
+    "'PEHUENCHE'": Vol_PEHUENCHE,
+    "'COLBUN'": Vol_COLBUN,
+    "'ELTORO'": Vol_ELTORO,
+    "'RAPEL'": Vol_RAPEL,
+    "'CANUTILLAR'": Vol_CANUTILLAR,
+    "'RALCO'": Vol_RALCO,
+    "'PANGUE'": Vol_PANGUE
+}
+
+dict_dam_rendfunc = {
+    "'LMAULE'": Rend_LMAULE,
+    "'CIPRESES'": Rend_CIPRESES,
+    "'PEHUENCHE'": Rend_PEHUENCHE,
+    "'COLBUN'": Rend_COLBUN,
+    "'ELTORO'": Rend_ELTORO,
+    "'RAPEL'": Rend_RAPEL,
+    "'CANUTILLAR'": Rend_CANUTILLAR,
+    "'RALCO'": Rend_RALCO,
+    "'PANGUE'": Rend_PANGUE
+}
+
 
 formatter_plpcnfce = {
 
@@ -46,45 +82,37 @@ def read_df_centrales_all(iplp_path: Path):
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
     # Rename columns
-    df = df.rename(columns={'CENTRALES': 'Nombre'})
+    df = df.rename(columns={
+        'CENTRALES': 'Nombre',
+        'Costo Variable': 'CosVar',
+        'Rendimiento': 'Rendi',
+        'Inicial': 'CotaIni',
+        'Final': 'CotaFin',
+        'Mínima': 'CotaMin',
+        'Máxima': 'CotaMax',
+        'Inicial.1': 'VolIni',
+        'Final.1': 'VolFin',
+        'Mínimo': 'VolMin',
+        'Máximo': 'VolMax',
+        'Mínima.1': 'Pmin',
+        'Máxima.1': 'Pmax',
+        'Mínimo.1': 'VertMin',
+        'Máximo.1': 'VertMax',
+        'Función Costo Futuro': 'EmbCFUE',
+        'Independencia Hidrológica': 'Hid_Indep'})
+    # Fill data
+    df['CosVar'] = df['CosVar'].fillna(0)
+    df['Hid_Indep'] = df[
+        'Hid_Indep'].apply(
+        lambda x: 'T' if x == 1 else 'F')
+    df['EmbCFUE'] = df[
+        'EmbCFUE'].apply(
+        lambda x: 'T' if x == 1 else 'F')
+    df['Afluente Primera Semana'] = df['Afluente Primera Semana'].fillna(0)
+    # Add new fields
     # Select columns
     # df = df[['Nombre', 'Pmin', 'Pmax']]
     return df
-
-
-'''
-'1) INDICE
-'2) CENTRALES
-'3) TIPO DE CENTRAL
-'4) COSTO VARIABLE
-'5) RENDIMIENTO
-'6) CONECTADA A LA BARRA
-'7) SERIE HIDRÁULICA GENERACIÓN
-'8) SERIE HIDRÁULICA VERTIMIENTO
-'9) FUNCIÓN COSTO FUTURO
-'10) AFLUENTE ESTOCÁSTICO
-'11) ESTADÍSTICA SEMANAL
-'12) AFLUENTE PRIMERA SEMANA
-'    INDEPENDENCIA HIDROLÓGICA - FLAG
-'14) PRONÓSTICO DE DESHIELO - FLAG
-'15) PRONÓSTICO DE DESHIELO - VOLUMEN MÍNIMO Hm3
-'16) PRONÓSTICO DE DESHIELO - VOLUMEN MÁXIMO Hm3
-'17) PRONÓSTICO DE DESHIELO - MES DEL PRONÓSTICO
-'    PRONÓSTICO DE DESHIELO - PRONÓSTICO ASOCIADO
-'19) COTA M.S.N.M. INICIAL
-'20) COTA M.S.N.M. FINAL
-'21) COTA M.S.N.M. MÍNIMA
-'22) COTA M.S.N.M. MÁXIMA
-'23) VOLUMEN DEL EMBALSE MILLONES DE M3 INICIAL
-'24) VOLUMEN DEL EMBALSE MILLONES DE M3 FINAL
-'25) VOLUMEN DEL EMBALSE MILLONES DE M3 MÍNIMO
-'26) VOLUMEN DEL EMBALSE MILLONES DE M3 MÁXIMO
-'27) POTENCIA NETA MÍNIMA
-'28) POTENCIA NETA MÁXIMA
-'29) VERTIMIENTO MÍNIMO
-'30) VERTIMIENTO MÁXIMO
-
-'''
 
 
 def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
@@ -114,7 +142,7 @@ def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
     # Add data to dataframe
     df_centrales_falla['Nombre'] = list_failure_names
     df_centrales_falla['Tipo de Central'] = 'F'
-    df_centrales_falla['Costo Variable'] = cost
+    df_centrales_falla['CosVar'] = cost
     df_centrales_falla['Conectada a la Barra'] = list_bus_conected
     df_centrales_falla['Pmax'] = 9999
     df = pd.concat([df_centrales, df_centrales_falla], axis=0)
@@ -131,7 +159,7 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     num_runofriver = len(df_centrales[df_centrales['Tipo de Central'] == 'P'])
     num_failure = len(df_centrales[df_centrales['Tipo de Central'] == 'F'])
 
-    path_plpcnfce = path_inputs / 'print_plpcnfce.dat'
+    path_plpcnfce = path_inputs / 'plpcnfce.dat'
     lines = ['# Archivo de configuracion de las centrales (plpcnfce.dat)']
     lines += ['# Num.Centrales  Num.Embalses Num.Serie Num.Fallas Num.Pas.Pur.']
     lines += ["     %s             %s           %s       %s        %s" %
@@ -147,11 +175,92 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     write_lines_from_scratch(lines, path_plpcnfce)
 
 
+def calculate_dam_es(idx: int, row: pd.Series):
+    # Apply Vol functions
+    if row['Nombre'] in dict_dam_volfunc.keys():
+        vol_func = dict_dam_volfunc[row['Nombre']]
+        row['VolIni'] = vol_func(row['CotaIni']) * 1000000 if type(
+            row['VolIni']) is str else row['VolIni'] * 1000000
+        row['VolFin'] = vol_func(row['CotaFin']) * 1000000 if type(
+            row['VolFin']) is str else row['VolFin'] * 1000000
+        row['VolMin'] = vol_func(row['CotaMin']) * 1000000 if type(
+            row['VolMin']) is str else row['VolIni'] * 1000000
+        row['VolMax'] = vol_func(row['CotaMax']) * 1000000 if type(
+            row['VolMax']) is str else row['VolMax'] * 1000000
+        factor_escala = 10**int(math.log10(row['VolMax']) + 0.5)
+    else:
+        logger.error('Vol function for %s not found' % row['Nombre'])
+        factor_escala = 1
+    # Apply Rend functions
+    if row['Nombre'] in dict_dam_rendfunc.keys():
+        rend_func = dict_dam_rendfunc[row['Nombre']]
+        row['Rendi'] = rend_func(row['CotaIni']) if type(row['Rendi']) is str\
+            else row['Rendi']
+    else:
+        logger.error('Rendi function for %s not found' % row['Nombre'])
+    # Build dicts
+    dict1 = {'num_cen': idx + 1,
+             'nom_cen': row['Nombre'],
+             'IPot': 1,
+             'MinTec': 'F',
+             'Inter': 'F',
+             'FCAD': 'F',
+             'Cen_MTTdHrz': 'F',
+             'Hid_Indep': row['Hid_Indep'],
+             'Cen_NEtaArr': 0,
+             'Cen_NEtaDet': 0
+             }
+    dict2 = {'PotMin': row['Pmin'],
+             'PotMax': row['Pmax'],
+             'VertMin': row['VertMin'],
+             'VertMax': row['VertMax']
+             }
+    dict3 = {'CosVar': row['CosVar'],
+             'Rendi': row['Rendi'],
+             'Barra': row['Conectada a la Barra'],
+             'Genera': row['Generación'],
+             'Vertim': row['Vertimiento'],
+             'pot': 0,
+             'Afluen': row['Afluente Primera Semana'],
+             'VolIni': row['VolIni'] / factor_escala,
+             'VolFin': row['VolFin'] / factor_escala,
+             'VolMin': row['VolMin'] / factor_escala,
+             'VolMax': row['VolMax'] / factor_escala,
+             'FEscala': factor_escala,
+             'EmbCFUE': row['EmbCFUE']
+             }
+    return dict1, dict2, dict3
+
+
 def lines_dam(df_centrales: pd.DataFrame):
-    # TODO format df
+    df_dam = df_centrales[df_centrales['Tipo de Central'] == 'E']
+    df_dam.loc[:, 'Nombre'] = df_dam['Nombre'].apply(lambda x: "'%s'" % x)
     lines = ['# Centrales de Embalse']
-    lines += [df_centrales[df_centrales['Tipo de Central'] == 'E'].to_string(
-                index=False, header=False, formatters=formatter_plpcnfce)]
+    for idx, row in df_dam.iterrows():
+        # Calculations
+        dict1, dict2, dict3 = calculate_dam_es(idx, row)
+        # Write lines
+        lines += ["                                                      "
+                  "IPot MinTec  Inter   FCAD    Cen_MTTdHrz Hid_Indep"
+                  "  Cen_NEtaArr Cen_NEtaDet"]
+        lines += ["  {num_cen:>02d} {nom_cen:<48} {IPot:<4} {MinTec:<7} "
+                  "{Inter:<7} {FCAD:<7} {Cen_MTTdHrz:<11} {Hid_Indep:<10} "
+                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<11}".format(**dict1)]
+        lines += ["          PotMin  PotMax VertMin VertMax"]
+        lines += ["           {PotMin:>05.1f}   {PotMax:>05.1f}"
+                  "  {VertMin:>06.1f}  {VertMax:>06.1f}".format(**dict2)]
+        lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
+        lines += ["           0       0    F       0     "
+                  "          Pot.           Volumen    Volumen    Volumen"
+                  "    Volumen  Factor"]
+        lines += ["          CosVar  Rendi  Barra Genera Vertim    t<0"
+                  "  Afluen    Inicial      Final     Minimo     Maximo"
+                  "  Escala EmbCFUE"]
+        lines += ["{CosVar:>13.1f} {Rendi:>9.3f} {Barra:>6} "
+                  "{Genera:>6} {Vertim:>6} {pot:>6.1f} {Afluen:>7.1f} "
+                  "{VolIni:>10.7f} {VolFin:>10.7f} {VolMin:>10.7f} "
+                  "{VolMax:>10.7f} "
+                  "{FEscala:>.1e} {EmbCFUE:>7}".format(**dict3)]
     return lines
 
 
@@ -246,15 +355,13 @@ def main():
     logger.info('Printing plptec')
     print_plptec(path_inputs, df_centrales)
 
-    #import pdb; pdb.set_trace()
-
     # Add failure data
     logger.info('Adding failure data')
     df_centrales = add_failure_generators(iplp_path, df_centrales)
 
     # Print plpcnfce
     logger.info('Printing plpcnfce')
-    #print_plpcnfce(path_inputs, df_centrales)
+    print_plpcnfce(path_inputs, df_centrales)
 
 
 

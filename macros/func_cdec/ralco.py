@@ -16,7 +16,7 @@ def punteroA(Arreglo, m, x):
     return k
 
 
-def Vol_Ralco(Cota):
+def Vol_RALCO(Cota):
     a0, a1, a2, a3 = -30351, 2789.6, -72.676, 0.9869
     if Cota <= Cotas[-1]:
         i = punteroA(Cotas, 9, Cota)
@@ -33,7 +33,7 @@ def dVol_dCot(Cota):
     return (a1 + 2 * a2 * Cota_R + 3 * a3 * Cota_R**2) / 1000
 
 
-def Cot_Ralco(Volumen):
+def Cot_RALCO(Volumen):
     if Volumen <= Vol_Inf[-1]:
         i = punteroA(Vol_Inf, 9, Volumen)
         return ((Cotas[i] - Cotas[i - 1]) / (Vol_Inf[i] - Vol_Inf[i - 1])) *\

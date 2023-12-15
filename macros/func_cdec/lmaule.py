@@ -20,7 +20,7 @@ def CotEST_LMAULE(Volumen):
 
 def dVol_LMAULE(Cota):
     DCota = Cota - 2152.135
-    a0 = -0.426511610904754
+    # a0 = -0.426511610904754
     a1 = 39.85091749344
     a2 = 0.713891558517388
     a3 = -2.68621789452889E-02
@@ -62,3 +62,7 @@ def Cot_LMAULE(Volumen):
             break
 
     return CotFin
+
+
+def Rend_LMAULE(Cota):
+    return 1.0
