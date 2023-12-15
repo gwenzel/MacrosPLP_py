@@ -46,7 +46,7 @@ def Cot_RALCO(Volumen):
         DCot = 9999
         while DCot > Error and Iter < LimIter:
             Iter += 1
-            Vol_aux = Vol_Ralco(Cota_R)
+            Vol_aux = Vol_RALCO(Cota_R)
             dVol_aux = dVol_dCot(Cota_R)
             Cota_A = Cota_R + (Volumen - Vol_aux) / dVol_aux
             DCot = abs(Cota_R - Cota_A)
