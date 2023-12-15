@@ -316,7 +316,8 @@ def lines_central(df: pd.DataFrame, type: str):
         lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
         lines += ["           0       0    F       0     "
                   "          Pot."]
-        lines += ["          CosVar  Rendi  Barra SerHid SerVer    t<0  Afluen"]
+        lines += [
+            "          CosVar  Rendi  Barra SerHid SerVer    t<0  Afluen"]
         lines += ["{CosVar:>16.1f} {Rendi:>6.3f} {Barra:>6} "
                   "{SerHid:>6} {SerVer:>6} {pot:>6.1f} {Afluen:>7.1f} ".format(
                     **dict3)]
@@ -389,8 +390,6 @@ def main():
     # Print plpcnfce
     logger.info('Printing plpcnfce')
     print_plpcnfce(path_inputs, df_centrales)
-
-
 
     logger.info('Process finished successfully')
 
