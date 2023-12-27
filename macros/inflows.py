@@ -131,7 +131,7 @@ def get_df_all_inflows(iplp_path: Path,
     df_daily = get_df_daily(blo_eta, iplp_path)
 
     # Filter if plp is not enabled and plexos is
-    if plx_enable & ~plp_enable:
+    if plx_enable & (not plp_enable):
         plexos_end_date = read_plexos_end_date(iplp_path)
         df_daily = df_daily[df_daily['DATE'] <= plexos_end_date]
 
@@ -398,6 +398,10 @@ def main():
 
     # Get PLP/PLX enabling booleans
     plp_enable, plx_enable = get_plp_plx_booleans(parser)
+    if (plx_enable | plp_enable) is False:
+        logger.error('No process enabled. Exiting...')
+        exit()
+
     if plp_enable:
         logger.info('PLP enabled')
     else:
