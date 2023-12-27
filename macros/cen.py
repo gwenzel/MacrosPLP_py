@@ -68,7 +68,7 @@ def read_df_centrales_all(iplp_path: Path):
     Read Centrales sheet and get all required fields
     '''
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
-                       skiprows=4, usecols="B:AX,BG,CF")
+                       skiprows=4, usecols="A:AX,BG,CF")
     '''
     'E EMBALSE
     'S PASADA EN SERIE HIDRÁULICA
@@ -83,6 +83,7 @@ def read_df_centrales_all(iplp_path: Path):
     df = df[df['Tipo de Central'] != 'X']
     # Rename columns
     df = df.rename(columns={
+        'INDICE': 'NumCen',
         'CENTRALES': 'Nombre',
         'Costo Variable': 'CosVar',
         'Rendimiento': 'Rendi',
@@ -136,15 +137,18 @@ def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
     # Get list of names and connected buses
     list_failure_names = []
     if tramo == 1:
-        list_failure_names = ['FALLA_%s' % i for i in df_buses_falla['Nº']]
+        list_failure_names = ['FALLA_%03d' % i for i in df_buses_falla['Nº']]
         list_bus_conected = df_buses_falla['Nº'].tolist()
     else:
         list_bus_conected = []
         for b in df_buses_falla['Nº']:
             for t in range(1, tramo + 1):
-                list_failure_names.append('FALLA_%s_%s' % (b, t))
+                list_failure_names.append('FALLA_%03d_%s' % (b, t))
                 list_bus_conected.append(b)
     # Add data to dataframe
+    last_index = df_centrales['NumCen'].max()
+    df_centrales_falla['NumCen'] = range(
+        last_index + 1, last_index + 1 + len(list_failure_names))
     df_centrales_falla['Nombre'] = list_failure_names
     df_centrales_falla['Tipo de Central'] = 'F'
     df_centrales_falla['CosVar'] = cost
@@ -157,7 +161,9 @@ def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
     df_centrales_falla['Generación'] = 0
     df_centrales_falla['Vertimiento'] = 0
     df_centrales_falla['Afluen'] = 0
+    df_centrales_falla['Hid_Indep'] = 'F'
     df = pd.concat([df_centrales, df_centrales_falla], axis=0)
+    df = df.reset_index(drop=True)
     return df
 
 
@@ -167,7 +173,8 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     '''
     num_gen = len(df_centrales)
     num_dam = len(df_centrales[df_centrales['Tipo de Central'] == 'E'])
-    num_series = len(df_centrales[df_centrales['Tipo de Central'] == 'S'])
+    num_series = len(df_centrales[df_centrales['Tipo de Central'] == 'S']) +\
+        len(df_centrales[df_centrales['Tipo de Central'] == 'R'])
     num_runofriver = len(df_centrales[df_centrales['Tipo de Central'] == 'P'])
     num_failure = len(df_centrales[df_centrales['Tipo de Central'] == 'F'])
 
@@ -197,7 +204,7 @@ def apply_plp_functions(row: pd.Series):
         row['VolFin'] = vol_func(row['CotaFin']) * 1000000 if type(
             row['VolFin']) is str else row['VolFin'] * 1000000
         row['VolMin'] = vol_func(row['CotaMin']) * 1000000 if type(
-            row['VolMin']) is str else row['VolIni'] * 1000000
+            row['VolMin']) is str else row['VolMin'] * 1000000
         row['VolMax'] = vol_func(row['CotaMax']) * 1000000 if type(
             row['VolMax']) is str else row['VolMax'] * 1000000
         factor_escala = 10**int(math.log10(row['VolMax']) + 0.5)
@@ -217,39 +224,41 @@ def apply_plp_functions(row: pd.Series):
 def lines_dam(df: pd.DataFrame):
     df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
     lines = ['# Centrales de Embalse']
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         # Calculations
-        dict1, dict2, dict3 = calculate_cen_data(idx, row, type='E')
+        dict1, dict2, dict3 = calculate_cen_data(row, type='E')
         # Write lines
         lines += ["                                                      "
                   "IPot MinTec  Inter   FCAD    Cen_MTTdHrz Hid_Indep"
                   "  Cen_NEtaArr Cen_NEtaDet"]
-        lines += ["  {num_cen:>02d} {nom_cen:<48} {IPot:<4} {MinTec:<7} "
+        lines += [" {num_cen: >4d} {nom_cen:<47} {IPot:<4} {MinTec:<7} "
                   "{Inter:<7} {FCAD:<7} {Cen_MTTdHrz:<11} {Hid_Indep:<10} "
-                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<11}".format(**dict1)]
+                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<}".format(**dict1)]
         lines += ["          PotMin  PotMax VertMin VertMax"]
-        lines += ["           {PotMin:>05.1f}   {PotMax:>05.1f}"
-                  "  {VertMin:>06.1f}  {VertMax:>06.1f}".format(**dict2)]
+        lines += ["           {PotMin:>05.1f}  {PotMax:>06.1f}"
+                  "   {VertMin:>05.1f}  {VertMax:>06.1f}".format(**dict2)]
         lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
-        lines += ["           0       0    F       0     "
+        lines += ["             0.0    0.0 F       0     "
                   "          Pot.           Volumen    Volumen    Volumen"
                   "    Volumen  Factor"]
         lines += ["          CosVar  Rendi  Barra Genera Vertim    t<0"
                   "  Afluen    Inicial      Final     Minimo     Maximo"
                   "  Escala EmbCFUE"]
         lines += ["{CosVar:>16.1f} {Rendi:>6.3f} {Barra:>6} "
-                  "{Genera:>6} {Vertim:>6} {pot:>6.1f} {Afluen:>7.1f} "
+                  "{Genera:>6} {Vertim:>6} {pot:>6.1f}  {Afluen:>06.1f} "
                   "{VolIni:>10.7f} {VolFin:>10.7f} {VolMin:>10.7f} "
                   "{VolMax:>10.7f} "
-                  "{FEscala:>.1e} {EmbCFUE:>7}".format(**dict3)]
+                  "{FEscala: >8.1E} {EmbCFUE:>7}".format(**dict3)]
+        # Remove leading zero of exponential numbers
+        lines[-1] = lines[-1].replace("E-0", "E-").replace("E+0", "E+")
     return lines
 
 
-def calculate_cen_data(idx: int, row: pd.Series, type: str):
+def calculate_cen_data(row: pd.Series, type: str):
     # Build dicts
     if type == 'E':
         row, factor_escala = apply_plp_functions(row)
-    dict1 = {'num_cen': idx + 1,
+    dict1 = {'num_cen': int(row['NumCen']),
              'nom_cen': row['Nombre'],
              'IPot': 1,
              'MinTec': 'F',
@@ -287,7 +296,15 @@ def calculate_cen_data(idx: int, row: pd.Series, type: str):
 
 
 def lines_central(df: pd.DataFrame, type: str):
-    df = df[df['Tipo de Central'] == type]
+    '''
+    Print lines for each central type
+    Group S (Series) and R (Riego) types
+    '''
+    if type != 'S':
+        df = df[df['Tipo de Central'] == type]
+    else:
+        df = df[(df['Tipo de Central'] == 'S') |
+                (df['Tipo de Central'] == 'R')]
     df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
     if type == 'S':
         lines = ['# Centrales Serie Hidraulica']
@@ -296,31 +313,32 @@ def lines_central(df: pd.DataFrame, type: str):
     elif type == 'T':
         lines = ['# Centrales Termicas o Embalses Equivalentes']
     elif type == 'F':
-        lines = ['# Centrales de Falla']
+        # lines = ['# Centrales de Falla']
+        lines = []
     else:
         logger.error('Tipo %s not valid' % type)
         lines = []
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         # Calculations
-        dict1, dict2, dict3 = calculate_cen_data(idx, row, type)
+        dict1, dict2, dict3 = calculate_cen_data(row, type)
         # Write lines
         lines += ["                                                      "
                   "IPot MinTec  Inter   FCAD    Cen_MTTdHrz Hid_Indep"
                   "  Cen_NEtaArr Cen_NEtaDet"]
-        lines += ["  {num_cen:>02d} {nom_cen:<48} {IPot:<4} {MinTec:<7} "
+        lines += [" {num_cen: >4d} {nom_cen:<47} {IPot:<4} {MinTec:<7} "
                   "{Inter:<7} {FCAD:<7} {Cen_MTTdHrz:<11} {Hid_Indep:<10} "
-                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<11}".format(**dict1)]
+                  "{Cen_NEtaArr:<11} {Cen_NEtaDet:<}".format(**dict1)]
         lines += ["          PotMin  PotMax VertMin VertMax"]
         lines += ["           {PotMin:>05.1f}  {PotMax:>06.1f}"
-                  "  {VertMin:>06.1f}  {VertMax:>06.1f}".format(**dict2)]
+                  "   {VertMin:>05.1f}  {VertMax:>06.1f}".format(**dict2)]
         lines += ["           Start   Stop ON(t<0) NEta_OnOff"]
-        lines += ["           0       0    F       0     "
+        lines += ["             0.0    0.0 F       0     "
                   "          Pot."]
         lines += [
             "          CosVar  Rendi  Barra SerHid SerVer    t<0  Afluen"]
         lines += ["{CosVar:>16.1f} {Rendi:>6.3f} {Barra:>6} "
-                  "{SerHid:>6} {SerVer:>6} {pot:>6.1f} {Afluen:>7.1f} ".format(
-                    **dict3)]
+                  "{SerHid:>6} {SerVer:>6} {pot:>6.1f}  "
+                  "{Afluen:>06.1f}".format(**dict3)]
     return lines
 
 
