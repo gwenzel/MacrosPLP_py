@@ -104,7 +104,8 @@ def get_week_name(row: pd.DataFrame,
 
 
 def get_df_daily(blo_eta: pd.DataFrame,
-                 iplp_path: Path) -> pd.DataFrame:
+                 iplp_path: Path,
+                 plexos_short: bool) -> pd.DataFrame:
     df_days_per_week = read_days_per_week(iplp_path)
     df_daily = get_daily_indexed_df(blo_eta, all_caps=True)
     df_daily['WEEK_NAME'] = df_daily.apply(
@@ -112,6 +113,10 @@ def get_df_daily(blo_eta: pd.DataFrame,
     year_ini = df_daily['YEAR'][0]
     df_daily['ETAPA'] = df_daily.apply(
         lambda row: (row['YEAR'] - year_ini) * 12 + row['MONTH'], axis=1)
+    # Filter by plexos_end_date
+    if plexos_short:
+        plexos_end_date = read_plexos_end_date(iplp_path)
+        df_daily = df_daily[df_daily['DATE'] <= plexos_end_date]
     return df_daily
 
 
@@ -128,13 +133,9 @@ def get_df_all_inflows(iplp_path: Path,
                        plp_enable: bool,
                        plx_enable: bool) -> pd.DataFrame:
     series_inflows = read_inflow_data(iplp_path)
-    df_daily = get_df_daily(blo_eta, iplp_path)
-
-    # Filter if plp is not enabled and plexos is
-    if plx_enable & (not plp_enable):
-        plexos_end_date = read_plexos_end_date(iplp_path)
-        df_daily = df_daily[df_daily['DATE'] <= plexos_end_date]
-
+    # Use short df_daily if running only plexos process
+    plexos_short = (not plp_enable) & plx_enable
+    df_daily = get_df_daily(blo_eta, iplp_path, plexos_short)
     # Join dataframes using outer to keep all data
     new_index = ['YEAR', 'MONTH', 'DAY', 'WEEK_NAME', 'DATE']
     df_all_inflows = df_daily.set_index(new_index)
@@ -167,15 +168,11 @@ def print_plexos_inflows_all(df_all_inflows: pd.DataFrame,
 
 
 def print_plexos_inflows_separate(df_all_inflows: pd.DataFrame,
-                                  path_pib: Path,
-                                  plexos_end_date: datetime):
-    # First, filter years before plexos_end_date
-    year_mask = df_all_inflows.index.get_level_values('YEAR') <= \
-        plexos_end_date.year
-    df_all_inflows = df_all_inflows[year_mask]
-
+                                  path_pib: Path):
+    # Remove next comment to print all hydrologies
+    # list_of_hyd = get_list_of_hyd(df_all_inflows)
+    list_of_hyd = [20]
     # Adjust to plexos data format
-    list_of_hyd = get_list_of_hyd(df_all_inflows)
     for indhid in list_of_hyd:
         hyd_mask = (df_all_inflows.index.get_level_values('INDHID') == indhid)
         inflows_aux = df_all_inflows[hyd_mask]
@@ -194,7 +191,7 @@ def print_plexos_inflows_separate(df_all_inflows: pd.DataFrame,
             path_pib / f'Storage_NaturalInflow_{indhid:02d}.csv', index=False)
 
 
-def get_shuffled_hydrologies(blo_eta: pd.DataFrame,
+def get_shuffled_hydrologies(df_daily: pd.DataFrame,
                              iplp_path: Path,
                              df_configsim: pd.DataFrame) -> pd.DataFrame:
     '''
@@ -204,7 +201,7 @@ def get_shuffled_hydrologies(blo_eta: pd.DataFrame,
     YEAR-MONTH-DAY data and get rid of Etapas
     '''
     df_configsim.index.names = ['ETAPA']
-    df_daily = get_df_daily(blo_eta, iplp_path).drop('WEEK_NAME', axis=1)
+    df_daily = df_daily.drop('WEEK_NAME', axis=1)
     df_shuffled_hyd = df_daily.join(df_configsim, on='ETAPA')
     df_shuffled_hyd = df_shuffled_hyd.drop('ETAPA', axis=1)
     df_shuffled_hyd = df_shuffled_hyd.set_index(
@@ -219,7 +216,7 @@ def get_shuffled_hydrologies(blo_eta: pd.DataFrame,
     return df_shuffled_hyd
 
 
-def shuffle_hidrologies(blo_eta: pd.DataFrame,
+def shuffle_hidrologies(df_daily: pd.DataFrame,
                         iplp_path: Path,
                         df_configsim: pd.DataFrame,
                         df_all_inflows: pd.DataFrame) -> pd.DataFrame:
@@ -229,7 +226,7 @@ def shuffle_hidrologies(blo_eta: pd.DataFrame,
     # Get stacked dataframe with mapping from original hydrology (INDHID) to
     # new shuffled hydrology (SHUFFLED_HYD) for each day
     df_shuffled_hyd = get_shuffled_hydrologies(
-        blo_eta, iplp_path, df_configsim)
+        df_daily, iplp_path, df_configsim)
 
     # Shuffling hydrologies
     # For each unit, merge df_shuffled_hyd with inflows data coming from
@@ -436,15 +433,16 @@ def main():
 
         logger.info('Shuffling inflows according to ConfigSim')
         df_configsim = read_configsim(iplp_path)
+        # Make sure df_daily is the plexos short version
+        df_daily = get_df_daily(blo_eta, iplp_path, plexos_short=True)
         df_all_inflows = shuffle_hidrologies(
-            blo_eta, iplp_path, df_configsim, df_all_inflows)
+            df_daily, iplp_path, df_configsim, df_all_inflows)
         # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv',
         #   index=False)
 
         logger.info('Printing inflows in plexos format')
         print_plexos_inflows_all(df_all_inflows, path_pib)
-        # print_plexos_inflows_separate(df_all_inflows, path_pib,
-        #                               plexos_end_date)
+        print_plexos_inflows_separate(df_all_inflows, path_pib)
 
     logger.info('Process finished successfully')
 
