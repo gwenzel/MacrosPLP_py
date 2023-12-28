@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones\costo_var\plpcosce_old.dat"
+filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones\costo_var\plpcosce_new.dat"
 
 list_of_cen = []
 dict_cen_values = {}
@@ -32,4 +32,4 @@ df_all['CosVar'] = df_all['CosVar'].astype(float)
 df_all_pivot_cvar = df_all.pivot(
     index='Etapa', columns='Cen', values=['CosVar'])
 
-df_all_pivot_cvar.to_csv('cvar_old.csv')
+df_all_pivot_cvar.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones\costo_var\cvar_new.csv")

@@ -20,9 +20,9 @@ from openpyxl.utils.datetime import from_excel
 logger = create_logger('cvariable')
 
 formatter_plpcosce = {
-    'Month': "   {:03d}".format,
+    'Month': "   {:02d}".format,
     'Etapa': "    {:03d}".format,
-    'Variable Cost USD/MWh': "{:8.1f}".format
+    'Variable Cost + CO2 Tax USD/MWh': "{:9.1f}".format
 }
 
 
@@ -199,14 +199,14 @@ def print_plpcosce(path_inputs, df_cvar_with_emissions):
     lines += [' %s' % len(df_cvar_with_emissions['Central'].unique())]
     write_lines_from_scratch(lines, path_plpcosce)
     df = df_cvar_with_emissions[['Central', 'Month', 'Etapa',
-                                 'Variable Cost USD/MWh']]
+                                 'Variable Cost + CO2 Tax USD/MWh']]
     for central in df['Central'].unique():
         # Filter and select columns
         df_aux = df[df['Central'] == central]
         df_aux = df_aux.drop(columns=['Central'])
         # Write lines to append
         lines = ['\n# Nombre de la central']
-        lines += ['%s' % central]
+        lines += ["'%s'" % central]
         lines += ['# Numero de etapas']
         lines += ['   %s' % len(df_aux)]
         lines += ['# Mes   Etapa    CosVar']
