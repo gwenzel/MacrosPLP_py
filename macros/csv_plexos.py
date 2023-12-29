@@ -481,7 +481,7 @@ def print_generator_rating_factor(iplp_path: Path,
     # Hourly-Monthly Profiles
     try:
         hm_profiles = pd.read_csv(
-            path_inputs / input_names["HM_PROFILES_FILENAME"])
+            path_df / input_names["HM_PROFILES_FILENAME"])
     except FileNotFoundError:
         logger.error('File %s not found' % input_names["HM_PROFILES_FILENAME"])
         logger.error('File Generator_RatingFactor could not be printed')
