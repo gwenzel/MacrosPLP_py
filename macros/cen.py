@@ -123,6 +123,9 @@ def read_df_centrales_all(iplp_path: Path) -> pd.DataFrame:
 
 def add_failure_generators(iplp_path: Path,
                            df_centrales: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Add failure generators to df_centrales
+    '''
     df_buses = get_barras_info(iplp_path, add_flag_falla=True)
     df_buses_falla = df_buses[df_buses['FlagFalla']]
 
@@ -197,6 +200,9 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
 
 
 def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
+    '''
+    Apply Vol and Rend functions to row
+    '''
     # Apply Vol functions
     if row['Nombre'] in dict_dam_volfunc.keys():
         vol_func = dict_dam_volfunc[row['Nombre']]
@@ -223,6 +229,9 @@ def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
 
 
 def lines_dam(df: pd.DataFrame) -> list:
+    '''
+    Get lines for each dam
+    '''
     df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
     lines = ['# Centrales de Embalse']
     for _, row in df.iterrows():
@@ -256,6 +265,9 @@ def lines_dam(df: pd.DataFrame) -> list:
 
 
 def calculate_cen_data(row: pd.Series, type: str) -> (dict, dict, dict):
+    '''
+    Calculate data for each central type
+    '''
     # Build dicts
     if type == 'E':
         row, factor_escala = apply_plp_functions(row)

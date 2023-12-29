@@ -26,6 +26,9 @@ logger = create_logger('csv_plexos')
 
 def get_df_daily_plexos(blo_eta: pd.DataFrame,
                         iplp_path: Path) -> pd.DataFrame:
+    '''
+    Get df_daily with all columns needed for plexos
+    '''
     plexos_end_date = read_plexos_end_date(iplp_path)
     df_daily = get_daily_indexed_df(blo_eta, all_caps=True)
     year_mask = df_daily['YEAR'] <= plexos_end_date.year
@@ -34,6 +37,9 @@ def get_df_daily_plexos(blo_eta: pd.DataFrame,
 
 def get_df_hourly_plexos(blo_eta: pd.DataFrame,
                          iplp_path: Path) -> pd.DataFrame:
+    '''
+    Get df_hourly with all columns needed for plexos
+    '''
     plexos_end_date = read_plexos_end_date(iplp_path)
     df_hourly = get_hourly_indexed_df(blo_eta, all_caps=False)
     year_mask = df_hourly['Year'] <= plexos_end_date.year
@@ -43,6 +49,9 @@ def get_df_hourly_plexos(blo_eta: pd.DataFrame,
 def read_centrales_plexos(iplp_path: Path,
                           add_specs: bool = False,
                           only_thermal: bool = False) -> pd.DataFrame:
+    '''
+    Read Centrales sheet from iplp_path and return df with generators
+    '''
     if not add_specs:
         # Get only Pmax
         df = pd.read_excel(iplp_path, sheet_name="Centrales",
@@ -73,6 +82,9 @@ def read_centrales_plexos(iplp_path: Path,
 def print_generator_for(df_daily: pd.DataFrame,
                         iplp_path: Path,
                         path_csv: Path):
+    '''
+    Print Generator For file with plexos format
+    '''
     df_centrales = read_centrales_plexos(iplp_path)
     df_gen_for = df_centrales.copy()
     df_gen_for = df_gen_for.drop('Pmax', axis=1)
@@ -112,6 +124,9 @@ def print_generator_rating(df_daily: pd.DataFrame,
                            iplp_path: Path,
                            path_csv: Path,
                            path_df: Path):
+    '''
+    Print Generator Rating with plexos format
+    '''
     # Leer desde Temp/df/df_mantcen_pmax para no renovables
     df_gen_rating = df_daily.copy()
     try:
@@ -208,6 +223,9 @@ def print_generator_files(iplp_path: Path,
                           path_csv: Path,
                           path_df: Path,
                           path_inputs: Path):
+    '''
+    Print all generator files in CSV folder
+    '''
     # Generator_For
     logger.info('Processing plexos Generator For')
     print_generator_for(df_daily, iplp_path, path_csv)
@@ -252,6 +270,9 @@ def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
 def get_df_line_maxflow_minflow(
         iplp_path: Path,
         df_daily: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
+    '''
+    Get df_line_maxflow and df_line_minflow
+    '''
     # Get Line_MaxFlow and Line_MinFlow
     # 0. Add PERIOD to df_daily
     df_daily['PERIOD'] = 1
@@ -298,6 +319,9 @@ def add_per_unit_r_and_x(df: pd.DataFrame,
 def get_df_line_r_x(
         iplp_path: Path,
         df_daily: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
+    '''
+    Get df_line_r and df_line_x
+    '''
     # 0. Add PERIOD to df_daily
     df_daily['PERIOD'] = 1
     # 1. Get nominal data for all lines in p.u.
@@ -330,6 +354,9 @@ def print_line_files(
         iplp_path: Path,
         df_daily: pd.DataFrame,
         path_csv: Path):
+    '''
+    Print all line files
+    '''
     # Get line flow files and print them
     df_line_maxflow, df_line_minflow = get_df_line_maxflow_minflow(
         iplp_path, df_daily)
