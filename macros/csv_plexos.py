@@ -234,7 +234,7 @@ def print_generator_files(iplp_path: Path,
     print_generator_rating(df_daily, iplp_path, path_csv, path_df)
     # Generator MaxCapacity
     logger.info('Processing plexos Generator MaxCapacity')
-    print_generator_maxcapacity(path_inputs, path_csv)
+    print_generator_maxcapacity(path_df, path_csv)
     # Generator RatingFactor
     logger.info('Processing plexos Generator RatingFactor')
     print_generator_rating_factor(iplp_path, path_inputs, path_csv)
@@ -426,12 +426,12 @@ def print_gas_files(
                       index=False)
 
 
-def print_generator_maxcapacity(path_inputs: Path, path_csv: Path):
+def print_generator_maxcapacity(path_df: Path, path_csv: Path):
     '''
     Print file with ERNC generator max capacity, based on ERNC tab
     '''
     try:
-        df = pd.read_csv(path_inputs / 'ernc_RatingFactor.csv')
+        df = pd.read_csv(path_df / 'ernc_RatingFactor.csv')
     except FileNotFoundError:
         logger.error('File ernc_RatingFactor.csv not found')
         logger.error('File Generator_MaxCapacity could not be printed')
