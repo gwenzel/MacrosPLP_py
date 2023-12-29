@@ -62,7 +62,7 @@ def read_centrales_plexos(iplp_path: Path,
     else:
         # Get MinTecNeto, MinDown, MinUp, ShutDownCost, StartCost
         df = pd.read_excel(iplp_path, sheet_name="Centrales",
-                           skiprows=4, usecols="B,C,AA,AU:AX")
+                           skiprows=4, usecols="B,C,AT:AX")
         df = df.rename(columns={
             'CENTRALES': 'Nombre',
             'MinTec Neto': 'MinTecNeto',
