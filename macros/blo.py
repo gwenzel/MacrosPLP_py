@@ -39,7 +39,7 @@ formatter_plpetapas = {
 }
 
 
-def get_df_bloques(blo_eta):
+def get_df_bloques(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Transform blo_eta to plpblo format
     '''
@@ -65,7 +65,7 @@ def get_df_bloques(blo_eta):
                'Ano', 'Mes', 'TipoBloque']]
 
 
-def get_df_etapas(blo_eta):
+def get_df_etapas(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Transform blo_eta to plpeta format
     '''
@@ -92,7 +92,7 @@ def get_df_etapas(blo_eta):
                'NHoras', 'FactTasa', 'TipoEtapa']]
 
 
-def get_df_etapa2dates(blo_eta):
+def get_df_etapa2dates(blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Transform blo_eta to Etapa2Dates.csv format
     '''

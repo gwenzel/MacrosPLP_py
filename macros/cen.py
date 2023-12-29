@@ -63,7 +63,7 @@ formatter_plptec = {
 }
 
 
-def read_df_centrales_all(iplp_path: Path):
+def read_df_centrales_all(iplp_path: Path) -> pd.DataFrame:
     '''
     Read Centrales sheet and get all required fields
     '''
@@ -121,7 +121,8 @@ def read_df_centrales_all(iplp_path: Path):
     return df
 
 
-def add_failure_generators(iplp_path: Path, df_centrales: pd.DataFrame):
+def add_failure_generators(iplp_path: Path,
+                           df_centrales: pd.DataFrame) -> pd.DataFrame:
     df_buses = get_barras_info(iplp_path, add_flag_falla=True)
     df_buses_falla = df_buses[df_buses['FlagFalla']]
 
@@ -195,7 +196,7 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     write_lines_from_scratch(lines, path_plpcnfce)
 
 
-def apply_plp_functions(row: pd.Series):
+def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
     # Apply Vol functions
     if row['Nombre'] in dict_dam_volfunc.keys():
         vol_func = dict_dam_volfunc[row['Nombre']]
@@ -221,7 +222,7 @@ def apply_plp_functions(row: pd.Series):
     return row, factor_escala
 
 
-def lines_dam(df: pd.DataFrame):
+def lines_dam(df: pd.DataFrame) -> list:
     df.loc[:, 'Nombre'] = df['Nombre'].apply(lambda x: "'%s'" % x)
     lines = ['# Centrales de Embalse']
     for _, row in df.iterrows():
@@ -254,7 +255,7 @@ def lines_dam(df: pd.DataFrame):
     return lines
 
 
-def calculate_cen_data(row: pd.Series, type: str):
+def calculate_cen_data(row: pd.Series, type: str) -> (dict, dict, dict):
     # Build dicts
     if type == 'E':
         row, factor_escala = apply_plp_functions(row)
@@ -295,7 +296,7 @@ def calculate_cen_data(row: pd.Series, type: str):
     return dict1, dict2, dict3
 
 
-def lines_central(df: pd.DataFrame, type: str):
+def lines_central(df: pd.DataFrame, type: str) -> list:
     '''
     Print lines for each central type
     Group S (Series) and R (Riego) types
