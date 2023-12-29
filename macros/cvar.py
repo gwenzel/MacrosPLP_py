@@ -32,9 +32,9 @@ def read_fuel_price_iplp(iplp_path: Path, fuel: str):
     Read fuel price for each fuel type
     '''
     fuel2sheetname = {
-        'Coal': 'Carbón_new',
-        'Gas': 'GNL-GAS_new',
-        'Diesel': 'Diesel_new'
+        'Coal': 'Carbón',
+        'Gas': 'GNL-GAS',
+        'Diesel': 'Diesel'
     }
     if fuel not in fuel2sheetname.keys():
         logger.error('Fuel %s not recognized' % fuel)
