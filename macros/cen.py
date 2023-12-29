@@ -1,6 +1,6 @@
 '''plpcnfce
 
-Generate plpcnfce.dat file from IPLP input file with data from
+Generate plpcnfce.dat and plptec.dat files from IPLP input file with data from
 sheet centrales.
 '''
 import math

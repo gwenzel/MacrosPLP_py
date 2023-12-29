@@ -15,6 +15,7 @@ from utils.utils import (timeit,
                          write_lines_appending)
 from utils.logger import add_file_handler, create_logger
 import pandas as pd
+from pathlib import Path
 from openpyxl.utils.datetime import from_excel
 
 logger = create_logger('cvariable')
@@ -26,14 +27,10 @@ formatter_plpcosce = {
 }
 
 
-def read_fuel_price_ext(ext_inputs_path, fuel, scen):
-    df_fuel_price = pd.read_csv(
-        ext_inputs_path / ('%s_%s.csv' % (fuel, scen)),
-        header=[0, 1], index_col=[0, 1], encoding='latin1')
-    return df_fuel_price
-
-
-def read_fuel_price_iplp(iplp_path, fuel):
+def read_fuel_price_iplp(iplp_path: Path, fuel: str):
+    '''
+    Read fuel price for each fuel type
+    '''
     fuel2sheetname = {
         'Coal': 'Carbón_new',
         'Gas': 'GNL-GAS_new',
@@ -64,12 +61,12 @@ def read_fuel_price_iplp(iplp_path, fuel):
     return df
 
 
-def validate_fuel_price(df_fuel_price):
+def validate_fuel_price(df_fuel_price: pd.DataFrame):
     # TODO validate names and values
     pass
 
 
-def read_all_fuel_prices(iplp_path):
+def read_all_fuel_prices(iplp_path: Path):
     '''
     Build dictionary of dataframes with fuel price info
     for Carbon USD/ton, Gas USD/MMBtu, Diesel USD/ton
@@ -86,7 +83,10 @@ def read_all_fuel_prices(iplp_path):
     return df
 
 
-def read_unit_cvar_nominal(iplp_path):
+def read_unit_cvar_nominal(iplp_path: Path):
+    '''
+    Read nominal variable cost for each unit
+    '''
     df = pd.read_excel(iplp_path, sheet_name='Centrales',
                        usecols='B:D', skiprows=4,
                        index_col='CENTRALES')
@@ -94,7 +94,7 @@ def read_unit_cvar_nominal(iplp_path):
     return df.to_dict()['Costo Variable']
 
 
-def read_heatrate_and_unit_fuel_mapping(iplp_path):
+def read_heatrate_and_unit_fuel_mapping(iplp_path: Path):
     '''
     Build dictionaries for heatrate and fuel price name
     for:
@@ -119,7 +119,7 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path):
     return df
 
 
-def read_year_co2_tax(iplp_path):
+def read_year_co2_tax(iplp_path: Path):
     '''
     Read CO2 tax per year for current scenario
     '''
@@ -129,7 +129,10 @@ def read_year_co2_tax(iplp_path):
     return df
 
 
-def read_unit_emissions_mapping(iplp_path):
+def read_unit_emissions_mapping(iplp_path: Path):
+    '''
+    Read CO2 emissions per unit
+    '''
     df = pd.read_excel(iplp_path, sheet_name='Centrales',
                        usecols='B,C,BY', skiprows=4)
     df = df[df['Tipo de Central'] == 'T']
@@ -141,8 +144,9 @@ def read_unit_emissions_mapping(iplp_path):
     return df
 
 
-def calculate_cvar(path_df, blo_eta, df_fuel_prices,
-                   df_heatrate_unit_fuel_mapping):
+def calculate_cvar(path_df: Path, blo_eta: pd.DataFrame,
+                   df_fuel_prices: pd.DataFrame,
+                   df_heatrate_unit_fuel_mapping: pd.DataFrame):
     '''
     Calculate Costo Variable for each unit in dict_unit_fuel_price_name,
     for each block in blo_eta, using fuel prices in fuel_prices
@@ -175,7 +179,9 @@ def calculate_cvar(path_df, blo_eta, df_fuel_prices,
     return df
 
 
-def add_emissions(path_df, df_cvar, df_unit_emissions, df_year_co2_tax):
+def add_emissions(path_df: Path, df_cvar: pd.DataFrame,
+                  df_unit_emissions: pd.DataFrame,
+                  df_year_co2_tax: pd.DataFrame):
     '''
     Add emissions cost to variable cost dataframe
     '''
@@ -189,7 +195,8 @@ def add_emissions(path_df, df_cvar, df_unit_emissions, df_year_co2_tax):
     return df
 
 
-def print_plpcosce(path_inputs, df_cvar_with_emissions):
+def print_plpcosce(path_inputs: Path,
+                   df_cvar_with_emissions: pd.DataFrame):
     '''
     Print plpcosce.dat file
     '''
