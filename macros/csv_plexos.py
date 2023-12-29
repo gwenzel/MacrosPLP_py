@@ -237,7 +237,7 @@ def print_generator_files(iplp_path: Path,
     print_generator_maxcapacity(path_df, path_csv)
     # Generator RatingFactor
     logger.info('Processing plexos Generator RatingFactor')
-    print_generator_rating_factor(iplp_path, path_inputs, path_csv)
+    print_generator_rating_factor(iplp_path, path_df, path_csv)
     # Generator HeatRate (Variable Cost)
     logger.info('Processing plexos Generator HeatRate')
     print_generator_heatrate(df_daily, iplp_path, path_csv, path_df)
@@ -451,7 +451,7 @@ def print_generator_maxcapacity(path_df: Path, path_csv: Path):
 
 
 def print_generator_rating_factor(iplp_path: Path,
-                                  path_inputs: Path,
+                                  path_df: Path,
                                   path_csv: Path):
     '''
     Print file with ERNC profiles
@@ -461,7 +461,7 @@ def print_generator_rating_factor(iplp_path: Path,
     # Hourly Profiles
     try:
         h_profiles = pd.read_csv(
-            path_inputs / input_names["H_PROFILES_FILENAME"])
+            path_df / input_names["H_PROFILES_FILENAME"])
     except FileNotFoundError:
         logger.error('File %s not found' % input_names["H_PROFILES_FILENAME"])
         logger.error('File Generator_RatingFactor could not be printed')
