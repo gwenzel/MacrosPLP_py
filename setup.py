@@ -37,6 +37,7 @@ setup(
             "plx = macros.csv_plexos:main",
             "blo = macros.blo:main",
             "cen = macros.cen:main",
+            "mat = macros.mat:main"
         ]
     },
     classifiers=[
