@@ -348,7 +348,7 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
 
     for idx, barra in enumerate(list_all_barras, 1):
         lines = ['\n# Nombre de la central']
-        lines += ["'Falla_%s'" % idx]
+        lines += ["'Falla_%03d'" % idx]
         lines += ['#   Numero de Etapas e Intervalos']
         if barra in list_dem_barras:
             df_aux = df_all_profiles[df_all_profiles['Barra Consumo'] == barra]
