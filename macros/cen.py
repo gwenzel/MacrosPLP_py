@@ -130,7 +130,7 @@ def add_failure_generators(iplp_path: Path,
     df_buses_falla = df_buses[df_buses['FlagFalla']]
 
     df_gx_falla = pd.read_excel(iplp_path, sheet_name="GxFalla", skiprows=1)
-    tramo = df_gx_falla.iloc[0, 0]
+    # tramo = df_gx_falla.iloc[0, 0]
     # prof = df_gx_falla.iloc[0, 1]
     cost = df_gx_falla.iloc[0, 2]
 
@@ -140,15 +140,17 @@ def add_failure_generators(iplp_path: Path,
     df_centrales_falla = pd.DataFrame()
     # Get list of names and connected buses
     list_failure_names = []
-    if tramo == 1:
-        list_failure_names = ['FALLA_%03d' % i for i in df_buses_falla['Nº']]
-        list_bus_conected = df_buses_falla['Nº'].tolist()
+    # if tramo == 1:
+    list_failure_names = ['FALLA_%03d' % i for i in df_buses_falla['Nº']]
+    list_bus_conected = df_buses_falla['Nº'].tolist()
+    '''
     else:
         list_bus_conected = []
         for b in df_buses_falla['Nº']:
             for t in range(1, tramo + 1):
                 list_failure_names.append('FALLA_%03d_%s' % (b, t))
                 list_bus_conected.append(b)
+    '''
     # Add data to dataframe
     last_index = df_centrales['NumCen'].max()
     df_centrales_falla['NumCen'] = range(

@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 from openpyxl.utils.datetime import from_excel
 from pathlib import Path
+from macros.bar import get_barras_info
 
 from utils.utils import (timeit,
                          define_arg_parser,
@@ -320,7 +321,8 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
                      iplp_path: Path):
     plpfal_path = iplp_path.parent / 'Temp' / 'plpfal.prn'
 
-    list_all_barras = get_list_of_all_barras(iplp_path)
+    df_buses = get_barras_info(iplp_path, add_flag_falla=True)
+    df_buses_falla = df_buses[df_buses['FlagFalla']]
     list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
 
     # Build df with zero-consumption barras
@@ -346,12 +348,13 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
     # Write data from scratch
     write_lines_from_scratch(lines, plpfal_path)
 
-    for idx, barra in enumerate(list_all_barras, 1):
+    for _, row in df_buses_falla.iterrows():
         lines = ['\n# Nombre de la central']
-        lines += ["'Falla_%03d'" % idx]
+        lines += ["'Falla_%03d'" % row['Nº']]
         lines += ['#   Numero de Etapas e Intervalos']
-        if barra in list_dem_barras:
-            df_aux = df_all_profiles[df_all_profiles['Barra Consumo'] == barra]
+        if row['BARRA'] in list_dem_barras:
+            df_aux = df_all_profiles[
+                df_all_profiles['Barra Consumo'] == row['BARRA']]
             df_aux = df_aux.drop('Barra Consumo', axis=1)
         else:
             df_aux = df_zero_demand
