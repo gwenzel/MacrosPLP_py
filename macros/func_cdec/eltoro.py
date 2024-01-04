@@ -49,8 +49,11 @@ def punteroA(m, x, i, dc):
 
 
 def Vol_ELTORO(Cota):
+    if Cota >= 1370:
+        return 5826.53656
+    # else
     Cota = Cota - 1300
-    i = min(round(Cota) + 2, 71)
+    i = min(round(Cota) + 1, 70)
     result = Datos[i - 1] + (Cota - round(Cota)) * (Datos[i] - Datos[i - 1])
     return max(result, 0)
 
