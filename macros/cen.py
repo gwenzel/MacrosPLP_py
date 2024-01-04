@@ -206,16 +206,23 @@ def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
     Apply Vol and Rend functions to row
     '''
     # Apply Vol functions
+    # If Macro function did not work, the result will be a string,
+    # and therefore the python equivalent function will be used
     if row['Nombre'] in dict_dam_volfunc.keys():
         vol_func = dict_dam_volfunc[row['Nombre']]
-        row['VolIni'] = vol_func(row['CotaIni']) * 1000000 if type(
-            row['VolIni']) is str else row['VolIni'] * 1000000
-        row['VolFin'] = vol_func(row['CotaFin']) * 1000000 if type(
-            row['VolFin']) is str else row['VolFin'] * 1000000
-        row['VolMin'] = vol_func(row['CotaMin']) * 1000000 if type(
-            row['VolMin']) is str else row['VolMin'] * 1000000
-        row['VolMax'] = vol_func(row['CotaMax']) * 1000000 if type(
-            row['VolMax']) is str else row['VolMax'] * 1000000
+        try:
+            row['VolIni'] = vol_func(row['CotaIni']) * 1000000 if type(
+                row['VolIni']) is str else row['VolIni'] * 1000000
+            row['VolFin'] = vol_func(row['CotaFin']) * 1000000 if type(
+                row['VolFin']) is str else row['VolFin'] * 1000000
+            row['VolMin'] = vol_func(row['CotaMin']) * 1000000 if type(
+                row['VolMin']) is str else row['VolMin'] * 1000000
+            row['VolMax'] = vol_func(row['CotaMax']) * 1000000 if type(
+                row['VolMax']) is str else row['VolMax'] * 1000000
+        except Exception as e:
+            logger.error('Error in PLP Volume function for %s' % row['Nombre'])
+            logger.error('Change Cota or fix function in macros/func_cdec')
+            logger.error(e)
         factor_escala = 10**int(math.log10(row['VolMax']) + 0.5)
     else:
         logger.error('Vol function for %s not found' % row['Nombre'])
@@ -223,8 +230,13 @@ def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
     # Apply Rend functions
     if row['Nombre'] in dict_dam_rendfunc.keys():
         rend_func = dict_dam_rendfunc[row['Nombre']]
-        row['Rendi'] = rend_func(row['CotaIni']) if type(row['Rendi']) is str\
-            else row['Rendi']
+        try:
+            row['Rendi'] = rend_func(row['CotaIni']) if type(row['Rendi']) is str\
+                else row['Rendi']
+        except Exception as e:
+            logger.error('Error in PLP Rendi function for %s' % row['Nombre'])
+            logger.error('Change CotaIni or fix function in macros/func_cdec')
+            logger.error(e)
     else:
         logger.error('Rendi function for %s not found' % row['Nombre'])
     return row, factor_escala

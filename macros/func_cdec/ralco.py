@@ -6,7 +6,7 @@ Vol_Inf = [0, 0.02132, 0.43767, 4.90172, 15.43637, 22.730575, 24.318677,
 
 
 def punteroA(Arreglo, m, x):
-    j, k = 1, m
+    j, k = 0, m
     while (k - j) > 1:
         i = (k + j) // 2
         if x <= Arreglo[i]:

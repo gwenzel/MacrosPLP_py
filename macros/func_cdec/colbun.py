@@ -36,9 +36,9 @@ def Vol_COLBUN(Cota):
     if Cota < 393:
         return 319.1
     elif Cota < 397:
-        i, dc = punteroC(5, Cota, 0, 0)
-        m = volumenes[i + 1] - volumenes[i]
-        b = volumenes[i] - Cotas[i] * m
+        i = round(Cota - 392)
+        m = volumenes[i] - volumenes[i - 1]
+        b = volumenes[i - 1] - Cotas[i - 1] * m
         return m * Cota + b
     else:
         return (a1 * (Cota / CMÁX) + a2 * (Cota / CMÁX) ** 2 +
@@ -146,3 +146,6 @@ def punteroC(m, x, i, dc):
     d2 = volumenes[i] - volumenes[i - 1]
     dc = d1 / d2
     return i, dc
+
+
+import pdb; pdb.set_trace()
