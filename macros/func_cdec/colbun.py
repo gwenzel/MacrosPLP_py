@@ -146,6 +146,3 @@ def punteroC(m, x, i, dc):
     d2 = volumenes[i] - volumenes[i - 1]
     dc = d1 / d2
     return i, dc
-
-
-import pdb; pdb.set_trace()
