@@ -231,8 +231,8 @@ def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
     if row['Nombre'] in dict_dam_rendfunc.keys():
         rend_func = dict_dam_rendfunc[row['Nombre']]
         try:
-            row['Rendi'] = rend_func(row['CotaIni']) if type(row['Rendi']) is str\
-                else row['Rendi']
+            row['Rendi'] = rend_func(row['CotaIni']) if type(
+                row['Rendi']) is str else row['Rendi']
         except Exception as e:
             logger.error('Error in PLP Rendi function for %s' % row['Nombre'])
             logger.error('Change CotaIni or fix function in macros/func_cdec')
