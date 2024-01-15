@@ -209,11 +209,13 @@ def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
 def filter_df_mantcen(df_mantcen: pd.DataFrame,
                       df_centrales: pd.DataFrame) -> pd.DataFrame:
     '''
-    Filter out rows with non-existent Unit names and ERNC
+    Filter out rows with non-existent Unit names and ERNC and BESS
     '''
     types_to_filter = ['SOLAR_', 'SOLARx_', 'EOLICA_', 'EOLICAx_']
     for type in types_to_filter:
         df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
+    # Filter out rows with Nombre containing BESS or BESSx
+    df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.contains('BESS')]
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
