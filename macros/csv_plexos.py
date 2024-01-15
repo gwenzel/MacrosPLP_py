@@ -1,6 +1,7 @@
 '''
 Generate Plexos files in CSV folder
 '''
+from macros.cvar import read_unit_cvar_nominal
 from macros.lin import read_df_lines
 from macros.manli import (add_manli_data_row_by_row,
                           get_df_manli,
@@ -201,14 +202,24 @@ def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
     df = df.reset_index()\
            .rename_axis(None, axis=1)
     # Read complete list of generators and add the ones that are missing
-    # with 0 variable cost
-    df_centrales = read_centrales_plexos(iplp_path)
+    # with their nominal variable cost
+    # or 0 if they are EOLICA, SOLAR, BESS
+    df_centrales = read_centrales_plexos(iplp_path, only_thermal=True)
+    dict_cvar_nom = read_unit_cvar_nominal(iplp_path, ernc_zero=True)
     list_of_centrales = df_centrales['Nombre'].unique().tolist()
     list_of_centrales_in_df = df.columns.tolist()[3:]
     list_of_centrales_missing = [
         unit for unit in list_of_centrales
-        if unit not in list_of_centrales_in_df]
-    df_aux = pd.DataFrame(0, index=df.index, columns=list_of_centrales_missing)
+        if unit not in list_of_centrales_in_df
+        ]
+    dict_nominal_cvar_cen_missing = {
+        unit: dict_cvar_nom[unit] if unit in dict_cvar_nom.keys() else 0
+        for unit in list_of_centrales_missing
+    }
+    # Create dataframe repeating values in dict_nominal_cvar_cen_missing
+    # using keys as columns, and repeating values, using same index as in df
+    df_aux = pd.DataFrame(dict_nominal_cvar_cen_missing, index=df.index)
+    # Concat df_aux to the right side of df
     df = pd.concat([df, df_aux], axis=1)
     # Format
     df['PERIOD'] = 1

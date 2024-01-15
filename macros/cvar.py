@@ -83,7 +83,7 @@ def read_all_fuel_prices(iplp_path: Path):
     return df
 
 
-def read_unit_cvar_nominal(iplp_path: Path):
+def read_unit_cvar_nominal(iplp_path: Path, ernc_zero: bool = False):
     '''
     Read nominal variable cost for each unit
     '''
@@ -91,6 +91,16 @@ def read_unit_cvar_nominal(iplp_path: Path):
                        usecols='B:D', skiprows=4,
                        index_col='CENTRALES')
     df = df[df['Tipo de Central'] == 'T']
+    # If enrc_zero is true, set ernc units to 0
+    if ernc_zero:
+        ernc_starts_with = ['SOLAR_', 'SOLARx_', 'ENGIE_PV',
+                            'EOLICA_', 'EOLICAx_', 'ENGIE_Wind',
+                            'BESS_', 'BESSx_', 'ENGIE_BESS_',
+                            'CSP_', 'CSPx_']
+        for type in ernc_starts_with:
+            df.loc[df.index.str.startswith(type), 'Costo Variable'] = 0
+    # Filter columns if values are missing
+    df = df.dropna(how='any')
     return df.to_dict()['Costo Variable']
 
 
