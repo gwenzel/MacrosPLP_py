@@ -214,8 +214,9 @@ def filter_df_mantcen(df_mantcen: pd.DataFrame,
     types_to_filter = ['SOLAR_', 'SOLARx_', 'EOLICA_', 'EOLICAx_']
     for type in types_to_filter:
         df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
-    # Filter out rows with Nombre containing BESS or BESSx
-    df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.contains('BESS')]
+    # Filter out rows with Nombre starting with BESS or BESSx
+    for type in ['BESS_', 'BESSx_', 'ENGIE_BESS_']:
+        df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
