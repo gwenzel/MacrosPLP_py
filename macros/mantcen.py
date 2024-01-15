@@ -211,11 +211,11 @@ def filter_df_mantcen(df_mantcen: pd.DataFrame,
     '''
     Filter out rows with non-existent Unit names and ERNC and BESS
     '''
-    types_to_filter = ['SOLAR_', 'SOLARx_', 'EOLICA_', 'EOLICAx_']
+    types_to_filter = ['SOLAR_', 'SOLARx_', 'ENGIE_PV',
+                       'EOLICA_', 'EOLICAx_', 'ENGIE_Wind',
+                       'BESS_', 'BESSx_', 'ENGIE_BESS_',
+                       'CSP_', 'CSPx_']
     for type in types_to_filter:
-        df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
-    # Filter out rows with Nombre starting with BESS or BESSx
-    for type in ['BESS_', 'BESSx_', 'ENGIE_BESS_']:
         df_mantcen = df_mantcen[~df_mantcen['Nombre'].str.startswith(type)]
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
