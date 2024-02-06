@@ -56,8 +56,8 @@ def create_plpparam(df_hidro: pd.DataFrame, df_etapas: pd.DataFrame,
         ("Nº Bloq:", bloques),
         ("", "", ""),
         ("", "Mes", "Año"),
-        ("Inicio:", ini_month, ini_year)
-        ("Fin:", end_month, end_year)
+        ("Inicio:", ini_month, ini_year),
+        ("Fin:", end_month, end_year),
     ]
     # Convert the data to a DataFrame
     df = pd.DataFrame(data)
