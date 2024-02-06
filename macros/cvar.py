@@ -185,7 +185,7 @@ def calculate_cvar(path_df: Path, blo_eta: pd.DataFrame,
              'Fuel Name', 'Variable Cost USD/MWh']]
     # Translate month to hydromonth
     df = translate_to_hydromonth(df)
-    df.to_csv(path_df / 'df_cvar.csv', index=False)
+    # df.to_csv(path_df / 'df_cvar.csv', index=False)
     return df
 
 
@@ -203,6 +203,34 @@ def add_emissions(path_df: Path, df_cvar: pd.DataFrame,
         (df['Variable Cost USD/MWh'] + df['CO2 Tax USD/MWh']).round(1)
     df.to_csv(path_df / 'df_cvar_with_emissions.csv', index=False)
     return df
+
+
+def validate_unit_emissions(df_unit_emissions: pd.DataFrame):
+    # If there are missing values in the dataframe, log error
+    if df_unit_emissions.isna().any().any():
+        logger.error('Unit emissions mapping has missing values')
+        return True
+    return False
+
+
+def validate_year_co2_tax(df_year_co2_tax: pd.DataFrame,
+                          blo_eta: pd.DataFrame):
+    # If there are years from blo_eta missing in df_year_co2_tax, fix and warn
+    years_blo_eta = blo_eta['Year'].unique()
+    years_df_year_co2_tax = df_year_co2_tax['Year'].unique()
+    if not set(years_blo_eta).issubset(set(years_df_year_co2_tax)):
+        logger.error('Years from blo_eta are not in df_year_co2_tax')
+        return True
+    return False
+
+
+def validate_df_cvar_with_emissions(df_cvar_with_emissions: pd.DataFrame):
+    # If there are missing values in the last column, error
+    if df_cvar_with_emissions.iloc[:, -1].isna().any():
+        logger.error('There are missing values in '
+                     'Variable Cost + CO2 Tax USD/MWh')
+        return True
+    return False
 
 
 def print_plpcosce(path_inputs: Path,
@@ -283,16 +311,27 @@ def main():
     df_unit_emissions = read_unit_emissions_mapping(iplp_path)
     df_year_co2_tax = read_year_co2_tax(iplp_path)
 
+    # Validate unit emissions and co2_tax data
+    bool_error_emissions = validate_unit_emissions(df_unit_emissions)
+    bool_error_co2_tax = validate_year_co2_tax(df_year_co2_tax, blo_eta)
+
     # Sumar impuestos verdes
     logger.info('Adding CO2 tax to variable cost')
     df_cvar_with_emissions = add_emissions(
         path_df, df_cvar, df_unit_emissions, df_year_co2_tax)
 
+    # Validate final data
+    logger.info('Validating final cvar data')
+    bool_error_cvar = validate_df_cvar_with_emissions(df_cvar_with_emissions)
+
     # escribir en formato .dat
     logger.info('Printing plpcosce.dat')
     print_plpcosce(path_inputs, df_cvar_with_emissions)
 
-    logger.info('Process finished successfully')
+    if bool_error_emissions or bool_error_co2_tax or bool_error_cvar:
+        logger.error('Process finished with errors. Check log.')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":
