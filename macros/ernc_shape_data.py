@@ -185,6 +185,8 @@ def get_scaled_profiles(ernc_data: dict, df_all_profiles: pd.DataFrame,
             df_profiles.loc[etapas, unit] =\
                 df_profiles_aux.loc[etapas_aux, 'aux'] * row['Value [MW]']
 
+    # Prevent future warning
+    pd.set_option('future.no_silent_downcasting', True)
     # Make sure nan values are turned to 0
     df_profiles = df_profiles.fillna(0)
     # Print profiles to file

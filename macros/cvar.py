@@ -47,7 +47,7 @@ def read_fuel_price_iplp(iplp_path: Path, fuel: str):
         if df.loc[row].T.isna().any():
             logger.warning('Fuel %s has missing values, which'
                            ' will be filled with previous value' % row[0])
-    df = df.stack(dropna=False)
+    df = df.stack(future_stack=True)
     df = df.reset_index()
     df = df.rename(columns={'level_2': 'Date', 0: 'Variable Cost USD/Unit'})
     df['Date'] = df['Date'].apply(from_excel)
