@@ -201,7 +201,7 @@ def print_plpcnfce(path_inputs: Path, df_centrales: pd.DataFrame):
     write_lines_from_scratch(lines, path_plpcnfce)
 
 
-def apply_plp_functions(row: pd.Series) -> (pd.Series, float):
+def apply_plp_functions(row: pd.Series) -> tuple[pd.Series, float]:
     '''
     Apply Vol and Rend functions to row
     '''
@@ -278,7 +278,7 @@ def lines_dam(df: pd.DataFrame) -> list:
     return lines
 
 
-def calculate_cen_data(row: pd.Series, type: str) -> (dict, dict, dict):
+def calculate_cen_data(row: pd.Series, type: str) -> tuple[dict, dict, dict]:
     '''
     Calculate data for each central type
     '''

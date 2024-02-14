@@ -280,7 +280,7 @@ def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
 
 def get_df_line_maxflow_minflow(
         iplp_path: Path,
-        df_daily: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
+        df_daily: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''
     Get df_line_maxflow and df_line_minflow
     '''
@@ -329,7 +329,7 @@ def add_per_unit_r_and_x(df: pd.DataFrame,
 
 def get_df_line_r_x(
         iplp_path: Path,
-        df_daily: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
+        df_daily: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''
     Get df_line_r and df_line_x
     '''

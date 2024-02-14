@@ -69,8 +69,8 @@ def timeit(func):
     return timeit_wrapper
 
 
-def process_etapas_blocks(path_dat: Path, droptasa: bool = True) -> (
-        pd.DataFrame, pd.Series, pd.DataFrame):
+def process_etapas_blocks(path_dat: Path, droptasa: bool = True) -> tuple[
+        pd.DataFrame, pd.Series, pd.DataFrame]:
     '''
     Get blocks to etapas definition and tasa
     '''
@@ -178,7 +178,7 @@ def get_ext_inputs_path(parser: ArgumentParser) -> Path:
     return ext_path
 
 
-def get_plp_plx_booleans(parser: ArgumentParser) -> (bool, bool):
+def get_plp_plx_booleans(parser: ArgumentParser) -> tuple[bool, bool]:
     args = parser.parse_args()
     return args.plp, args.plx
 

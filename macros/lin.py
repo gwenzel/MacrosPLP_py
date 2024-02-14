@@ -30,7 +30,7 @@ formatter_plpcnfli_full = {
 }
 
 
-def read_losses(iplp_path: Path) -> (str, str):
+def read_losses(iplp_path: Path) -> tuple[str, str]:
     df = pd.read_excel(iplp_path, sheet_name='Líneas', usecols='M',
                        nrows=2, header=None, names=["Value"])
     bool_losses_value = df.iloc[0]["Value"]

@@ -29,7 +29,7 @@ import pandas as pd
 logger = create_logger('ernc')
 
 
-def get_input_paths() -> (Path, Path, Path):
+def get_input_paths() -> tuple[Path, Path, Path]:
     logger.info('Getting input file path')
     parser = define_arg_parser(ext=True)
     iplp_path = get_iplp_input_path(parser)
@@ -59,7 +59,7 @@ def generate_csv_files(iplp_path: Path, path_df: Path, input_names: dict):
 
 
 def get_inputs(iplp_path: Path, path_df: Path, path_dat: Path,
-               input_names: dict) -> (dict, pd.DataFrame, pd.DataFrame, list):
+               input_names: dict) -> tuple[dict, pd.DataFrame, pd.DataFrame, list]:
     logger.info('Processing csv inputs')
     ernc_data = read_ernc_files(path_df, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)
@@ -70,8 +70,8 @@ def get_inputs(iplp_path: Path, path_df: Path, path_dat: Path,
 def get_profiles_and_rating_factors(ernc_data: dict,
                                     blo_eta: pd.DataFrame,
                                     block2day: pd.DataFrame,
-                                    path_df: Path) -> (
-                                    pd.DataFrame, pd.DataFrame):
+                                    path_df: Path) -> tuple[
+                                    pd.DataFrame, pd.DataFrame]:
     # Convert hourly profiles to blocks
     logger.info('Converting hourly profiles to blocks')
     profiles_dict = get_profiles_blo(ernc_data, block2day)

@@ -220,7 +220,7 @@ def filter_df_mantcen(df_mantcen: pd.DataFrame,
     return df_mantcen[df_mantcen['Nombre'].isin(df_centrales['Nombre'])]
 
 
-def get_pmin_pmax_dict(df_centrales: pd.DataFrame) -> (dict, dict):
+def get_pmin_pmax_dict(df_centrales: pd.DataFrame) -> tuple[dict, dict]:
     '''
     Get dictionary with Pmin and Pmax for each unit
     '''
@@ -230,7 +230,7 @@ def get_pmin_pmax_dict(df_centrales: pd.DataFrame) -> (dict, dict):
 
 def build_df_pmin_pmax(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
                        df_centrales: pd.DataFrame) -> \
-                       (pd.DataFrame, pd.DataFrame):
+                       tuple[pd.DataFrame, pd.DataFrame]:
     '''
     Build matrix with all pmin/pmax info in mantcen sheet
     '''
@@ -315,8 +315,8 @@ def build_df_aux(df_pmin_unit: pd.DataFrame, df_pmax_unit: pd.DataFrame,
 
 def get_mantcen_data(list_mantcen: list,
                      df_pmin: pd.DataFrame, df_pmax: pd.DataFrame,
-                     pmin_dict: dict, pmax_dict: dict) -> (
-                        list, int):
+                     pmin_dict: dict, pmax_dict: dict) -> tuple[
+                        list, int]:
     '''
     Return text lines with mantcen data for all units
     '''

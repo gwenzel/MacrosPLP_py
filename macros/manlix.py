@@ -281,9 +281,9 @@ def get_dict_trf_to_line(trf_list: list, df_lines: pd.DataFrame) -> dict:
 def get_trf_capacity(iplp_path: Path, path_df: Path,
                      df_lines: pd.DataFrame,
                      df_capmax_ab: pd.DataFrame,
-                     df_capmax_ba: pd.DataFrame) -> (
+                     df_capmax_ba: pd.DataFrame) -> tuple[
                          pd.DataFrame, pd.DataFrame
-                     ):
+                     ]:
     '''
     Read mantcen data from existing csv file (coming from mantcen.py routine),
     and get max pmax for each group of gas units in each transformer.
@@ -330,9 +330,9 @@ def add_trf_data(iplp_path: Path,
                  df_lines: pd.DataFrame,
                  df_v: pd.DataFrame,
                  df_r: pd.DataFrame,
-                 df_x: pd.DataFrame) -> (
+                 df_x: pd.DataFrame) -> tuple[
                      pd.DataFrame, pd.DataFrame, pd.DataFrame
-                 ):
+                 ]:
     '''
     Add transformers data to Voltage, R and X dataframes
     '''
