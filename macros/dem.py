@@ -23,7 +23,8 @@ from utils.utils import (timeit,
                          get_list_of_all_barras,
                          write_lines_from_scratch,
                          write_lines_appending,
-                         translate_to_hydromonth)
+                         translate_to_hydromonth,
+                         represents_int)
 from utils.logger import add_file_handler, create_logger
 
 logger = create_logger('demanda')
@@ -86,26 +87,49 @@ def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
     return df_dda_por_barra
 
 
-def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
-    '''
-    Get monthly demand and add timedata
-    '''
-    df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
+def clean_monthly_demand_data(df: pd.DataFrame) -> pd.DataFrame:
     # Drop rows if column # is nan
     df = df.dropna(subset=['#'], how='any')
     # Clean data
     cols_to_drop = ['#', 'Coordinado.1', 'Cliente.1', 'Perfil',
                     'Clasificacion SEN', 'Clasificacion ENGIE']
     df = df.drop(cols_to_drop, axis=1)
+    # Drop columns if there all values are nan
     df = df.dropna(how='all', axis=1)
     df.loc[:, 'Coordinado'] = df['Coordinado'].fillna('NA')
+    # Drop columns if name begins with 'Unnamed'
+    mask_is_not_unnamed = []
+    for col in df.columns:
+        if represents_int(col):
+            mask_is_not_unnamed.append(True)
+        elif col.startswith('Unnamed'):
+            mask_is_not_unnamed.append(False)
+        else:
+            mask_is_not_unnamed.append(True)
+    df = df.loc[:, mask_is_not_unnamed]
+    return df
+
+
+def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
+    '''
+    Get monthly demand and add timedata
+    '''
+    df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
+    # Clean data
+    df = clean_monthly_demand_data(df)
     # Stack to get Demand series
     demand_series = df.set_index(['Coordinado', 'Cliente']).stack()
     demand_series.index.set_names(['Coordinado', 'Cliente', 'Date'],
                                   inplace=True)
     demand_series.name = 'Demand'
+    # Check if series is free of nan values and drop them
+    if demand_series.isna().sum() > 0:
+        logger.warning('There are nan values in demand series.'
+                       ' Filling them with 0')
+        demand_series = demand_series.fillna(0)
+    # Reset index
     df = demand_series.reset_index()
-    # parse dates
+    # Parse dates
     df['Date'] = df['Date'].apply(from_excel)
     # If plexos, filter out all BESS, Carnot and PHS clients
     if plexos:
@@ -126,7 +150,10 @@ def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
                                    inplace=True)
     profile_series.name = 'PowerFactor'
     df = profile_series.reset_index()
-    df = df.replace(to_replace={"Mes": MONTH_2_NUMBER, "Hora": HORA_DICT})
+    # Avoid Future Warning by opting to new behaviour
+    pd.set_option('future.no_silent_downcasting', True)
+    df = df.infer_objects(copy=False).replace(
+        to_replace={"Mes": MONTH_2_NUMBER, "Hora": HORA_DICT})
     df = df.rename(
         columns={'Perfil día tipo': 'Profile',
                  'Mes': 'Month',

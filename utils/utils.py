@@ -344,3 +344,12 @@ def read_plexos_end_date(iplp_path: Path) -> datetime:
                           skiprows=21
                           ).iloc[0].apply(from_excel).values[0]
     return pd.to_datetime(value)
+
+
+def represents_int(s):
+    try:
+        int(s)
+    except ValueError:
+        return False
+    else:
+        return True
