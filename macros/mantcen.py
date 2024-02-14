@@ -256,7 +256,7 @@ def build_df_pmin_pmax(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
 def get_mantcen_output(blo_eta: pd.DataFrame, df_mantcen: pd.DataFrame,
                        df_centrales: pd.DataFrame,
                        plp_or_plexos: str = 'PLP') -> \
-                       (pd.DataFrame, pd.DataFrame):
+                       tuple[pd.DataFrame, pd.DataFrame]:
     # 1. Build default dataframes
     df_pmin, df_pmax = build_df_pmin_pmax(blo_eta, df_mantcen, df_centrales)
     # 2. Add df_mantcen data in row-by-row order
