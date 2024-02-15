@@ -107,20 +107,6 @@ def main():
         check_is_path(path_inputs)
         path_dat = iplp_path.parent / "Temp" / "Dat"
         check_is_path(path_dat)
-    try:
-        # Get input file path
-        logger.info('Getting input file path')
-        parser = define_arg_parser()
-        iplp_path = get_iplp_input_path(parser)
-        path_inputs = iplp_path.parent / "Temp"
-        check_is_path(path_inputs)
-        path_dat = iplp_path.parent / "Temp" / "Dat"
-        check_is_path(path_dat)
-
-        # Add destination folder to logger
-        path_log = iplp_path.parent / "Temp" / "log"
-        check_is_path(path_log)
-        add_file_handler(logger, 'barras', path_log)
         # Add destination folder to logger
         path_log = iplp_path.parent / "Temp" / "log"
         check_is_path(path_log)
@@ -128,12 +114,7 @@ def main():
 
         # Get if uninodal or not
         # UNINODAL = False
-        # Get if uninodal or not
-        # UNINODAL = False
 
-        # If uninodal, print dat file directly
-        logger.info('Printing uni_plpbar')
-        print_uni_plpbar(path_inputs)
         # If uninodal, print dat file directly
         logger.info('Printing uni_plpbar')
         print_uni_plpbar(path_inputs)
@@ -145,19 +126,9 @@ def main():
         # Print to file
         logger.info('Printing plpbar')
         print_plpbar(path_inputs, df_barras)
-        # Print to file
-        logger.info('Printing plpbar')
-        print_plpbar(path_inputs, df_barras)
 
         logger.info('Printing plpbar_full')
         print_plpbar_full(path_inputs, df_barras)
-        logger.info('Printing plpbar_full')
-        print_plpbar_full(path_inputs, df_barras)
-
-        logger.info('Process finished successfully')
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        logger.error('Process finished with errors. Check above for details')
 
         logger.info('Process finished successfully')
     except Exception as e:
