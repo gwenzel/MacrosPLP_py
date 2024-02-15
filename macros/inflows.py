@@ -5,7 +5,6 @@ Generate plpaflce.dat file with water inflows
 Generate Storage_NaturalInflow files for Plexos
 
 '''
-from datetime import datetime
 from pathlib import Path
 from utils.utils import (timeit,
                          define_arg_parser,
@@ -420,7 +419,7 @@ def main():
         #   index=False)
 
         if plp_enable:
-            # logger.info('Reducing uncertainty of first months (only for plp)')
+            # logger.info('Reducing uncertainty of first months, only for plp')
             # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
             logger.info('Printing inflows in plp format')
             write_plpaflce(path_inputs, df_all_inflows)

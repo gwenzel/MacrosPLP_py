@@ -585,7 +585,7 @@ def main():
         # Generator files
         logger.info('Processing plexos Generator files')
         print_generator_files(iplp_path, df_daily, path_csv,
-                            path_df, path_inputs)
+                              path_df, path_inputs)
 
         # Line files
         logger.info('Processing plexos Line files')
@@ -600,6 +600,7 @@ def main():
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+
 
 if __name__ == "__main__":
     main()

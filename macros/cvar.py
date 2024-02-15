@@ -305,7 +305,7 @@ def main():
         # crear matriz de centrales - costos variables
         logger.info('Calculating base Variable Cost')
         df_cvar = calculate_cvar(path_df, blo_eta, df_fuel_prices,
-                                df_heatrate_unit_fuel_mapping)
+                                 df_heatrate_unit_fuel_mapping)
 
         # leer mapeo central - factor de emisiones
         logger.info('Reading unit emissions mapping and carbon tax')
@@ -323,7 +323,8 @@ def main():
 
         # Validate final data
         logger.info('Validating final cvar data')
-        bool_error_cvar = validate_df_cvar_with_emissions(df_cvar_with_emissions)
+        bool_error_cvar = validate_df_cvar_with_emissions(
+            df_cvar_with_emissions)
 
         # escribir en formato .dat
         logger.info('Printing plpcosce.dat')
@@ -336,6 +337,7 @@ def main():
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+
 
 if __name__ == "__main__":
     main()

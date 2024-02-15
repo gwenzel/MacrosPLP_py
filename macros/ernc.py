@@ -59,7 +59,8 @@ def generate_csv_files(iplp_path: Path, path_df: Path, input_names: dict):
 
 
 def get_inputs(iplp_path: Path, path_df: Path, path_dat: Path,
-               input_names: dict) -> tuple[dict, pd.DataFrame, pd.DataFrame, list]:
+               input_names: dict) -> tuple[
+                   dict, pd.DataFrame, pd.DataFrame, list]:
     logger.info('Processing csv inputs')
     ernc_data = read_ernc_files(path_df, input_names)
     blo_eta, _, block2day = process_etapas_blocks(path_dat)

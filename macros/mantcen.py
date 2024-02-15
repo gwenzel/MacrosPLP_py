@@ -463,13 +463,13 @@ def main():
         logger.info('Generating pmin and pmax data PLP')
         df_pmin_plp, df_pmax_plp = \
             get_mantcen_output(blo_eta, df_mantcen, df_centrales,
-                            plp_or_plexos='PLP')
+                               plp_or_plexos='PLP')
         # Write data
         logger.info('Writing data to plpmance_ini.dat file')
         write_plpmance_ini_dat(df_centrales,
-                            df_pmin_plp, df_pmax_plp,
-                            iplp_path, path_df,
-                            printdata=True)
+                               df_pmin_plp, df_pmax_plp,
+                               iplp_path, path_df,
+                               printdata=True)
         # Plexos
         # Generate arrays with pmin/pmax data
         # Redefine nominal Pmax for Plexos, adding reserves
@@ -477,7 +477,7 @@ def main():
         logger.info('Generating pmin and pmax data Plexos')
         df_pmin_plexos, df_pmax_plexos = \
             get_mantcen_output(blo_eta, df_mantcen, df_centrales,
-                            plp_or_plexos='PLEXOS')
+                               plp_or_plexos='PLEXOS')
         # Write data
         logger.info('Writing data to plexos csv files')
         write_plexos(df_pmin_plexos, df_pmax_plexos, path_df)

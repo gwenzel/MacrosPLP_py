@@ -291,5 +291,6 @@ def main():
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
 
+
 if __name__ == "__main__":
     main()
