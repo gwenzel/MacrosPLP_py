@@ -138,3 +138,5 @@ macros/test/
 dist/
 build/
 README.pdf
+TODO.txt
+warnings.txt
