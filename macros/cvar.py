@@ -64,10 +64,9 @@ def read_fuel_price_iplp(iplp_path: Path, fuel: str):
 
 def validate_fuel_price(df_fuel_price: pd.DataFrame, fuel: str):
     # Validate names and values
+    logger.info('Validating %s price' % fuel)
     if df_fuel_price.isna().any().any():
-        logger.error('%s price has missing values' % fuel)
-        return True
-    return False
+        logger.error('Fuel %s has missing values' % fuel)
 
 
 def read_all_fuel_prices(iplp_path: Path):
@@ -133,9 +132,10 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path: Path):
 
 def validate_heatrate_unit_fuel_mapping(df: pd.DataFrame):
     # Warn if there are missing values
-    if df.isna().any().any():
-        logger.error('Heatrate and fuel mapping has missing values')
-        return True
+    logger.info('Validating heatrate and fuel mapping')
+    assert not df.isna().any().any()
+    # Validate data types
+    logger.info('Validating data types for heatrate and fuel mapping')
     assert df.dtypes['Heat Rate'] == np.dtype('float64')
     assert df.dtypes['Non-Fuel Cost'] == np.dtype('float64')
     return False
@@ -221,32 +221,31 @@ def add_emissions(path_df: Path, df_cvar: pd.DataFrame,
 
 def validate_unit_emissions(df: pd.DataFrame):
     # If there are missing values in the dataframe, log error
-    if df.isna().any().any():
-        logger.error('Unit emissions mapping has missing values')
-        return True
+    logger.info('Validating unit emissions')
+    assert not df.isna().any().any()
     assert df.dtypes['Emissions TonCO2/MWh'] == np.dtype('float64')
-    return False
 
 
 def validate_year_co2_tax(df_year_co2_tax: pd.DataFrame,
                           blo_eta: pd.DataFrame):
     # If there are years from blo_eta missing in df_year_co2_tax, fix and warn
+    logger.info('Validating year CO2 tax')
     years_blo_eta = blo_eta['Year'].unique()
     years_df_year_co2_tax = df_year_co2_tax['Year'].unique()
-    if not set(years_blo_eta).issubset(set(years_df_year_co2_tax)):
-        logger.error('Years from blo_eta are not in df_year_co2_tax')
-        return True
+    logger.info('Checking if years from blo_eta are not in df_year_co2_tax')
+    assert set(years_blo_eta).issubset(set(years_df_year_co2_tax))
+    # Validate data types
+    logger.info('Validating data types for df_year_co2_tax')
     assert df_year_co2_tax.dtypes['Year'] == np.dtype('int64')
     assert df_year_co2_tax.dtypes['CO2 Tax USD/TonCO2'] == np.dtype('float64')
-    return False
 
 
 def validate_df_cvar_with_emissions(df: pd.DataFrame):
     # If there are missing values in the last column, error
-    if df.iloc[:, -1].isna().any():
-        logger.error('There are missing values in '
-                     'Variable Cost + CO2 Tax USD/MWh')
-        return True
+    logger.info('Checking for missing values in df_cvar_with_emissions')
+    assert not df.iloc[:, -1].isna().any()
+    # Validate data types
+    logger.info('Validating data types for df_cvar_with_emissions')
     assert df.dtypes['Etapa'] == np.dtype('int64')
     assert df.dtypes['Year'] == np.dtype('int64')
     assert df.dtypes['Month'] == np.dtype('int64')
@@ -262,7 +261,6 @@ def validate_df_cvar_with_emissions(df: pd.DataFrame):
         np.dtype('float64')
     assert df.dtypes['Variable Cost + CO2 Tax USD/MWh'] ==\
         np.dtype('float64')
-    return False
 
 
 def print_plpcosce(path_inputs: Path,
@@ -329,8 +327,7 @@ def main():
         logger.info('Reading heatrate and fuel mapping')
         df_heatrate_unit_fuel_mapping =\
             read_heatrate_and_unit_fuel_mapping(iplp_path)
-        bool_error_heatrate = validate_heatrate_unit_fuel_mapping(
-            df_heatrate_unit_fuel_mapping)
+        validate_heatrate_unit_fuel_mapping(df_heatrate_unit_fuel_mapping)
 
         # crear matriz de centrales - costos variables
         logger.info('Calculating base Variable Cost')
@@ -343,8 +340,8 @@ def main():
         df_year_co2_tax = read_year_co2_tax(iplp_path)
 
         # Validate unit emissions and co2_tax data
-        bool_error_emissions = validate_unit_emissions(df_unit_emissions)
-        bool_error_co2_tax = validate_year_co2_tax(df_year_co2_tax, blo_eta)
+        validate_unit_emissions(df_unit_emissions)
+        validate_year_co2_tax(df_year_co2_tax, blo_eta)
 
         # Sumar impuestos verdes
         logger.info('Adding CO2 tax to variable cost')
@@ -353,20 +350,13 @@ def main():
 
         # Validate final data
         logger.info('Validating final cvar data')
-        bool_error_cvar = validate_df_cvar_with_emissions(
-            df_cvar_with_emissions)
+        validate_df_cvar_with_emissions(df_cvar_with_emissions)
 
         # escribir en formato .dat
         logger.info('Printing plpcosce.dat')
         print_plpcosce(path_inputs, df_cvar_with_emissions)
 
-        any_error = bool_error_heatrate or bool_error_emissions or \
-            bool_error_co2_tax or bool_error_cvar
-
-        if any_error:
-            logger.error('Process finished with errors. Check log.')
-        else:
-            logger.info('Process finished successfully')
+        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
