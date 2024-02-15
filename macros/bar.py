@@ -79,7 +79,6 @@ def print_plpbar_full(path_inputs: Path, df_barras: pd.DataFrame):
     lines += ['     %s' % len(df_barras)]
     lines += ['# Numero       Nombre                                 '
               '      Tension   FL FI']
-    import pdb; pdb.set_trace()
     lines += [df_aux.to_string(
         index=False, header=False, formatters=formatter_plpbar_full)]
     write_lines_from_scratch(lines, path_plpbar_full)
