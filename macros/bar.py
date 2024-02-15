@@ -124,10 +124,10 @@ def main():
         df_barras = get_barras_info(iplp_path)
 
         # Print to file
-        logger.info('Printing plpbar')
+        logger.info('Printing plpbar.dat')
         print_plpbar(path_inputs, df_barras)
 
-        logger.info('Printing plpbar_full')
+        logger.info('Printing plpbar_full.dat')
         print_plpbar_full(path_inputs, df_barras)
 
         logger.info('Process finished successfully')
