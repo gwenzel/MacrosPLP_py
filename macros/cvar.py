@@ -15,6 +15,7 @@ from utils.utils import (timeit,
                          write_lines_appending)
 from utils.logger import add_file_handler, create_logger
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from openpyxl.utils.datetime import from_excel
 
@@ -61,9 +62,12 @@ def read_fuel_price_iplp(iplp_path: Path, fuel: str):
     return df
 
 
-def validate_fuel_price(df_fuel_price: pd.DataFrame):
-    # TODO validate names and values
-    pass
+def validate_fuel_price(df_fuel_price: pd.DataFrame, fuel: str):
+    # Validate names and values
+    if df_fuel_price.isna().any().any():
+        logger.error('%s price has missing values' % fuel)
+        return True
+    return False
 
 
 def read_all_fuel_prices(iplp_path: Path):
@@ -75,7 +79,7 @@ def read_all_fuel_prices(iplp_path: Path):
     for fuel in ['Coal', 'Gas', 'Diesel']:
         fuel_prices[fuel] = read_fuel_price_iplp(
             iplp_path, fuel=fuel)
-        validate_fuel_price(fuel_prices[fuel])
+        validate_fuel_price(fuel_prices[fuel], fuel)
     df = pd.concat(fuel_prices)
     df = df.reset_index()
     df = df.drop(columns=['level_1'])
@@ -124,9 +128,17 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path: Path):
     df = df.merge(df_cen, left_on='Central', right_on='CENTRALES')
     df = df[df['Tipo de Central'] == 'T']
     df = df.drop(columns=['Tipo de Central', 'CENTRALES'])
+    return df
+
+
+def validate_heatrate_unit_fuel_mapping(df: pd.DataFrame):
+    # Warn if there are missing values
     if df.isna().any().any():
         logger.error('Heatrate and fuel mapping has missing values')
-    return df
+        return True
+    assert df.dtypes['Heat Rate'] == np.dtype('float64')
+    assert df.dtypes['Non-Fuel Cost'] == np.dtype('float64')
+    return False
 
 
 def read_year_co2_tax(iplp_path: Path):
@@ -136,6 +148,8 @@ def read_year_co2_tax(iplp_path: Path):
     df = pd.read_excel(iplp_path, sheet_name='CVariable',
                        usecols='J:K', skiprows=4).dropna(how='any')
     df = df.rename(columns={'CO2 Tax in USD/TonCO2': 'CO2 Tax USD/TonCO2'})
+    # Set tax type to float
+    df['CO2 Tax USD/TonCO2'] = df['CO2 Tax USD/TonCO2'].astype(float)
     return df
 
 
@@ -205,11 +219,12 @@ def add_emissions(path_df: Path, df_cvar: pd.DataFrame,
     return df
 
 
-def validate_unit_emissions(df_unit_emissions: pd.DataFrame):
+def validate_unit_emissions(df: pd.DataFrame):
     # If there are missing values in the dataframe, log error
-    if df_unit_emissions.isna().any().any():
+    if df.isna().any().any():
         logger.error('Unit emissions mapping has missing values')
         return True
+    assert df.dtypes['Emissions TonCO2/MWh'] == np.dtype('float64')
     return False
 
 
@@ -221,15 +236,32 @@ def validate_year_co2_tax(df_year_co2_tax: pd.DataFrame,
     if not set(years_blo_eta).issubset(set(years_df_year_co2_tax)):
         logger.error('Years from blo_eta are not in df_year_co2_tax')
         return True
+    assert df_year_co2_tax.dtypes['Year'] == np.dtype('int64')
+    assert df_year_co2_tax.dtypes['CO2 Tax USD/TonCO2'] == np.dtype('float64')
     return False
 
 
-def validate_df_cvar_with_emissions(df_cvar_with_emissions: pd.DataFrame):
+def validate_df_cvar_with_emissions(df: pd.DataFrame):
     # If there are missing values in the last column, error
-    if df_cvar_with_emissions.iloc[:, -1].isna().any():
+    if df.iloc[:, -1].isna().any():
         logger.error('There are missing values in '
                      'Variable Cost + CO2 Tax USD/MWh')
         return True
+    assert df.dtypes['Etapa'] == np.dtype('int64')
+    assert df.dtypes['Year'] == np.dtype('int64')
+    assert df.dtypes['Month'] == np.dtype('int64')
+    assert df.dtypes['Date'] == np.dtype('datetime64[ns]')
+    assert df.dtypes['Heat Rate'] == np.dtype('float64')
+    assert df.dtypes['Variable Cost USD/MWh'] ==\
+        np.dtype('float64')
+    assert df.dtypes['Emissions TonCO2/MWh'] ==\
+        np.dtype('float64')
+    assert df.dtypes['CO2 Tax USD/TonCO2'] ==\
+        np.dtype('float64')
+    assert df.dtypes['CO2 Tax USD/MWh'] ==\
+        np.dtype('float64')
+    assert df.dtypes['Variable Cost + CO2 Tax USD/MWh'] ==\
+        np.dtype('float64')
     return False
 
 
@@ -288,10 +320,6 @@ def main():
         logger.info('Processing block to etapas files')
         blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-        # Get Hour-Blocks-Etapas definition
-        logger.info('Processing csv inputs')
-        blo_eta, _, _ = process_etapas_blocks(path_dat)
-
         # Llenado Costo Variable - IM_to_CostoVariable
         # borrar datos
         logger.info('Reading fuel prices')
@@ -301,6 +329,8 @@ def main():
         logger.info('Reading heatrate and fuel mapping')
         df_heatrate_unit_fuel_mapping =\
             read_heatrate_and_unit_fuel_mapping(iplp_path)
+        bool_error_heatrate = validate_heatrate_unit_fuel_mapping(
+            df_heatrate_unit_fuel_mapping)
 
         # crear matriz de centrales - costos variables
         logger.info('Calculating base Variable Cost')
@@ -330,7 +360,10 @@ def main():
         logger.info('Printing plpcosce.dat')
         print_plpcosce(path_inputs, df_cvar_with_emissions)
 
-        if bool_error_emissions or bool_error_co2_tax or bool_error_cvar:
+        any_error = bool_error_heatrate or bool_error_emissions or \
+            bool_error_co2_tax or bool_error_cvar
+
+        if any_error:
             logger.error('Process finished with errors. Check log.')
         else:
             logger.info('Process finished successfully')
