@@ -408,80 +408,84 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'mantcen', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'mantcen', path_log)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    # Read Centrales and get PnomMax and PnomMin
-    logger.info('Reading data from sheet Centrales')
-    df_centrales = get_centrales(iplp_path)
+        # Read Centrales and get PnomMax and PnomMin
+        logger.info('Reading data from sheet Centrales')
+        df_centrales = get_centrales(iplp_path)
 
-    logger.info('Validating list of centrales')
-    validate_centrales(df_centrales)
+        logger.info('Validating list of centrales')
+        validate_centrales(df_centrales)
 
-    # Get initial mantcen dataframe
-    logger.info('Getting initial mantcen')
-    df_mantcen = get_mantcen_input(iplp_path)
+        # Get initial mantcen dataframe
+        logger.info('Getting initial mantcen')
+        df_mantcen = get_mantcen_input(iplp_path)
 
-    # LlenadoMantConvenc
-    # Read directly from MantenimientosIM and add to df_mantcen before
-    # generating output
-    # No cíclicos, cíclicos, restricciones de gas, genmin
-    logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
-    df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
+        # LlenadoMantConvenc
+        # Read directly from MantenimientosIM and add to df_mantcen before
+        # generating output
+        # No cíclicos, cíclicos, restricciones de gas, genmin
+        logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
+        df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
 
-    logger.info('Filtering required')
-    df_mantcen = filter_df_mantcen(df_mantcen, df_centrales)
+        logger.info('Filtering required')
+        df_mantcen = filter_df_mantcen(df_mantcen, df_centrales)
 
-    # Add time info
-    logger.info('Adding time info')
-    df_mantcen = add_time_info(df_mantcen)
+        # Add time info
+        logger.info('Adding time info')
+        df_mantcen = add_time_info(df_mantcen)
 
-    # Validate mantcen
-    logger.info('Validating mantcen data')
-    validate_mantcen(df_centrales, df_mantcen)
+        # Validate mantcen
+        logger.info('Validating mantcen data')
+        validate_mantcen(df_centrales, df_mantcen)
 
-    # PLP
-    # Generate arrays with pmin/pmax data
-    logger.info('Generating pmin and pmax data PLP')
-    df_pmin_plp, df_pmax_plp = \
-        get_mantcen_output(blo_eta, df_mantcen, df_centrales,
-                           plp_or_plexos='PLP')
-    # Write data
-    logger.info('Writing data to plpmance_ini.dat file')
-    write_plpmance_ini_dat(df_centrales,
-                           df_pmin_plp, df_pmax_plp,
-                           iplp_path, path_df,
-                           printdata=True)
-    # Plexos
-    # Generate arrays with pmin/pmax data
-    # Redefine nominal Pmax for Plexos, adding reserves
-    df_centrales = get_centrales(iplp_path, plx=True)
-    logger.info('Generating pmin and pmax data Plexos')
-    df_pmin_plexos, df_pmax_plexos = \
-        get_mantcen_output(blo_eta, df_mantcen, df_centrales,
-                           plp_or_plexos='PLEXOS')
-    # Write data
-    logger.info('Writing data to plexos csv files')
-    write_plexos(df_pmin_plexos, df_pmax_plexos, path_df)
+        # PLP
+        # Generate arrays with pmin/pmax data
+        logger.info('Generating pmin and pmax data PLP')
+        df_pmin_plp, df_pmax_plp = \
+            get_mantcen_output(blo_eta, df_mantcen, df_centrales,
+                            plp_or_plexos='PLP')
+        # Write data
+        logger.info('Writing data to plpmance_ini.dat file')
+        write_plpmance_ini_dat(df_centrales,
+                            df_pmin_plp, df_pmax_plp,
+                            iplp_path, path_df,
+                            printdata=True)
+        # Plexos
+        # Generate arrays with pmin/pmax data
+        # Redefine nominal Pmax for Plexos, adding reserves
+        df_centrales = get_centrales(iplp_path, plx=True)
+        logger.info('Generating pmin and pmax data Plexos')
+        df_pmin_plexos, df_pmax_plexos = \
+            get_mantcen_output(blo_eta, df_mantcen, df_centrales,
+                            plp_or_plexos='PLEXOS')
+        # Write data
+        logger.info('Writing data to plexos csv files')
+        write_plexos(df_pmin_plexos, df_pmax_plexos, path_df)
 
-    logger.info('Process finished successfully')
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 
 if __name__ == "__main__":

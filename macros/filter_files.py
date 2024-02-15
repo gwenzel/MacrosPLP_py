@@ -149,42 +149,46 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'filter_files', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'filter_files', path_log)
 
-    logger.info('Checking if folders exist, create them otherwise')
+        logger.info('Checking if folders exist, create them otherwise')
 
-    path_inputs = iplp_path.parent / "Temp"
-    path_inputs.mkdir(parents=True, exist_ok=True)
-    check_is_path(path_inputs)
+        path_inputs = iplp_path.parent / "Temp"
+        path_inputs.mkdir(parents=True, exist_ok=True)
+        check_is_path(path_inputs)
 
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    path_dat.mkdir(parents=True, exist_ok=True)
-    check_is_path(path_dat)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        path_dat.mkdir(parents=True, exist_ok=True)
+        check_is_path(path_dat)
 
-    path_sal = iplp_path.parent / "Temp" / "Sal"
-    path_sal.mkdir(parents=True, exist_ok=True)
-    check_is_path(path_sal)
+        path_sal = iplp_path.parent / "Temp" / "Sal"
+        path_sal.mkdir(parents=True, exist_ok=True)
+        check_is_path(path_sal)
 
-    path_dat_plexos = iplp_path.parent / "Temp" / "Dat Plexos"
-    path_dat_plexos.mkdir(parents=True, exist_ok=True)
-    check_is_path(path_dat_plexos)
+        path_dat_plexos = iplp_path.parent / "Temp" / "Dat Plexos"
+        path_dat_plexos.mkdir(parents=True, exist_ok=True)
+        check_is_path(path_dat_plexos)
 
-    logger.info('Create block2day')
-    create_block2day(iplp_path, path_dat)
-    create_block2day(iplp_path, path_dat_plexos)
+        logger.info('Create block2day')
+        create_block2day(iplp_path, path_dat)
+        create_block2day(iplp_path, path_dat_plexos)
 
-    logger.info('Create plpparam and plpetapas')
-    create_plpparam_and_plpetapas(iplp_path, path_dat, path_dat_plexos)
+        logger.info('Create plpparam and plpetapas')
+        create_plpparam_and_plpetapas(iplp_path, path_dat, path_dat_plexos)
 
-    logger.info('Finished successfully')
+        logger.info('Finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 
 if __name__ == "__main__":

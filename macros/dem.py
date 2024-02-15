@@ -403,72 +403,75 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'demanda', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'demanda', path_log)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, block2day = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, block2day = process_etapas_blocks(path_dat)
 
-    # Sheet "DdaPorBarra" to row format
-    logger.info('Processing DdaPorBarra sheet')
-    df_dda_por_barra = dda_por_barra_to_row_format(iplp_path)
-    print_df_dda_por_barra(path_df, df_dda_por_barra)
+        # Sheet "DdaPorBarra" to row format
+        logger.info('Processing DdaPorBarra sheet')
+        df_dda_por_barra = dda_por_barra_to_row_format(iplp_path)
+        print_df_dda_por_barra(path_df, df_dda_por_barra)
 
-    # Get monthly demand from Sheet "DdaEnergia"
-    logger.info('Processing DdaEnergia sheet')
-    df_monthly_demand = get_monthly_demand(iplp_path)
+        # Get monthly demand from Sheet "DdaEnergia"
+        logger.info('Processing DdaEnergia sheet')
+        df_monthly_demand = get_monthly_demand(iplp_path)
 
-    # Get hourly profiles from Sheet "PerfilesDDA"
-    logger.info('Processing PerfilesDDA sheet')
-    df_hourly_profiles = get_hourly_profiles(iplp_path)
+        # Get hourly profiles from Sheet "PerfilesDDA"
+        logger.info('Processing PerfilesDDA sheet')
+        df_hourly_profiles = get_hourly_profiles(iplp_path)
 
-    # Generate dataframe with profiles per Etapa
-    logger.info('Generating dataframes with profiles per Etapa per Barra')
-    df_all_profiles = get_all_profiles(
-        blo_eta, block2day,
-        df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
+        # Generate dataframe with profiles per Etapa
+        logger.info('Generating dataframes with profiles per Etapa per Barra')
+        df_all_profiles = get_all_profiles(
+            blo_eta, block2day,
+            df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
 
-    # Print to plpdem and uni_plpdem
-    logger.info('Printing plpdem.dat and uni_plpdem.dat')
-    write_plpdem_dat(df_all_profiles, iplp_path)
-    write_uni_plpdem_dat(df_all_profiles, iplp_path)
+        # Print to plpdem and uni_plpdem
+        logger.info('Printing plpdem.dat and uni_plpdem.dat')
+        write_plpdem_dat(df_all_profiles, iplp_path)
+        write_uni_plpdem_dat(df_all_profiles, iplp_path)
 
-    # Get failure units and generate plpfal.prn
-    logger.info('Printing plpfal.prn')
-    write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
+        # Get failure units and generate plpfal.prn
+        logger.info('Printing plpfal.prn')
+        write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
 
-    # Plexos outputs
-    # Get monthly demand from Sheet "DdaEnergia"
-    logger.info('Processing DdaEnergia sheet for plexos')
-    df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
+        # Plexos outputs
+        # Get monthly demand from Sheet "DdaEnergia"
+        logger.info('Processing DdaEnergia sheet for plexos')
+        df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
 
-    # Generate dataframe with profiles per Etapa
-    logger.info('Generating dataframes with profiles per Etapa per'
-                ' Barra for plexos')
-    df_all_profiles = get_all_profiles_plexos(
-        df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
+        # Generate dataframe with profiles per Etapa
+        logger.info('Generating dataframes with profiles per Etapa per'
+                    ' Barra for plexos')
+        df_all_profiles = get_all_profiles_plexos(
+            df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
 
-    # Print df_all_profiles to csv to be used in plexos
-    logger.info('Printing df_all_profiles.csv for plexos')
-    df_all_profiles.to_csv(path_df / 'df_dda_all_profiles_plexos.csv',
-                           index=False)
+        # Print df_all_profiles to csv to be used in plexos
+        logger.info('Printing df_all_profiles.csv for plexos')
+        df_all_profiles.to_csv(path_df / 'df_dda_all_profiles_plexos.csv',
+                               index=False)
 
-    logger.info('Process finished successfully')
-
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

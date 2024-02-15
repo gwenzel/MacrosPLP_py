@@ -406,38 +406,41 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'cen', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'cen', path_log)
 
-    # Read centrales data
-    logger.info('Reading centrales data')
-    df_centrales = read_df_centrales_all(iplp_path)
+        # Read centrales data
+        logger.info('Reading centrales data')
+        df_centrales = read_df_centrales_all(iplp_path)
 
-    # Print plptec
-    logger.info('Printing plptec')
-    print_plptec(path_inputs, df_centrales)
+        # Print plptec
+        logger.info('Printing plptec')
+        print_plptec(path_inputs, df_centrales)
 
-    # Add failure data
-    logger.info('Adding failure data')
-    df_centrales = add_failure_generators(iplp_path, df_centrales)
+        # Add failure data
+        logger.info('Adding failure data')
+        df_centrales = add_failure_generators(iplp_path, df_centrales)
 
-    # Print plpcnfce
-    logger.info('Printing plpcnfce')
-    print_plpcnfce(path_inputs, df_centrales)
+        # Print plpcnfce
+        logger.info('Printing plpcnfce')
+        print_plpcnfce(path_inputs, df_centrales)
 
-    logger.info('Process finished successfully')
-
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

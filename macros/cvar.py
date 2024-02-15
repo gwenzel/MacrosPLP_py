@@ -265,74 +265,77 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
-    path_csv = iplp_path.parent / "Temp" / "CSV"
-    check_is_path(path_csv)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
+        path_csv = iplp_path.parent / "Temp" / "CSV"
+        check_is_path(path_csv)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'cvariable', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'cvariable', path_log)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing csv inputs')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing csv inputs')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    # Llenado Costo Variable - IM_to_CostoVariable
-    # borrar datos
-    logger.info('Reading fuel prices')
-    df_fuel_prices = read_all_fuel_prices(iplp_path)
+        # Llenado Costo Variable - IM_to_CostoVariable
+        # borrar datos
+        logger.info('Reading fuel prices')
+        df_fuel_prices = read_all_fuel_prices(iplp_path)
 
-    # leer Rendimientos y mapeo central-combustible
-    logger.info('Reading heatrate and fuel mapping')
-    df_heatrate_unit_fuel_mapping =\
-        read_heatrate_and_unit_fuel_mapping(iplp_path)
+        # leer Rendimientos y mapeo central-combustible
+        logger.info('Reading heatrate and fuel mapping')
+        df_heatrate_unit_fuel_mapping =\
+            read_heatrate_and_unit_fuel_mapping(iplp_path)
 
-    # crear matriz de centrales - costos variables
-    logger.info('Calculating base Variable Cost')
-    df_cvar = calculate_cvar(path_df, blo_eta, df_fuel_prices,
-                             df_heatrate_unit_fuel_mapping)
+        # crear matriz de centrales - costos variables
+        logger.info('Calculating base Variable Cost')
+        df_cvar = calculate_cvar(path_df, blo_eta, df_fuel_prices,
+                                df_heatrate_unit_fuel_mapping)
 
-    # leer mapeo central - factor de emisiones
-    logger.info('Reading unit emissions mapping and carbon tax')
-    df_unit_emissions = read_unit_emissions_mapping(iplp_path)
-    df_year_co2_tax = read_year_co2_tax(iplp_path)
+        # leer mapeo central - factor de emisiones
+        logger.info('Reading unit emissions mapping and carbon tax')
+        df_unit_emissions = read_unit_emissions_mapping(iplp_path)
+        df_year_co2_tax = read_year_co2_tax(iplp_path)
 
-    # Validate unit emissions and co2_tax data
-    bool_error_emissions = validate_unit_emissions(df_unit_emissions)
-    bool_error_co2_tax = validate_year_co2_tax(df_year_co2_tax, blo_eta)
+        # Validate unit emissions and co2_tax data
+        bool_error_emissions = validate_unit_emissions(df_unit_emissions)
+        bool_error_co2_tax = validate_year_co2_tax(df_year_co2_tax, blo_eta)
 
-    # Sumar impuestos verdes
-    logger.info('Adding CO2 tax to variable cost')
-    df_cvar_with_emissions = add_emissions(
-        path_df, df_cvar, df_unit_emissions, df_year_co2_tax)
+        # Sumar impuestos verdes
+        logger.info('Adding CO2 tax to variable cost')
+        df_cvar_with_emissions = add_emissions(
+            path_df, df_cvar, df_unit_emissions, df_year_co2_tax)
 
-    # Validate final data
-    logger.info('Validating final cvar data')
-    bool_error_cvar = validate_df_cvar_with_emissions(df_cvar_with_emissions)
+        # Validate final data
+        logger.info('Validating final cvar data')
+        bool_error_cvar = validate_df_cvar_with_emissions(df_cvar_with_emissions)
 
-    # escribir en formato .dat
-    logger.info('Printing plpcosce.dat')
-    print_plpcosce(path_inputs, df_cvar_with_emissions)
+        # escribir en formato .dat
+        logger.info('Printing plpcosce.dat')
+        print_plpcosce(path_inputs, df_cvar_with_emissions)
 
-    if bool_error_emissions or bool_error_co2_tax or bool_error_cvar:
-        logger.error('Process finished with errors. Check log.')
-    else:
-        logger.info('Process finished successfully')
-
+        if bool_error_emissions or bool_error_co2_tax or bool_error_cvar:
+            logger.error('Process finished with errors. Check log.')
+        else:
+            logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

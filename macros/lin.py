@@ -96,29 +96,32 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'lineas', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'lineas', path_log)
 
-    logger.info('Write uni_plpcnfli.dat')
-    print_uni_plpcnfli(path_inputs, iplp_path)
+        logger.info('Write uni_plpcnfli.dat')
+        print_uni_plpcnfli(path_inputs, iplp_path)
 
-    logger.info('Read lines data')
-    df_lines = read_df_lines(iplp_path)
+        logger.info('Read lines data')
+        df_lines = read_df_lines(iplp_path)
 
-    logger.info('Write plpcnfli.dat')
-    print_plpcnfli(path_inputs, iplp_path, df_lines)
+        logger.info('Write plpcnfli.dat')
+        print_plpcnfli(path_inputs, iplp_path, df_lines)
 
-    logger.info('Process finished successfully')
-
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

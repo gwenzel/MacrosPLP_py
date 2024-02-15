@@ -552,51 +552,54 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
-    path_csv = iplp_path.parent / "Temp" / "CSV"
-    check_is_path(path_csv)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
+        path_csv = iplp_path.parent / "Temp" / "CSV"
+        check_is_path(path_csv)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'csv_plexos', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'csv_plexos', path_log)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    df_daily = get_df_daily_plexos(blo_eta, iplp_path)
-    df_hourly = get_df_hourly_plexos(blo_eta, iplp_path)
+        df_daily = get_df_daily_plexos(blo_eta, iplp_path)
+        df_hourly = get_df_hourly_plexos(blo_eta, iplp_path)
 
-    # Print Node Load (Demand)
-    logger.info('Processing plexos Node Load')
-    print_node_load(df_hourly, path_csv, path_df)
+        # Print Node Load (Demand)
+        logger.info('Processing plexos Node Load')
+        print_node_load(df_hourly, path_csv, path_df)
 
-    # Generator files
-    logger.info('Processing plexos Generator files')
-    print_generator_files(iplp_path, df_daily, path_csv,
-                          path_df, path_inputs)
+        # Generator files
+        logger.info('Processing plexos Generator files')
+        print_generator_files(iplp_path, df_daily, path_csv,
+                            path_df, path_inputs)
 
-    # Line files
-    logger.info('Processing plexos Line files')
-    print_line_files(iplp_path, df_daily, path_csv)
+        # Line files
+        logger.info('Processing plexos Line files')
+        print_line_files(iplp_path, df_daily, path_csv)
 
-    # GNL Base - volumen mensual de cada estanque de gas
-    logger.info('Processing plexos Gas volumes')
-    print_gas_files(iplp_path, df_daily, path_csv)
+        # GNL Base - volumen mensual de cada estanque de gas
+        logger.info('Processing plexos Gas volumes')
+        print_gas_files(iplp_path, df_daily, path_csv)
 
-    # Finish
-    logger.info('CSV plexos completed successfully')
-
+        # Finish
+        logger.info('CSV plexos completed successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

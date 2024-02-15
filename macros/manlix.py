@@ -363,93 +363,96 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'manlix', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'manlix', path_log)
 
-    logger.info('Read existing lines data')
-    df_lines = read_df_lines(iplp_path)
+        logger.info('Read existing lines data')
+        df_lines = read_df_lines(iplp_path)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    # Get df_manlix
-    logger.info('Getting df_manlix')
-    df_manlix = get_df_manlix(iplp_path, df_lines)
+        # Get df_manlix
+        logger.info('Getting df_manlix')
+        df_manlix = get_df_manlix(iplp_path, df_lines)
 
-    # Get nominal data for all lines
-    nominal_line_capacity_ab, nominal_line_capacity_ba = \
-        get_nominal_line_capacity(df_lines)
+        # Get nominal data for all lines
+        nominal_line_capacity_ab, nominal_line_capacity_ba = \
+            get_nominal_line_capacity(df_lines)
 
-    # Get data from Manli routine to know when lines exist
-    logger.info('Getting df_manli')
-    df_manli = get_df_manli(iplp_path, df_lines)
+        # Get data from Manli routine to know when lines exist
+        logger.info('Getting df_manli')
+        df_manli = get_df_manli(iplp_path, df_lines)
 
-    # Generate dfs for capacity, V, R and X
-    logger.info('Generating max capacity data')
-    df_capmax_ab = get_manlix_output(
-        blo_eta, df_manli, df_manlix, df_lines,
-        id_col='LÍNEA', manli_col='A-B',
-        lines_value_col='A->B', func='mean')
-    df_capmax_ba = get_manlix_output(
-        blo_eta, df_manli, df_manlix, df_lines,
-        id_col='LÍNEA', manli_col='B-A',
-        lines_value_col='B->A', func='mean')
+        # Generate dfs for capacity, V, R and X
+        logger.info('Generating max capacity data')
+        df_capmax_ab = get_manlix_output(
+            blo_eta, df_manli, df_manlix, df_lines,
+            id_col='LÍNEA', manli_col='A-B',
+            lines_value_col='A->B', func='mean')
+        df_capmax_ba = get_manlix_output(
+            blo_eta, df_manli, df_manlix, df_lines,
+            id_col='LÍNEA', manli_col='B-A',
+            lines_value_col='B->A', func='mean')
 
-    logger.info('Generating V data')
-    df_v = get_manlix_output(
-        blo_eta, df_manli, df_manlix, df_lines,
-        id_col='LÍNEA', manli_col='V [kV]',
-        lines_value_col='V [kV]', func='last')
+        logger.info('Generating V data')
+        df_v = get_manlix_output(
+            blo_eta, df_manli, df_manlix, df_lines,
+            id_col='LÍNEA', manli_col='V [kV]',
+            lines_value_col='V [kV]', func='last')
 
-    logger.info('Generating R data')
-    df_r = get_manlix_output(
-        blo_eta, df_manli, df_manlix, df_lines,
-        id_col='LÍNEA', manli_col='R [ohms]',
-        lines_value_col='R[ohm]', func='last')
+        logger.info('Generating R data')
+        df_r = get_manlix_output(
+            blo_eta, df_manli, df_manlix, df_lines,
+            id_col='LÍNEA', manli_col='R [ohms]',
+            lines_value_col='R[ohm]', func='last')
 
-    logger.info('Generating X data')
-    df_x = get_manlix_output(
-        blo_eta, df_manli, df_manlix, df_lines,
-        id_col='LÍNEA', manli_col='X [ohms]',
-        lines_value_col='X[ohm]', func='last')
+        logger.info('Generating X data')
+        df_x = get_manlix_output(
+            blo_eta, df_manli, df_manlix, df_lines,
+            id_col='LÍNEA', manli_col='X [ohms]',
+            lines_value_col='X[ohm]', func='last')
 
-    logger.info('Read MantCen Pmax data for gas units and '
-                'add to transformers line capacity. Add them to '
-                'V, R and X dataframes too.')
-    df_capmax_ab, df_capmax_ba = get_trf_capacity(
-        iplp_path, path_df, df_lines,
-        df_capmax_ab, df_capmax_ba)
+        logger.info('Read MantCen Pmax data for gas units and '
+                    'add to transformers line capacity. Add them to '
+                    'V, R and X dataframes too.')
+        df_capmax_ab, df_capmax_ba = get_trf_capacity(
+            iplp_path, path_df, df_lines,
+            df_capmax_ab, df_capmax_ba)
 
-    logger.info('Add missing transformer data')
-    df_v, df_r, df_x = add_trf_data(
-        iplp_path, df_lines, df_v, df_r, df_x)
+        logger.info('Add missing transformer data')
+        df_v, df_r, df_x = add_trf_data(
+            iplp_path, df_lines, df_v, df_r, df_x)
 
-    logger.info('Detect changes and get formatted dataframe')
-    df_manlix_changes = get_manlix_changes(
-        df_capmax_ab, df_capmax_ba,
-        nominal_line_capacity_ab, nominal_line_capacity_ba,
-        df_v, df_r, df_x, path_df)
+        logger.info('Detect changes and get formatted dataframe')
+        df_manlix_changes = get_manlix_changes(
+            df_capmax_ab, df_capmax_ba,
+            nominal_line_capacity_ab, nominal_line_capacity_ba,
+            df_v, df_r, df_x, path_df)
 
-    # Write data
-    logger.info('Write manli data')
-    write_plpmanlix(path_inputs, df_manlix_changes)
+        # Write data
+        logger.info('Write manli data')
+        write_plpmanlix(path_inputs, df_manlix_changes)
 
-    logger.info('Process finished successfully')
-
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

@@ -106,39 +106,43 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    iplp_path, path_inputs, path_dat, path_df =\
-        get_input_paths()
+    try:
+        # Get input file path
+        iplp_path, path_inputs, path_dat, path_df =\
+            get_input_paths()
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'ernc', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'ernc', path_log)
 
-    # Get ERNC scenario and input file names
-    input_names = get_input_names(iplp_path)
+        # Get ERNC scenario and input file names
+        input_names = get_input_names(iplp_path)
 
-    # Generate csv files
-    generate_csv_files(
-        iplp_path, path_df, input_names)
+        # Generate csv files
+        generate_csv_files(
+            iplp_path, path_df, input_names)
 
-    # Get inputs
-    ernc_data, blo_eta, block2day, valid_unit_names =\
-        get_inputs(iplp_path, path_df, path_dat, input_names)
+        # Get inputs
+        ernc_data, blo_eta, block2day, valid_unit_names =\
+            get_inputs(iplp_path, path_df, path_dat, input_names)
 
-    # Get profiles and rating factors
-    df_all_profiles, df_rf = get_profiles_and_rating_factors(
-        ernc_data, blo_eta, block2day, path_df)
+        # Get profiles and rating factors
+        df_all_profiles, df_rf = get_profiles_and_rating_factors(
+            ernc_data, blo_eta, block2day, path_df)
 
-    # Use RFs to scale profiles
-    df_scaled_profiles = scale_profiles(
-        ernc_data, df_all_profiles, df_rf, valid_unit_names, path_df)
+        # Use RFs to scale profiles
+        df_scaled_profiles = scale_profiles(
+            ernc_data, df_all_profiles, df_rf, valid_unit_names, path_df)
 
-    # Write data in .dat format
-    write_data(
-        ernc_data, df_scaled_profiles, valid_unit_names, iplp_path)
+        # Write data in .dat format
+        write_data(
+            ernc_data, df_scaled_profiles, valid_unit_names, iplp_path)
 
-    logger.info('Process finished successfully')
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 
 if __name__ == "__main__":

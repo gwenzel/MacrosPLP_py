@@ -240,53 +240,56 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'manli', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'manli', path_log)
 
-    logger.info('Read existing lines data')
-    df_lines = read_df_lines(iplp_path)
+        logger.info('Read existing lines data')
+        df_lines = read_df_lines(iplp_path)
 
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
 
-    # Get df_manli
-    logger.info('Getting df_manli')
-    df_manli = get_df_manli(iplp_path, df_lines)
+        # Get df_manli
+        logger.info('Getting df_manli')
+        df_manli = get_df_manli(iplp_path, df_lines)
 
-    # Generate arrays with min/max capacity data
-    logger.info('Generating min and max capacity data')
-    df_capmax_ab = get_manli_output(blo_eta, df_manli, df_lines,
-                                    id_col='LÍNEA',
-                                    manli_col='A-B',
-                                    lines_value_col='A->B',
-                                    func='mean')
-    df_capmax_ba = get_manli_output(blo_eta, df_manli, df_lines,
-                                    id_col='LÍNEA',
-                                    manli_col='B-A',
-                                    lines_value_col='B->A',
-                                    func='mean')
-    # Write data
-    logger.info('Write manli data')
-    print_dfs(path_df, df_capmax_ab, df_capmax_ba)
-    write_plpmanli(path_inputs, df_capmax_ab, df_capmax_ba)
-    write_uni_plpmanli(path_inputs)
+        # Generate arrays with min/max capacity data
+        logger.info('Generating min and max capacity data')
+        df_capmax_ab = get_manli_output(blo_eta, df_manli, df_lines,
+                                        id_col='LÍNEA',
+                                        manli_col='A-B',
+                                        lines_value_col='A->B',
+                                        func='mean')
+        df_capmax_ba = get_manli_output(blo_eta, df_manli, df_lines,
+                                        id_col='LÍNEA',
+                                        manli_col='B-A',
+                                        lines_value_col='B->A',
+                                        func='mean')
+        # Write data
+        logger.info('Write manli data')
+        print_dfs(path_df, df_capmax_ab, df_capmax_ba)
+        write_plpmanli(path_inputs, df_capmax_ab, df_capmax_ba)
+        write_uni_plpmanli(path_inputs)
 
-    logger.info('Process finished successfully')
-
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 if __name__ == "__main__":
     main()

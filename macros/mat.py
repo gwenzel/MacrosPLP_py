@@ -52,28 +52,32 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser()
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser()
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'plpmat', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'plpmat', path_log)
 
-    # Number of iterations
-    num_iter = read_num_iter(iplp_path)
-    logger.info('Selected number of iterations is: %s' % num_iter)
+        # Number of iterations
+        num_iter = read_num_iter(iplp_path)
+        logger.info('Selected number of iterations is: %s' % num_iter)
 
-    logger.info('Printing plpmat.dat')
-    print_plpmat(path_inputs, num_iter)
+        logger.info('Printing plpmat.dat')
+        print_plpmat(path_inputs, num_iter)
 
-    logger.info('Process finished successfully')
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 
 if __name__ == "__main__":

@@ -375,76 +375,80 @@ def main():
     '''
     Main routine
     '''
-    # Get input file path
-    logger.info('Getting input file path')
-    parser = define_arg_parser(plp=True, plx=True)
-    iplp_path = get_iplp_input_path(parser)
-    path_inputs = iplp_path.parent / "Temp"
-    check_is_path(path_inputs)
-    path_dat = iplp_path.parent / "Temp" / "Dat"
-    check_is_path(path_dat)
-    path_df = iplp_path.parent / "Temp" / "df"
-    check_is_path(path_df)
-    path_pib = iplp_path.parent / "Temp" / "PIB"
-    check_is_path(path_pib)
+    try:
+        # Get input file path
+        logger.info('Getting input file path')
+        parser = define_arg_parser(plp=True, plx=True)
+        iplp_path = get_iplp_input_path(parser)
+        path_inputs = iplp_path.parent / "Temp"
+        check_is_path(path_inputs)
+        path_dat = iplp_path.parent / "Temp" / "Dat"
+        check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
+        path_pib = iplp_path.parent / "Temp" / "PIB"
+        check_is_path(path_pib)
 
-    # Add destination folder to logger
-    path_log = iplp_path.parent / "Temp" / "log"
-    check_is_path(path_log)
-    add_file_handler(logger, 'water_inflows', path_log)
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
+        add_file_handler(logger, 'water_inflows', path_log)
 
-    # Get PLP/PLX enabling booleans
-    plp_enable, plx_enable = get_plp_plx_booleans(parser)
-    if (plx_enable | plp_enable) is False:
-        logger.error('No process enabled. Exiting...')
-        exit()
+        # Get PLP/PLX enabling booleans
+        plp_enable, plx_enable = get_plp_plx_booleans(parser)
+        if (plx_enable | plp_enable) is False:
+            logger.error('No process enabled. Exiting...')
+            exit()
 
-    if plp_enable:
-        logger.info('PLP enabled')
-    else:
-        logger.info('PLP disabled')
-    if plx_enable:
-        logger.info('PLX enabled')
-    else:
-        logger.info('PLX disabled')
-
-    # Get Hour-Blocks-Etapas definition
-    logger.info('Processing block to etapas files')
-    blo_eta, _, _ = process_etapas_blocks(path_dat)
-
-    logger.info('Getting dataframe with all data')
-    df_all_inflows = get_df_all_inflows(iplp_path, blo_eta,
-                                        plp_enable, plx_enable)
-    # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv',
-    #   index=False)
-
-    if plp_enable:
-        # logger.info('Reducing uncertainty of first months (only for plp)')
-        # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
-        logger.info('Printing inflows in plp format')
-        write_plpaflce(path_inputs, df_all_inflows)
-
-    if plx_enable:
         if plp_enable:
-            logger.info('Filtering inflows dataframe (PLP was enabled)')
-            # Otherwise, it was already filtered in get_df_all_inflows
-            df_all_inflows = filter_df_all_inflows(
-                iplp_path, df_all_inflows)
+            logger.info('PLP enabled')
+        else:
+            logger.info('PLP disabled')
+        if plx_enable:
+            logger.info('PLX enabled')
+        else:
+            logger.info('PLX disabled')
 
-        logger.info('Shuffling inflows according to ConfigSim')
-        df_configsim = read_configsim(iplp_path)
-        # Make sure df_daily is the plexos short version
-        df_daily = get_df_daily(blo_eta, iplp_path, plexos_short=True)
-        df_all_inflows = shuffle_hidrologies(
-            df_daily, iplp_path, df_configsim, df_all_inflows)
-        # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv',
+        # Get Hour-Blocks-Etapas definition
+        logger.info('Processing block to etapas files')
+        blo_eta, _, _ = process_etapas_blocks(path_dat)
+
+        logger.info('Getting dataframe with all data')
+        df_all_inflows = get_df_all_inflows(iplp_path, blo_eta,
+                                            plp_enable, plx_enable)
+        # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv',
         #   index=False)
 
-        logger.info('Printing inflows in plexos format')
-        print_plexos_inflows_all(df_all_inflows, path_pib)
-        print_plexos_inflows_separate(df_all_inflows, path_pib)
+        if plp_enable:
+            # logger.info('Reducing uncertainty of first months (only for plp)')
+            # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
+            logger.info('Printing inflows in plp format')
+            write_plpaflce(path_inputs, df_all_inflows)
 
-    logger.info('Process finished successfully')
+        if plx_enable:
+            if plp_enable:
+                logger.info('Filtering inflows dataframe (PLP was enabled)')
+                # Otherwise, it was already filtered in get_df_all_inflows
+                df_all_inflows = filter_df_all_inflows(
+                    iplp_path, df_all_inflows)
+
+            logger.info('Shuffling inflows according to ConfigSim')
+            df_configsim = read_configsim(iplp_path)
+            # Make sure df_daily is the plexos short version
+            df_daily = get_df_daily(blo_eta, iplp_path, plexos_short=True)
+            df_all_inflows = shuffle_hidrologies(
+                df_daily, iplp_path, df_configsim, df_all_inflows)
+            # df_all_inflows.to_csv(path_df / 'df_all_inflows_shuffled.csv',
+            #   index=False)
+
+            logger.info('Printing inflows in plexos format')
+            print_plexos_inflows_all(df_all_inflows, path_pib)
+            print_plexos_inflows_separate(df_all_inflows, path_pib)
+
+        logger.info('Process finished successfully')
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
 
 
 if __name__ == "__main__":
