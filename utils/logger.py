@@ -17,17 +17,10 @@ def create_logger(logname: str):
     formatter = logging.Formatter(
         '%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 
-    # define file and stream handlers
-    root = get_project_root()
-    filepath = root / ('log_%s.log' % logname)
-    file_handler = logging.FileHandler(filepath, mode='w')
-    file_handler.setFormatter(formatter)
-
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
 
     # add file and handler to logger
-    logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
     return logger
 
