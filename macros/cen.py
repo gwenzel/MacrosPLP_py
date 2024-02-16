@@ -79,6 +79,7 @@ def read_df_centrales_all(iplp_path: Path) -> pd.DataFrame:
     'F CENTRAL DE FALLA
     'X FUERA DE SERVICIO
     '''
+    validate_column_names(df)
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
     # Rename columns
@@ -118,11 +119,61 @@ def read_df_centrales_all(iplp_path: Path) -> pd.DataFrame:
     df['VertMax'] = df['VertMax'].fillna(0)
     # Add new fields
     # Select columns
+    # Clean and format
+    df = clean_and_format_df_centrales(df)
+    validate_df_centrales(df)
+    return df
+
+
+def clean_and_format_df_centrales(df: pd.DataFrame):
     # Remove rows where Nombre is empty
     df = df[df['Nombre'].notna()]
-    # Set types
-    df['NumCen'] = df['NumCen'].astype(int)
     return df
+
+
+def validate_column_names(df: pd.DataFrame):
+    # Check if df_centrales has expected column names
+    expected_columns = [
+        'INDICE', 'CENTRALES', 'Tipo de Central', 'Costo Variable',
+        'Rendimiento', 'Inicial', 'Final', 'Mínima', 'Máxima',
+        'Inicial.1', 'Final.1', 'Mínimo', 'Máximo', 'Mínima.1', 'Máxima.1',
+        'Mínimo.1', 'Máximo.1', 'Afluente Primera Semana',
+        'Función Costo Futuro', 'Independencia Hidrológica']
+    # Check if df columns contain expected columns
+    for column in expected_columns:
+        if column not in df.columns:
+            logger.error('Centrales sheet must have column: %s' % column)
+        assert column in expected_columns
+
+
+def validate_df_centrales(df_centrales: pd.DataFrame):
+    # Check if there are repeated names
+    if df_centrales['Nombre'].duplicated().any():
+        logger.error('There are repeated names in Centrales sheet')
+    # Check if there are repeated NumCen
+    if df_centrales['NumCen'].duplicated().any():
+        logger.error('There are repeated NumCen in Centrales sheet')
+    # Check if there are empty names
+    if df_centrales['Nombre'].isna().any():
+        logger.error('There are empty names in Centrales sheet')
+    # Check if there are empty NumCen
+    if df_centrales['NumCen'].isna().any():
+        logger.error('There are empty NumCen in Centrales sheet')
+    # Check if there are empty CosVar
+    if df_centrales['CosVar'].isna().any():
+        logger.warning('There are empty CosVar in Centrales sheet')
+    # Assert dtypes
+    assert df_centrales.dtypes['NumCen'] == 'float64'
+    assert df_centrales.dtypes['CosVar'] == 'float64'
+    assert df_centrales.dtypes['CotaIni'] == 'float64'
+    assert df_centrales.dtypes['CotaFin'] == 'float64'
+    assert df_centrales.dtypes['CotaMin'] == 'float64'
+    assert df_centrales.dtypes['CotaMax'] == 'float64'
+    assert df_centrales.dtypes['Pmin'] == 'float64'
+    assert df_centrales.dtypes['Pmax'] == 'float64'
+    assert df_centrales.dtypes['VertMin'] == 'float64'
+    assert df_centrales.dtypes['VertMax'] == 'float64'
+    assert df_centrales.dtypes['Afluen'] == 'float64'
 
 
 def add_failure_generators(iplp_path: Path,
@@ -134,6 +185,16 @@ def add_failure_generators(iplp_path: Path,
     df_buses_falla = df_buses[df_buses['FlagFalla']]
 
     df_gx_falla = pd.read_excel(iplp_path, sheet_name="GxFalla", skiprows=1)
+    # Drop rows if any value is nan
+    df_gx_falla = df_gx_falla.dropna()
+    # Check shape
+    if df_gx_falla.shape[0] != 1:
+        logger.error('GxFalla sheet must have only 1 row')
+    # Check column names
+    if df_gx_falla.columns.tolist() != [
+            'TRAMO', 'PROFUNDIDAD', 'COSTO DE FALLA']:
+        logger.error('GxFalla sheet must have columns: '
+                     'TRAMO, PROFUNDIDAD, COSTO DE FALLA')
     # tramo = df_gx_falla.iloc[0, 0]
     # prof = df_gx_falla.iloc[0, 1]
     cost = df_gx_falla.iloc[0, 2]
@@ -156,7 +217,7 @@ def add_failure_generators(iplp_path: Path,
                 list_bus_conected.append(b)
     '''
     # Add data to dataframe
-    last_index = df_centrales['NumCen'].max()
+    last_index = int(df_centrales['NumCen'].max())
     df_centrales_falla['NumCen'] = range(
         last_index + 1, last_index + 1 + len(list_failure_names))
     df_centrales_falla['Nombre'] = list_failure_names
