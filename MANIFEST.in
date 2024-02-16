@@ -1,4 +1,8 @@
 graft macros
 graft utils
-recursive-include macros/inputs *.csv
-recursive-exclude macros/inputs *.xlsx
+graft postpro
+global-exclude *~ *.pyc
+global-exclude *~ *.log
+global-exclude *~ *.bat
+global-exclude *~ *.csv
+global-exclude *~ *.xlsx
