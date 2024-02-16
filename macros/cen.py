@@ -118,6 +118,10 @@ def read_df_centrales_all(iplp_path: Path) -> pd.DataFrame:
     df['VertMax'] = df['VertMax'].fillna(0)
     # Add new fields
     # Select columns
+    # Remove rows where Nombre is empty
+    df = df[df['Nombre'].notna()]
+    # Set types
+    df['NumCen'] = df['NumCen'].astype(int)
     return df
 
 
