@@ -64,6 +64,7 @@ def read_inflow_data(iplp_path: Path) -> pd.Series:
                        sheet_name="Caudales_full",
                        skiprows=4,
                        usecols="A:AX")
+    validate_inflow_data(df)
     # Get dict from hidroyear to hidrology and filter
     dict_hidroyears = read_dict_hidroyears(iplp_path)
     df = df[df['AÑO'].isin(dict_hidroyears.keys())]
@@ -75,24 +76,75 @@ def read_inflow_data(iplp_path: Path) -> pd.Series:
     return series
 
 
+def validate_inflow_data(df: pd.DataFrame):
+    '''
+    Validate inflow data
+    '''
+    # Check for NaNs
+    if df.isnull().values.any():
+        raise ValueError('Inflow data contains NaNs')
+    # Check for negative values
+    if (df.iloc[:, 2:] < 0).values.any():
+        raise ValueError('Inflow data contains negative values')
+    # Check column names
+    if df.columns[0] != 'CENTRAL':
+        raise ValueError('Inflow data does not contain CENTRAL column')
+    if df.columns[1] != 'AÑO':
+        raise ValueError('Inflow data does not contain AÑO column')
+
+
 def read_configsim(iplp_path: Path) -> pd.DataFrame:
-    return pd.read_excel(iplp_path,
-                         sheet_name="ConfigSim",
-                         usecols="A:U").set_index('Etapa')
+    df = pd.read_excel(iplp_path,
+                       sheet_name="ConfigSim",
+                       usecols="A:U").set_index('Etapa')
+    validate_configsim(df)
+    return df
+
+
+def validate_configsim(df: pd.DataFrame):
+    '''
+    Validate ConfigSim data
+    '''
+    # Check for NaNs
+    if df.isnull().values.any():
+        raise ValueError('ConfigSim data contains NaNs')
+    # Check for negative values
+    if (df < 0).values.any():
+        raise ValueError('ConfigSim data contains negative values')
 
 
 def read_days_per_week(iplp_path: Path) -> pd.DataFrame:
-    return pd.read_excel(iplp_path,
-                         sheet_name="TimeData",
-                         usecols="A:D")
+    df = pd.read_excel(iplp_path,
+                       sheet_name="TimeData",
+                       usecols="A:D")
+    validate_timedata_1(df)
+    df.dropna(inplace=True)
+    return df
+
+
+def validate_timedata_1(df: pd.DataFrame):
+    # Check if column names are ok
+    if not df.columns.tolist() == ['id_week', 'name', 'month', 'day']:
+        raise ValueError('TimeData sheet does not contain id_week, name, '
+                         ' month or day as columns. Exiting...')
 
 
 def read_dict_hidroyears(iplp_path: Path) -> dict:
     df = pd.read_excel(iplp_path,
                        sheet_name="TimeData",
                        usecols="F:G")
+    validate_timedata_2(df)
     df = df.dropna().astype(int).set_index('AÑO')
     return df.to_dict()['INDHID']
+
+
+def validate_timedata_2(df: pd.DataFrame):
+    # Check if column names are ok
+    if not df.columns.tolist() == ['INDHID', 'AÑO']:
+        logger.error('TimeData sheet does not contain INDHID and AÑO columns. '
+                     'Exiting...')
+        raise ValueError('TimeData sheet does not contain INDHID and AÑO '
+                         'columns')
 
 
 def get_week_name(row: pd.DataFrame,
