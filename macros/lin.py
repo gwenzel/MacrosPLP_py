@@ -11,6 +11,7 @@ from utils.utils import (timeit,
 from utils.logger import add_file_handler, create_logger
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 logger = create_logger('lineas')
 
@@ -51,6 +52,7 @@ def print_uni_plpcnfli(path_inputs: Path, iplp_path: Path):
 def read_df_lines(iplp_path: Path) -> pd.DataFrame:
     df_lines = pd.read_excel(iplp_path, sheet_name='Líneas',
                              usecols='B:O', skiprows=4)
+    validate_lines(df_lines)
     # Filter out non-operative lines
     df_lines = df_lines[df_lines['Operativa']]
     # Check name length
@@ -71,6 +73,35 @@ def read_df_lines(iplp_path: Path) -> pd.DataFrame:
     df_lines['FlujoDC'] = df_lines['FlujoDC'].replace(
         {True: 'T', False: 'F'})
     return df_lines
+
+
+def validate_lines(df: pd.DataFrame):
+    # Check column names
+    expected_cols = ['Nombre A->B', 'Barra A', 'Barra B', 'A->B', 'B->A',
+                     'V [kV]', 'R [0/1]', 'X [0/1]', 'R[ohm]', 'X[ohm]',
+                     'Pérdidas', 'Nº de Tramos', 'Operativa', 'FlujoDC']
+    for col in expected_cols:
+        if col not in df.columns:
+            raise ValueError(f'Column {col} not found in input file')
+    # Check dtypes
+    expected_dtypes = {'Nombre A->B': object,
+                       'Barra A': np.dtype('int64'),
+                       'Barra B': np.dtype('int64'),
+                       'A->B': np.dtype('float64'),
+                       'B->A': np.dtype('float64'),
+                       'V [kV]': np.dtype('int64'),
+                       'R [0/1]': np.dtype('float64'),
+                       'X [0/1]': np.dtype('float64'),
+                       'R[ohm]': np.dtype('float64'),
+                       'X[ohm]': np.dtype('float64'),
+                       'Pérdidas': np.dtype('bool'),
+                       'Nº de Tramos': np.dtype('int64'),
+                       'Operativa': np.dtype('bool'),
+                       'FlujoDC': np.dtype('bool')}
+    for col, dtype in expected_dtypes.items():
+        if df[col].dtype != dtype:
+            logger.warning(f'Column {col} dtype does not '
+                           f'match expected value {dtype}')
 
 
 def print_plpcnfli(path_inputs: Path, iplp_path: Path, df_lines: pd.DataFrame):

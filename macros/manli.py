@@ -37,9 +37,24 @@ def get_manli_input(iplp_path: Path) -> pd.DataFrame:
     '''
     df_manli = pd.read_excel(iplp_path, sheet_name='MantLIN',
                              usecols='B:G', skiprows=4)
+    validate_df_manli(df_manli)
     df_manli['INICIAL'] = df_manli['INICIAL'].apply(from_excel)
     df_manli['FINAL'] = df_manli['FINAL'].apply(from_excel)
     return df_manli
+
+
+def validate_df_manli(df_manli: pd.DataFrame):
+    '''
+    Validate df_manli data
+    '''
+    # Check if columns INICIAL and FINAL are present
+    if not all([col in df_manli.columns for col in ['INICIAL', 'FINAL']]):
+        raise ValueError('INICIAL or FINAL columns are missing')
+    # Check if values in INICIAL and FINAL columns are integers
+    if not all([isinstance(x, int) for x in df_manli['INICIAL']]):
+        raise ValueError('INICIAL values are not integers')
+    if not all([isinstance(x, int) for x in df_manli['FINAL']]):
+        raise ValueError('FINAL values are not integers')
 
 
 def build_df_aux(df_capmax_ab: pd.DataFrame,
@@ -116,7 +131,7 @@ def filter_lines(df_lines: pd.DataFrame,
     return df_manli[filter1 & filter2]
 
 
-def validate_manli(df_manli: pd.DataFrame, df_lines: pd.DataFrame):
+def validate_processed_manli(df_manli: pd.DataFrame, df_lines: pd.DataFrame):
     for idx, row in df_manli.iterrows():
         if row.isna().any():
             logger.error('Missing fields in row %s' % idx)
@@ -231,7 +246,7 @@ def get_df_manli(iplp_path: Path, df_lines: pd.DataFrame) -> pd.DataFrame:
 
     # Validate manli data
     logger.info('Validating MantLin data')
-    validate_manli(df_manli, df_lines)
+    validate_processed_manli(df_manli, df_lines)
     return df_manli
 
 

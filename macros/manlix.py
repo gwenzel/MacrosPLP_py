@@ -2,7 +2,6 @@
 
 Generate PLPMANLIX.dat file with changes in line capacity
 '''
-import sys
 from utils.utils import (timeit,
                          define_arg_parser,
                          get_iplp_input_path,
@@ -44,9 +43,24 @@ def get_manlix_input(iplp_path: Path) -> pd.DataFrame:
     '''
     df_manlix = pd.read_excel(iplp_path, sheet_name='MantLINX',
                               usecols='B:J', skiprows=4)
+    validate_manlix(df_manlix)
     df_manlix['INICIAL'] = df_manlix['INICIAL'].apply(from_excel)
     df_manlix['FINAL'] = df_manlix['FINAL'].apply(from_excel)
     return df_manlix
+
+
+def validate_manlix(df: pd.DataFrame):
+    '''
+    Validate df_manli data
+    '''
+    # Check if columns INICIAL and FINAL are present
+    if not all([col in df.columns for col in ['INICIAL', 'FINAL']]):
+        raise ValueError('INICIAL or FINAL columns are missing')
+    # Check if values in INICIAL and FINAL columns are integers
+    if not all([isinstance(x, int) for x in df['INICIAL']]):
+        raise ValueError('INICIAL values are not integers')
+    if not all([isinstance(x, int) for x in df['FINAL']]):
+        raise ValueError('FINAL values are not integers')
 
 
 def filter_linesx(df_lines: pd.DataFrame,
@@ -59,7 +73,7 @@ def filter_linesx(df_lines: pd.DataFrame,
     return df_manlix[filter1 & filter2]
 
 
-def validate_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
+def validate_processed_manlix(df_manlix: pd.DataFrame, df_lines: pd.DataFrame):
     for idx, row in df_manlix.iterrows():
         if row.isna().any():
             logger.error('Missing fields in row %s' % idx)
@@ -204,7 +218,7 @@ def get_df_manlix(iplp_path: Path, df_lines: pd.DataFrame) -> pd.DataFrame:
 
     # Validate manli data
     logger.info('Validating MantLINX data')
-    validate_manlix(df_manlix, df_lines)
+    validate_processed_manlix(df_manlix, df_lines)
     return df_manlix
 
 
@@ -248,6 +262,7 @@ def get_dict_centrales_trf(iplp_path: Path) -> pd.DataFrame:
     '''
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
                        skiprows=4, usecols="B,C,AP,BG")
+    validate_trf_centrales(df)
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
     # Keep only Gas units
@@ -262,6 +277,20 @@ def get_dict_centrales_trf(iplp_path: Path) -> pd.DataFrame:
     for trf in transformers:
         dict_trf_units[trf] = df[df['Barra'] == trf]['Nombre'].tolist()
     return dict_trf_units
+
+
+def validate_trf_centrales(df: pd.DataFrame):
+    # Check column names
+    expected_cols = ['CENTRALES', 'Barra', 'Tipo de Central', 'Fuel']
+    for col in expected_cols:
+        if col not in df.columns:
+            raise ValueError(f'Column {col} not found in input file')
+    # Check if there are Barras starting with 'Trf_'
+    if not df['Barra'].str.startswith('Trf_').any():
+        logger.warning('No transformers found in Barras column')
+    # Check if there are Fuel starting with 'Gas-'
+    if not df['Fuel'].str.startswith('Gas-').any():
+        logger.warning('No gas units found in Fuel column')
 
 
 def get_dict_trf_to_line(trf_list: list, df_lines: pd.DataFrame) -> dict:
@@ -299,7 +328,7 @@ def get_trf_capacity(iplp_path: Path, path_df: Path,
         df_mantcen_pmax = pd.read_csv(path_df / 'df_mantcen_pmax.csv')
     except Exception as e:
         logger.error(e)
-        sys.exit('Error reading df/df_mantcen_pmax.csv')
+        raise FileExistsError('Error reading df/df_mantcen_pmax.csv')
 
     mantcen_cols = df_mantcen_pmax.columns.tolist()
 
