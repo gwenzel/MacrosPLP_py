@@ -300,6 +300,8 @@ def apply_plp_functions(row: pd.Series) -> tuple[pd.Series, float]:
             logger.error('Error in PLP Volume function for %s' % row['Nombre'])
             logger.error('Change Cota or fix function in macros/func_cdec')
             logger.error(e)
+            raise ValueError('Error in PLP Volume function for %s' %
+                             row['Nombre'])
         factor_escala = 10**int(math.log10(row['VolMax']) + 0.5)
     else:
         logger.error('Vol function for %s not found' % row['Nombre'])
@@ -314,8 +316,11 @@ def apply_plp_functions(row: pd.Series) -> tuple[pd.Series, float]:
             logger.error('Error in PLP Rendi function for %s' % row['Nombre'])
             logger.error('Change CotaIni or fix function in macros/func_cdec')
             logger.error(e)
+            raise ValueError('Error in PLP Rendi function for %s' %
+                             row['Nombre'])
     else:
         logger.error('Rendi function for %s not found' % row['Nombre'])
+        raise ValueError('Rendi function for %s not found' % row['Nombre'])
     return row, factor_escala
 
 
@@ -514,10 +519,11 @@ def main():
         logger.info('Printing plpcnfce')
         print_plpcnfce(path_inputs, df_centrales)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

@@ -118,10 +118,11 @@ def main():
         logger.info('Write plpcnfli.dat')
         print_plpcnfli(path_inputs, iplp_path, df_lines)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

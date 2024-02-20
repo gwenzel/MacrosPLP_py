@@ -286,10 +286,11 @@ def main():
         write_plpmanli(path_inputs, df_capmax_ab, df_capmax_ba)
         write_uni_plpmanli(path_inputs)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

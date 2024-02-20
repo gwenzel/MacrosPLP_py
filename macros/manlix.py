@@ -449,10 +449,12 @@ def main():
         logger.info('Write manli data')
         write_plpmanlix(path_inputs, df_manlix_changes)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
+
 
 if __name__ == "__main__":
     main()

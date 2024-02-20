@@ -595,11 +595,11 @@ def main():
         logger.info('Processing plexos Gas volumes')
         print_gas_files(iplp_path, df_daily, path_csv)
 
-        # Finish
-        logger.info('CSV plexos completed successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

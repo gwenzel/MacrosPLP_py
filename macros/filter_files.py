@@ -185,10 +185,11 @@ def main():
         logger.info('Create plpparam and plpetapas')
         create_plpparam_and_plpetapas(iplp_path, path_dat, path_dat_plexos)
 
-        logger.info('Finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

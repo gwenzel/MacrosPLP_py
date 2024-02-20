@@ -140,10 +140,11 @@ def main():
         write_data(
             ernc_data, df_scaled_profiles, valid_unit_names, iplp_path)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

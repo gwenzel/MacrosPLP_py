@@ -74,10 +74,11 @@ def main():
         logger.info('Printing plpmat.dat')
         print_plpmat(path_inputs, num_iter)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

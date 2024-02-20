@@ -130,10 +130,11 @@ def main():
         logger.info('Printing plpbar_full.dat')
         print_plpbar_full(path_inputs, df_barras)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":

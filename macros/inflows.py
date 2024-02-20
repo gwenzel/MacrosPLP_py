@@ -444,10 +444,11 @@ def main():
             print_plexos_inflows_all(df_all_inflows, path_pib)
             print_plexos_inflows_separate(df_all_inflows, path_pib)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":
