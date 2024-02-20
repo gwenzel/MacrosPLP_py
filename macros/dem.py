@@ -60,15 +60,22 @@ formatters_plpfal = {
     "PotMax":   "{:8.2f}".format
 }
 
+N_MAX_BARRAS = 23
+
 
 def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
+    '''
+    Read DdaPorBarra sheet and transform it to row format
+    '''
     df = pd.read_excel(iplp_path, sheet_name="DdaPorBarra")
+    # Validate DdaPorBarra sheet
+    validate_dda_por_barra(df)
+    # Transform to row format
     keys = ["Coordinado", "Cliente", "Profile",
             "Barra Consumo", "Factor Barra Consumo"]
     df_as_dict = df.to_dict()
     new_dict = {key: {} for key in keys}
     idx = 0
-    N_MAX_BARRAS = 23
     N_COORD_CLIENTE = len(df)
     for i in range(N_COORD_CLIENTE):
         for barra in range(1, N_MAX_BARRAS + 1):
@@ -85,6 +92,49 @@ def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
     df_dda_por_barra['Coordinado'] = \
         df_dda_por_barra['Coordinado'].fillna("NA")
     return df_dda_por_barra
+
+
+def validate_dda_por_barra(df: pd.DataFrame):
+    '''
+    Validate DdaPorBarra sheet
+    '''
+    # Check if all columns are present
+    cols_to_check = ["#", "Coordinado", "Cliente", "Perfil día tipo"]
+    for col in cols_to_check:
+        if col not in df.columns:
+            raise ValueError(
+                "Column %s is not present in DdaPorBarra sheet" % col)
+    # Check if all columns are present
+    cols_to_check = ["Barra Consumo %s" % i for i in range(
+        1, N_MAX_BARRAS + 1)]
+    for col in cols_to_check:
+        if col not in df.columns:
+            raise ValueError(
+                "Column %s is not present in DdaPorBarra sheet" % col)
+    cols_to_check = ["Factor Barra Consumo %s" % i for i in range(
+        1, N_MAX_BARRAS + 1)]
+    for col in cols_to_check:
+        if col not in df.columns:
+            raise ValueError(
+                "Column %s is not present in DdaPorBarra sheet" % col)
+    # Check number of columns
+    assert len(df.columns) - 5 == 2 * N_MAX_BARRAS, \
+        "Number of columns is not %s" % (2 * N_MAX_BARRAS + 5)
+    # Check if all rows contain at least one Barra Consumo
+    mask = df.iloc[:, 5:].notna().any(axis=1)
+    if not mask.all():
+        raise ValueError(
+            "There are rows without Barra Consumo in DdaPorBarra sheet")
+    # Check if all rows contain at least one Factor Barra Consumo
+    mask = df.iloc[:, 5:].notna().any(axis=1)
+    if not mask.all():
+        raise ValueError(
+            "There are rows without Factor Barra Consumo in DdaPorBarra sheet")
+    # Check if there are no nan values in Cliente
+    mask = df['Cliente'].notna()
+    if not mask.all():
+        raise ValueError(
+            "There are nan values in column Cliente in DdaPorBarra sheet")
 
 
 def clean_monthly_demand_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -115,6 +165,7 @@ def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
     Get monthly demand and add timedata
     '''
     df = pd.read_excel(iplp_path, sheet_name='DdaEnergia')
+    validate_monthly_demand(df)
     # Clean data
     df = clean_monthly_demand_data(df)
     # Stack to get Demand series
@@ -122,7 +173,7 @@ def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
     demand_series.index.set_names(['Coordinado', 'Cliente', 'Date'],
                                   inplace=True)
     demand_series.name = 'Demand'
-    # Check if series is free of nan values and drop them
+    # Check if series is free of nan values or zero-fill them
     if demand_series.isna().sum() > 0:
         logger.warning('There are nan values in demand series.'
                        ' Filling them with 0')
@@ -133,14 +184,29 @@ def get_monthly_demand(iplp_path: Path, plexos: bool = False) -> pd.DataFrame:
     df['Date'] = df['Date'].apply(from_excel)
     # If plexos, filter out all BESS, Carnot and PHS clients
     if plexos:
+        logger.info('Outputs for Plexos - filtering out all demands'
+                    ' with names containing BESS, CARNOTx, and PHSx')
         df = df[~df['Cliente'].str.contains('BESS|CARNOTx|PHSx')]
     # add timedata
     df = add_timedata_to_monthly_demand(df)
     return df
 
 
+def validate_monthly_demand(df: pd.DataFrame):
+    '''
+    Validate DdaEnergia sheet
+    '''
+    # Check if all columns are present
+    cols_to_check = ["Coordinado", "Cliente"]
+    for col in cols_to_check:
+        if col not in df.columns:
+            raise ValueError(
+                "Column %s is not present in DdaEnergia sheet" % col)
+
+
 def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
+    validate_hourly_profiles(df)
     # Clean data
     cols_to_drop = ['#', 'Año', 'Verificador consumo']
     df = df.drop(cols_to_drop, axis=1)
@@ -159,6 +225,30 @@ def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
                  'Mes': 'Month',
                  'Hora': 'Hour'})
     return df
+
+
+def validate_hourly_profiles(df: pd.DataFrame):
+    # Check if all columns are present
+    cols_to_check = ["#", "Perfil día tipo", "Mes", "Año",
+                     "Verificador consumo"]
+    hour_columns = ["H%s" % i for i in range(1, 25)]
+    cols_to_check += hour_columns
+    for col in cols_to_check:
+        if col not in df.columns:
+            logger.error(
+                "Column %s is not present in PerfilesDDA sheet" % col)
+            raise ValueError(
+                "Column %s is not present in PerfilesDDA sheet" % col)
+    # Check if all rows contain data for all hours
+    mask = df[hour_columns].notna().any(axis=1)
+    if not mask.all():
+        logger.error(
+            "There are rows without data for all hours in PerfilesDDA sheet")
+    # Check if rows sum 1 for all profiles
+    mask = abs(df[hour_columns].sum(axis=1) - 1) < 1e-3
+    if not mask.all():
+        logger.warning(
+            "There are rows that do not sum 1 in PerfilesDDA sheet")
 
 
 def get_blockly_profiles(df_hourly_profiles: pd.DataFrame,
@@ -464,14 +554,15 @@ def main():
             df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
 
         # Print df_all_profiles to csv to be used in plexos
-        logger.info('Printing df_all_profiles.csv for plexos')
+        logger.info('Printing df_all_profiles.csv for Plexos')
         df_all_profiles.to_csv(path_df / 'df_dda_all_profiles_plexos.csv',
                                index=False)
 
-        logger.info('Process finished successfully')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
 
 
 if __name__ == "__main__":
