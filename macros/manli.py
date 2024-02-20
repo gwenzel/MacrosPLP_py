@@ -43,17 +43,19 @@ def get_manli_input(iplp_path: Path) -> pd.DataFrame:
     return df_manli
 
 
-def validate_df_manli(df_manli: pd.DataFrame):
+def validate_df_manli(df: pd.DataFrame):
     '''
     Validate df_manli data
     '''
     # Check if columns INICIAL and FINAL are present
-    if not all([col in df_manli.columns for col in ['INICIAL', 'FINAL']]):
+    if not all([col in df.columns for col in ['INICIAL', 'FINAL']]):
         raise ValueError('INICIAL or FINAL columns are missing')
-    # Check if values in INICIAL and FINAL columns are integers
-    if not all([isinstance(x, int) for x in df_manli['INICIAL']]):
+    # Check if values in INICIAL and FINAL columns are integers or floats
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['INICIAL']]):
         raise ValueError('INICIAL values are not integers')
-    if not all([isinstance(x, int) for x in df_manli['FINAL']]):
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['FINAL']]):
         raise ValueError('FINAL values are not integers')
 
 
