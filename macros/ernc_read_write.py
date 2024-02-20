@@ -10,7 +10,6 @@ from utils.utils import (check_is_file,
 
 OUTPUT_FILENAME = 'plpmance.dat'
 
-
 formatters = {
     "Month":    "     {:02d}".format,
     "Etapa":    "     {:04d}".format,
@@ -162,9 +161,16 @@ def generate_max_capacity_csv(iplp_path: Path, path_df: Path,
     Read iplp file, sheet ERNC, and extract max capacities
     '''
     df = pd.read_excel(iplp_path, sheet_name='ERNC', usecols="A:B")
+    validate_max_capacity_csv(df)
     df = df.dropna()
     df.to_csv(Path(path_df, input_names["MAX_CAPACITY_FILENAME"]),
               index=False)
+
+
+def validate_max_capacity_csv(df: pd.DataFrame):
+    # Check if 'Name' and 'MaxCapacityFactor' are in columns
+    if 'Name' not in df.columns or 'MaxCapacityFactor' not in df.columns:
+        raise ValueError('Columns Name and MaxCapacityFactor are required')
 
 
 def generate_min_capacity_csv(iplp_path: Path, path_df: Path,
@@ -176,10 +182,17 @@ def generate_min_capacity_csv(iplp_path: Path, path_df: Path,
     '''
     df = pd.read_excel(iplp_path, sheet_name='Centrales',
                        skiprows=4, usecols="B,AA")
+    validate_min_capacity_csv(df)
     df = df.dropna()
     df = df.rename(columns={'CENTRALES': 'Name', 'Mínima.1': 'Pmin'})
     df.to_csv(Path(path_df, input_names["MIN_CAPACITY_FILENAME"]),
               index=False)
+
+
+def validate_min_capacity_csv(df: pd.DataFrame):
+    # Check if 'CENTRALES' and 'Mínima.1' are in columns
+    if 'CENTRALES' not in df.columns or 'Mínima.1' not in df.columns:
+        raise ValueError('Columns CENTRALES and Mínima are required')
 
 
 def generate_rating_factor_csv(iplp_path: Path, path_df: Path,
@@ -188,12 +201,21 @@ def generate_rating_factor_csv(iplp_path: Path, path_df: Path,
     Read iplp file, sheet ERNC, and extract rating factors
     '''
     df = pd.read_excel(iplp_path, sheet_name='ERNC', usecols="E:G")
+    validate_rating_factor_csv(df)
     df['DateFrom'] = df['DateFrom'].apply(from_excel)
     df = df.dropna()
     df = df.rename(columns={'Name.1': 'Name'})
     df['DateFrom'] = df['DateFrom'].dt.strftime("%m/%d/%Y")
     df.to_csv(Path(path_df, input_names["RATING_FACTOR_FILENAME"]),
               index=False)
+
+
+def validate_rating_factor_csv(df: pd.DataFrame):
+    # Check if 'Name.1', 'DateFrom', 'DateTo' are in columns
+    if 'Name.1' not in df.columns or 'DateFrom' not in df.columns or \
+            'Value [MW]' not in df.columns:
+        raise ValueError('Columns Name.1, DateFrom and Value [MW]'
+                         'are required')
 
 
 def generate_profiles_csv(iplp_path: Path, path_df: Path,
@@ -204,11 +226,28 @@ def generate_profiles_csv(iplp_path: Path, path_df: Path,
     h_sheetname = 'ernc_H_%s' % input_names["SCENARIO"]
     hm_sheetname = 'ernc_MH_%s' % input_names["SCENARIO"]
     df_h = pd.read_excel(iplp_path, sheet_name=h_sheetname)
+    validate_profiles_csv(df_h, resolution='h')
     df_h.to_csv(Path(path_df, input_names["H_PROFILES_FILENAME"]),
                 index=False, header=True)
     df_hm = pd.read_excel(iplp_path, sheet_name=hm_sheetname)
+    validate_profiles_csv(df_hm, resolution='hm')
     df_hm.to_csv(Path(path_df, input_names["HM_PROFILES_FILENAME"]),
                  index=False, header=True)
+
+
+def validate_profiles_csv(df: pd.DataFrame, resolution='h'):
+    # Check if 'MES' and 'PERIODO' are in columns
+    if 'MES' not in df.columns or 'PERIODO' not in df.columns:
+        raise ValueError('Columns MES and PERIODO are required')
+    # Check if resolution is correct
+    if resolution == 'h':
+        assert len(df) == 24
+        assert df['MES'].unique() == [1]
+        assert (df['PERIODO'].unique() == range(1, 25)).all()
+    elif resolution == 'hm':
+        assert len(df) == 12 * 24
+        assert (df['MES'].unique() == range(1, 13)).all()
+        assert (df['PERIODO'].unique() == range(1, 25)).all()
 
 
 def get_unit_type(iplp_path: Path) -> dict:
