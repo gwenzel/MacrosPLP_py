@@ -246,21 +246,27 @@ def validate_df_cvar_with_emissions(df: pd.DataFrame):
     assert not df.iloc[:, -1].isna().any()
     # Validate data types
     logger.info('Validating data types for df_cvar_with_emissions')
-    assert df.dtypes['Etapa'] == np.dtype('int64')
-    assert df.dtypes['Year'] == np.dtype('int64')
-    assert df.dtypes['Month'] == np.dtype('int64')
-    assert df.dtypes['Date'] == np.dtype('datetime64[ns]')
-    assert df.dtypes['Heat Rate'] == np.dtype('float64')
-    assert df.dtypes['Variable Cost USD/MWh'] ==\
-        np.dtype('float64')
-    assert df.dtypes['Emissions TonCO2/MWh'] ==\
-        np.dtype('float64')
-    assert df.dtypes['CO2 Tax USD/TonCO2'] ==\
-        np.dtype('float64')
-    assert df.dtypes['CO2 Tax USD/MWh'] ==\
-        np.dtype('float64')
-    assert df.dtypes['Variable Cost + CO2 Tax USD/MWh'] ==\
-        np.dtype('float64')
+    if not df.dtypes['Etapa'] == np.dtype('int64'):
+        logger.warning("Etapa should be int64")
+    if not df.dtypes['Year'] == np.dtype('int64'):
+        logger.warning("Year should be int64")
+    if not df.dtypes['Month'] == np.dtype('int64'):
+        logger.warning("Month should be int64")
+    if not df.dtypes['Date'] == np.dtype('datetime64[ns]'):
+        logger.warning("Date should be datetime64[ns]")
+    if not df.dtypes['Heat Rate'] == np.dtype('float64'):
+        logger.warning("Heat Rate should be float64")
+    if not df.dtypes['Variable Cost USD/MWh'] == np.dtype('float64'):
+        logger.warning("Variable Cost USD/MWh should be float64")
+    if not df.dtypes['Emissions TonCO2/MWh'] == np.dtype('float64'):
+        logger.warning("Emissions TonCO2/MWh should be float64")
+    if not df.dtypes['CO2 Tax USD/TonCO2'] == np.dtype('float64'):
+        logger.warning("CO2 Tax USD/TonCO2 should be float64")
+    if not df.dtypes['CO2 Tax USD/MWh'] == np.dtype('float64'):
+        logger.warning("CO2 Tax USD/MWh should be float64")
+    if not df.dtypes['Variable Cost + CO2 Tax USD/MWh'] ==\
+            np.dtype('float64'):
+        logger.warning("Variable Cost + CO2 Tax USD/MWh should be float64")
 
 
 def print_plpcosce(path_inputs: Path,

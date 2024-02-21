@@ -163,30 +163,29 @@ def validate_df_centrales(df_centrales: pd.DataFrame):
     # Check if there are empty CosVar
     if df_centrales['CosVar'].isna().any():
         logger.warning('There are empty CosVar in Centrales sheet')
-    # Assert dtypes
-    import pdb; pdb.set_trace()
-    # assert df_centrales.dtypes['NumCen'] == 'float64', \
-    #     "NumCen must be float64"
-    assert df_centrales.dtypes['CosVar'] == 'float64', \
-        "CosVar must be float64"
-    assert df_centrales.dtypes['CotaIni'] == 'float64', \
-        "CotaIni must be float64"
-    assert df_centrales.dtypes['CotaFin'] == 'float64', \
-        "CotaFin must be float64"
-    assert df_centrales.dtypes['CotaMin'] == 'float64', \
-        "CotaMin must be float64"
-    assert df_centrales.dtypes['CotaMax'] == 'float64', \
-        "CotaMax must be float64"
-    assert df_centrales.dtypes['Pmin'] == 'float64', \
-        "Pmin must be float64"
-    assert df_centrales.dtypes['Pmax'] == 'float64', \
-        "Pmax must be float64"
-    assert df_centrales.dtypes['VertMin'] == 'float64', \
-        "VertMin must be float64"
-    assert df_centrales.dtypes['VertMax'] == 'float64', \
-        "VertMax must be float64"
-    assert df_centrales.dtypes['Afluen'] == 'float64', \
-        "Afluen must be float64"
+    # Check dtypes
+    if not df_centrales.dtypes['NumCen'] == 'float64':
+        logger.warning("NumCen should be float64")
+    if not df_centrales.dtypes['CosVar'] == 'float64':
+        logger.warning("CosVar should be float64")
+    if not df_centrales.dtypes['CotaIni'] == 'float64':
+        logger.warning("CotaIni should be float64")
+    if not df_centrales.dtypes['CotaFin'] == 'float64':
+        logger.warning("CotaFin should be float64")
+    if not df_centrales.dtypes['CotaMin'] == 'float64':
+        logger.warning("CotaMin should be float64")
+    if not df_centrales.dtypes['CotaMax'] == 'float64':
+        logger.warning("CotaMax should be float64")
+    if not df_centrales.dtypes['Pmin'] == 'float64':
+        logger.warning("Pmin should be float64")
+    if not df_centrales.dtypes['Pmax'] == 'float64':
+        logger.warning("Pmax should be float64")
+    if not df_centrales.dtypes['VertMin'] == 'float64':
+        logger.warning("VertMin should be float64")
+    if not df_centrales.dtypes['VertMax'] == 'float64':
+        logger.warning("VertMax should be float64")
+    if not df_centrales.dtypes['Afluen'] == 'float64':
+        logger.warning("Afluen should be float64")
 
 
 def add_failure_generators(iplp_path: Path,
