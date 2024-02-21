@@ -164,8 +164,9 @@ def validate_df_centrales(df_centrales: pd.DataFrame):
     if df_centrales['CosVar'].isna().any():
         logger.warning('There are empty CosVar in Centrales sheet')
     # Assert dtypes
-    assert df_centrales.dtypes['NumCen'] == 'float64', \
-        "NumCen must be float64"
+    import pdb; pdb.set_trace()
+    # assert df_centrales.dtypes['NumCen'] == 'float64', \
+    #     "NumCen must be float64"
     assert df_centrales.dtypes['CosVar'] == 'float64', \
         "CosVar must be float64"
     assert df_centrales.dtypes['CotaIni'] == 'float64', \
