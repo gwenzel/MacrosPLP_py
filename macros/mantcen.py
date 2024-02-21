@@ -46,7 +46,8 @@ formatters_plpmance = {
 
 def get_centrales(iplp_path: Path, plx: bool = False) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
-                       skiprows=4, usecols="B,C,AA,AB,DK")
+                       skiprows=4, usecols="B,C,AA,AB,DK").dropna(how='all')
+    validate_centrales(df)
     # Filter out if X
     df = df[df['Tipo de Central'] != 'X']
     # Rename columns
@@ -61,9 +62,22 @@ def get_centrales(iplp_path: Path, plx: bool = False) -> pd.DataFrame:
     return df
 
 
+def validate_centrales(df: pd.DataFrame):
+    # Check if all columns are present
+    expected_columns = [
+        'CENTRALES', 'Tipo de Central', 'Mínima.1', 'Máxima.1', 'Reserva MW']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError('Column %s not found in Centrales' % col)
+    if not df['CENTRALES'].is_unique:
+        logger.error('List of Centrales has repeated values')
+        sys.exit('List of Centrales has repeated values')
+
+
 def get_mantcen_input(iplp_path: Path) -> pd.DataFrame:
     df = pd.read_excel(iplp_path, sheet_name="MantCEN",
-                       skiprows=4, usecols="A:F")
+                       skiprows=4, usecols="A:F").dropna(how='any')
+    validate_mantcen_ini(df)
     df = df.rename(
         columns={
             df.columns[0]: 'Description',
@@ -73,7 +87,6 @@ def get_mantcen_input(iplp_path: Path) -> pd.DataFrame:
         }
     )
     # Drop all rows without description
-    df = df.dropna(how='any')
     df = df[df['Description'] != 'Mantenimientos']
     # Add columns with more info
     df['INICIAL'] = df['INICIAL'].apply(from_excel)
@@ -81,26 +94,40 @@ def get_mantcen_input(iplp_path: Path) -> pd.DataFrame:
     return df
 
 
-def validate_centrales(df_centrales: pd.DataFrame):
-    if not df_centrales['Nombre'].is_unique:
-        logger.error('List of Centrales has repeated values')
-        sys.exit('List of Centrales has repeated values')
-    logger.info('Validation process for Centrales successful')
+def validate_mantcen_ini(df: pd.DataFrame):
+    # Check if columns are present
+    expected_columns = ['CENTRAL', 'INICIAL', 'FINAL', 'MÍNIMA', 'MÁXIMA']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError('Column %s not found in MantCen' % col)
+    # Check if values in INICIAL and FINAL columns are integers or floats
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['INICIAL']]):
+        raise ValueError('INICIAL values are not integers')
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['FINAL']]):
+        raise ValueError('FINAL values are not integers')
 
 
-def validate_mantcen(df_centrales: pd.DataFrame, df_mantcen: pd.DataFrame):
+def validate_mantcen_processed(df_centrales: pd.DataFrame,
+                               df_mantcen: pd.DataFrame):
     # Names
     list_of_names_centrales = df_centrales['Nombre'].unique().tolist()
     list_of_names_mantcen = df_mantcen['Nombre'].unique().tolist()
     for name in list_of_names_mantcen:
         if name not in list_of_names_centrales:
-            logger.error('Name of unit %s in MantCEN not valid' % name)
-            sys.exit('Name of unit %s in MantCEN not valid' % name)
+            raise ValueError('Name of unit %s in MantCEN not valid' % name)
     # Values
-    # TODO Check that INICIAL < FINAL
-    # TODO Check that Pmin and Pmax are coherent and in range
-    # TODO Check that DayIni and DayEnd equals DaysInMonth
-    logger.info('Validation process for MantCEN successful')
+    if not all(df_mantcen['INICIAL'] < df_mantcen['FINAL']):
+        logger.warning('INICIAL date values are not less than FINAL'
+                       ' date values')
+    # Check if Pmin and Pmax are floats
+    if not all([isinstance(x, float) for x in df_mantcen['Pmin']]):
+        raise ValueError('Pmin values are not floats')
+    # Check if Pmin < Pmax
+    if not all(df_mantcen['Pmin'] <= df_mantcen['Pmax']):
+        raise ValueError('There are Pmin values greater than Pmax values')
+    logger.info('Validation process for processed MantCEN successful')
 
 
 def shape_extra_mant_no_gas(df: pd.DataFrame,
@@ -119,6 +146,7 @@ def read_extra_mant_no_ciclicos(iplp_path: Path) -> pd.DataFrame:
     df_no_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
         skiprows=1, usecols="B:D,F").dropna(how='any')
+    validate__mant_no_ciclicos(df_no_ciclicos)
     df_no_ciclicos = df_no_ciclicos.rename(
         columns={'Unidad': 'Nombre',
                  'Fecha Inicio': 'INICIAL',
@@ -130,12 +158,35 @@ def read_extra_mant_no_ciclicos(iplp_path: Path) -> pd.DataFrame:
     return df_no_ciclicos
 
 
+def validate__mant_no_ciclicos(df: pd.DataFrame):
+    # Check if columns are 'Unidad', 'Fecha Inicio', 'Fecha Término',
+    # and 'Potencia Maxima'
+    expected_columns = ['Unidad', 'Fecha Inicio', 'Fecha Término',
+                        'Potencia Maxima']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError('Column %s not found in MantenimientosIM' % col)
+    # Check if values in Fecha Inicio and Fecha Término columns are integers
+    # or floats
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['Fecha Inicio']]):
+        raise ValueError('Fecha Inicio values are not integers')
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['Fecha Término']]):
+        raise ValueError('Fecha Término values are not integers')
+    # Check if values in Potencia Maxima are floats
+    if not all([isinstance(x, float) for x in df['Potencia Maxima']]):
+        raise ValueError('Potencia Maxima values are not floats')
+    logger.info('Validation process for MantCEN No Cíclicos successful')
+
+
 def read_extra_mant_ciclicos(iplp_path: Path,
                              blo_eta: pd.DataFrame) -> pd.DataFrame:
     # Ciclicos
     df_ciclicos = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
         skiprows=1, usecols="I:K,M").dropna(how='any')
+    validate_mant_ciclicos(df_ciclicos)
     df_ciclicos = df_ciclicos.rename(
         columns={'Unidad.1': 'Nombre',
                  'Fecha Inicio.1': 'INICIAL',
@@ -161,6 +212,28 @@ def read_extra_mant_ciclicos(iplp_path: Path,
     return df_ciclicos
 
 
+def validate_mant_ciclicos(df: pd.DataFrame):
+    # Check if columns are 'Unidad.1', 'Fecha Inicio.1', 'Fecha Término.1',
+    # and 'Potencia Maxima.1'
+    expected_columns = ['Unidad.1', 'Fecha Inicio.1', 'Fecha Término.1',
+                        'Potencia Maxima.1']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError('Column %s not found in MantenimientosIM' % col)
+    # Check if values in Fecha Inicio and Fecha Término columns are integers
+    # or floats
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['Fecha Inicio.1']]):
+        raise ValueError('Fecha Inicio values are not integers')
+    if not all([isinstance(x, int) or isinstance(x, float)
+                for x in df['Fecha Término.1']]):
+        raise ValueError('Fecha Término values are not integers')
+    # Check if values in Potencia Maxima are floats
+    if not all([isinstance(x, float) for x in df['Potencia Maxima.1']]):
+        raise ValueError('Potencia Maxima values are not floats')
+    logger.info('Validation process for MantCEN Cíclicos successful')
+
+
 def read_extra_mant_gas(iplp_path: Path,
                         blo_eta: pd.DataFrame) -> pd.DataFrame:
     end_year = blo_eta.iloc[-1]['Year']
@@ -168,6 +241,7 @@ def read_extra_mant_gas(iplp_path: Path,
     df_gas = pd.read_excel(
         iplp_path, sheet_name="MantenimientosIM",
         skiprows=1, usecols="O:AC", index_col=0).dropna(how='any')
+    validate_mant_gas(df_gas)
     df_gas = df_gas.replace('*', str(end_year))
     dict_out = {'Nombre': [], 'INICIAL': [], 'FINAL': [],
                 'Pmin': [], 'Pmax': []}
@@ -185,6 +259,26 @@ def read_extra_mant_gas(iplp_path: Path,
     df_out = pd.DataFrame.from_dict(dict_out)
     df_out['Description'] = 'Gas'
     return df_out
+
+
+def validate_mant_gas(df: pd.DataFrame):
+    # Check if columns are [AnoInic, AnoFinal, Ene, Feb, Mar, Abr, May, Jun,
+    # Jul, Ago, Sep, Oct, Nov, Dic]
+    expected_columns = ['AnoInic', 'AnoFinal', 'Ene', 'Feb', 'Mar', 'Abr',
+                        'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError('Column %s not found in MantenimientosIM' % col)
+    # Check if values in AnoInic and AnoFinal columns are integers
+    if not all([isinstance(x, int) for x in df['AnoInic']]):
+        raise ValueError('AnoInic values are not integers')
+    if not all([isinstance(x, int) for x in df['AnoFinal']]):
+        raise ValueError('AnoFinal values are not integers')
+    # Check if values in other columns are floats
+    for col in expected_columns[2:]:
+        if not all([isinstance(x, float) for x in df[col]]):
+            raise ValueError('%s values are not floats' % col)
+    logger.info('Validation process for MantCEN Gas successful')
 
 
 def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
@@ -433,9 +527,6 @@ def main():
         logger.info('Reading data from sheet Centrales')
         df_centrales = get_centrales(iplp_path)
 
-        logger.info('Validating list of centrales')
-        validate_centrales(df_centrales)
-
         # Get initial mantcen dataframe
         logger.info('Getting initial mantcen')
         df_mantcen = get_mantcen_input(iplp_path)
@@ -455,8 +546,8 @@ def main():
         df_mantcen = add_time_info(df_mantcen)
 
         # Validate mantcen
-        logger.info('Validating mantcen data')
-        validate_mantcen(df_centrales, df_mantcen)
+        logger.info('Validating Mantcen processed data')
+        validate_mantcen_processed(df_centrales, df_mantcen)
 
         # PLP
         # Generate arrays with pmin/pmax data
