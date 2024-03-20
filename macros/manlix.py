@@ -304,6 +304,10 @@ def get_dict_trf_to_line(trf_list: list, df_lines: pd.DataFrame) -> dict:
         mask = df_lines['Nombre A->B'].str.contains(trf)
         line_name = df_lines[mask]['Nombre A->B'].values[0]
         dict_trf_to_line[trf] = line_name
+        # Add warning if there is more than one line
+        if mask.sum() > 1:
+            logger.warning('More than one line found for transformer %s' % trf)
+            logger.warning('Using first line found: %s' % line_name)
     return dict_trf_to_line
 
 
