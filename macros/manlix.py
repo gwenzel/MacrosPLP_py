@@ -319,7 +319,7 @@ def get_trf_capacity(iplp_path: Path, path_df: Path,
                      ]:
     '''
     Read mantcen data from existing csv file (coming from mantcen.py routine),
-    and get min pmax for each group of gas units in each transformer.
+    and get max pmax for each group of gas units in each transformer.
 
     Paste additional columns to df_capmax_ab and df_capmax_ba dataframes
 
@@ -345,7 +345,7 @@ def get_trf_capacity(iplp_path: Path, path_df: Path,
         df_pmax_units = df_pmax_units.set_index('Etapa')
         # Summarize using max function, and create series with the name
         # of the transformer
-        df_pmax_trf = df_pmax_units.min(axis=1)
+        df_pmax_trf = df_pmax_units.max(axis=1)
         df_pmax_trf.name = dict_trf_to_line[trf]
         # Join series to A->B Capacity dataframe
         df_capmax_ab = df_capmax_ab.join(df_pmax_trf)
