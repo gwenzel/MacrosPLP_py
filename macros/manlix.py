@@ -461,6 +461,7 @@ def main():
             id_col='LÍNEA', manli_col='X [ohms]',
             lines_value_col='X[ohm]', func='last')
 
+        '''
         logger.info('Read MantCen Pmax data for gas units and '
                     'add to transformers line capacity. Add them to '
                     'V, R and X dataframes too.')
@@ -471,6 +472,7 @@ def main():
         logger.info('Add missing transformer data')
         df_v, df_r, df_x = add_trf_data(
             iplp_path, df_lines, df_v, df_r, df_x)
+        '''
 
         logger.info('Detect changes and get formatted dataframe')
         df_manlix_changes = get_manlix_changes(
