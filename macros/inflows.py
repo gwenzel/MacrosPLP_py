@@ -305,7 +305,7 @@ def shuffle_hidrologies(df_daily: pd.DataFrame,
 
 def reduce_uncertainty(iplp_path: Path,
                        df_all_inflows: pd.DataFrame) -> pd.DataFrame:
-    '''
+    ''' DEPRECATED
     For the first x months, use monthly average inflows for each week,
     instead of using weekly data
     '''
@@ -467,12 +467,9 @@ def main():
         logger.info('Getting dataframe with all data')
         df_all_inflows = get_df_all_inflows(iplp_path, blo_eta,
                                             plp_enable, plx_enable)
-        # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv',
-        #   index=False)
+        # df_all_inflows.to_csv(path_df / 'df_all_inflows.csv')
 
         if plp_enable:
-            # logger.info('Reducing uncertainty of first months, only for plp')
-            # df_all_inflows_ru = reduce_uncertainty(iplp_path, df_all_inflows)
             logger.info('Printing inflows in plp format')
             write_plpaflce(path_inputs, df_all_inflows)
 
