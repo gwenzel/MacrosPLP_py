@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202301 - PMT V2'23\1_Caso_Base\comparaciones\plpaflce_py_nc_v20.dat"
+filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Feb 24\afluentes\plpaflce_exp_afl_1.dat"
 
 list_of_cen = []
 dict_cen_values = {}
@@ -31,4 +31,4 @@ df_all['Mes'] = df_all['Mes'].astype(int)
 df_all['Bloque'] = df_all['Bloque'].astype(int)
 
 
-df_all.to_csv('afluentes_py_nc_v20.csv')
+df_all.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Feb 24\afluentes\df_plpaflce_exp_afl_1.csv")

@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpmanli_v9.dat"
+filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Abr 24\manli\plpmanli_py.dat"
 
 list_of_lines = []
 dict_lines_values = {}
@@ -36,6 +36,6 @@ with open(filename) as f:
         index='Etapa', columns='Line', values=['BA']).fillna(1)
     df_all_pivot_flag = df_all.pivot(
         index='Etapa', columns='Line', values=['Flag']).fillna('T')
-    df_all_pivot_ab.to_csv('v9_ab.csv')
-    df_all_pivot_ba.to_csv('v9_ba.csv')
-    df_all_pivot_flag.to_csv('v9_flag.csv')
+    df_all_pivot_ab.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Abr 24\manli\plpmanli_py_ab.csv")
+    df_all_pivot_ba.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Abr 24\manli\plpmanli_py_ba.csv")
+    df_all_pivot_flag.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones BE Abr 24\manli\plpmanli_py_flag.csv")

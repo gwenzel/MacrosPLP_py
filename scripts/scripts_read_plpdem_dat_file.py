@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones\dem\plpdem_nc_v24.dat"
+filename = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpdem_119.dat"
 
 list_of_items = []
 dict_item2value = {}
@@ -29,7 +29,7 @@ df_all['Etapa'] = df_all['Etapa'].astype(int)
 df_all['Demanda'] = df_all['Demanda'].astype(float)
 
 
-df_all_pivot_cvar = df_all.pivot(
+df_all_pivot_dem = df_all.pivot_table(
     index='Etapa', columns='Dem', values=['Demanda'])
 
-df_all_pivot_cvar.to_csv(r"C:\Users\BH5873\ENGIE\Equipo Estudios - Biblioteca Equipo Estudios\08. Modelos\202311 - MejorasPLP\comparaciones\dem\dem_nc_v24.csv")
+df_all_pivot_dem.to_csv(r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpdem_119.csv")

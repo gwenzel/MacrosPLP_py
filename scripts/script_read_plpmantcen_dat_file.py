@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpmance_ini_v11.dat"
+filename = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\plpmance_ini.dat"
 
 list_of_cen = []
 dict_cen_values = {}
@@ -32,10 +32,11 @@ df_all['PotMax'] = df_all['PotMax'].astype(float)
 
 # df_all.to_csv('df_all.csv')
 
-df_all_pivot_pmin = df_all.pivot(
-    index='Bloque', columns='Cen', values=['PotMin'])
-df_all_pivot_pmax = df_all.pivot(
+#df_all_pivot_pmin = df_all.pivot_table(
+#    index='Bloque', columns='Cen', values=['PotMin'])
+df_all_pivot_pmax = df_all.pivot_table(
     index='Bloque', columns='Cen', values=['PotMax'])
 
-df_all_pivot_pmin.to_csv('pmin_v11.csv')
-df_all_pivot_pmax.to_csv('pmax_v11.csv')
+#df_all_pivot_pmin.to_csv(r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\pmin_v11.csv")
+df_all_pivot_pmax.to_csv(
+    r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\df_pmax_plpmance_ini.csv")
