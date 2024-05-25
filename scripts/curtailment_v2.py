@@ -1,26 +1,28 @@
-import os
 import pandas as pd
 from pathlib import Path
 
-inputs_path = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP"
+inputs_path = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP\Output_test"
 # Input Data files
-cmg_file = Path(inputs_path, "outBarCMg_B.csv")
-cur_file = Path(inputs_path, "outCurtail_B.csv")
-ener_file = Path(inputs_path, "outEnerg_B.csv")
+cmg_file = Path(inputs_path, "outBarCMg_12B.csv")
+cur_file = Path(inputs_path, "outCurtail_12B.csv")
+ener_file = Path(inputs_path, "outEnerg_12B.csv")
 # Input Dict files
 zonas_file = Path(inputs_path, "BarsZones.csv")
 gen2zone_file = Path(inputs_path, "ID_Gen_PLP-Plexos.csv")
+# Create output folder
+output_folder = Path(inputs_path, "Curtailment_Outputs")
+output_folder.mkdir(exist_ok=True)
 # Output Data files
-cur_out_file = os.path.join(
-    inputs_path, 'curtailment.csv')
-cur_grouped_out_file = os.path.join(
-    inputs_path, 'curtailment_grouped.csv')
-cur_redistrib_out_file = os.path.join(
-    inputs_path, 'curtailment_redistrib.csv')
-cur_redistrib_grouped_out_file = os.path.join(
-    inputs_path, 'curtailment_redistrib_grouped.csv')
-out_ener_redistrib_out_file = os.path.join(
-    inputs_path, 'outEnerg_B_redistrib.csv')
+cur_out_file = Path(
+    output_folder, 'curtailment.csv')
+cur_grouped_out_file = Path(
+    output_folder, 'curtailment_grouped.csv')
+cur_redistrib_out_file = Path(
+    output_folder, 'curtailment_redistrib.csv')
+cur_redistrib_grouped_out_file = Path(
+    output_folder, 'curtailment_redistrib_grouped.csv')
+out_ener_redistrib_out_file = Path(
+    output_folder, 'outEnerg_12B_redistrib.csv')
 
 # Hydrology to filter
 Hyd = 20
@@ -38,20 +40,23 @@ def load_data(cmg_file, cur_file, ener_file):
 
     df_cmg = pd.read_csv(cmg_file, encoding="latin1",
                          skiprows=1, low_memory=False)
-    df_cmg = df_cmg[df_cmg["Hyd"] == Hyd]
-    df_cmg = df_cmg.drop(columns=["Hyd"])
+    if "Hyd" in df_cmg.columns:
+        df_cmg = df_cmg[df_cmg["Hyd"] == Hyd]
+        df_cmg = df_cmg.drop(columns=["Hyd"])
     df_cmg = df_cmg.set_index(["Year", "Month", "Block"])
 
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
-    df_cur = df_cur[df_cur["Hyd"] == Hyd]
-    df_cur = df_cur.drop(columns=["Hyd"])
+    if "Hyd" in df_cur.columns:
+        df_cur = df_cur[df_cur["Hyd"] == Hyd]
+        df_cur = df_cur.drop(columns=["Hyd"])
     df_cur = df_cur.set_index(["Year", "Month", "Block"])
 
     df_ener = pd.read_csv(ener_file, encoding="latin1",
                           skiprows=3, low_memory=False)
-    df_ener = df_ener[df_ener["Hyd"] == Hyd]
-    df_ener = df_ener.drop(columns=["Hyd"])
+    if "Hyd" in df_ener.columns:
+        df_ener = df_ener[df_ener["Hyd"] == Hyd]
+        df_ener = df_ener.drop(columns=["Hyd"])
     df_ener = df_ener.set_index(["Year", "Month", "Block"])
 
     return df_cmg, df_cur, df_ener
@@ -191,6 +196,15 @@ def process_redistributed_out_ener(df_all_redistrib):
     return df_out_ener_redistrib
 
 
+def add_blank_lines(out_file, lines):
+    with open(out_file, 'r') as original:
+        data = original.read()
+    with open(out_file, 'w') as modified:
+        for i in range(lines):
+            modified.write('\n')
+        modified.write(data)
+
+
 def main():
     print('--Starting curtailment script')
     # Load Data
@@ -228,10 +242,7 @@ def main():
 
     # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
     # to match format
-    with open(out_ener_redistrib_out_file, 'r') as original:
-        data = original.read()
-    with open(out_ener_redistrib_out_file, 'w') as modified:
-        modified.write('\n\n\n' + data)
+    add_blank_lines(out_ener_redistrib_out_file, 3)
 
     print('--Finished curtailment script')
 
