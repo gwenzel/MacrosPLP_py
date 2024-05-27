@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Filter Plexos
 
 Take plexos outputs and print equivalent PLP outputs,
 to be used by the Curtailment Model
-"""
+'''
 import os
 import pandas as pd
 import datetime
@@ -25,12 +25,12 @@ if not os.path.exists(pDir):
     print("Please create the folder 'PLP' in the working directory.")
     print("The folder should be located at: ", pDir)
     exit()
-oDir = os.path.join(wDir, "Output_test")
+oDir = os.path.join(wDir, "Output_Filter_Plexos")
 if not os.path.exists(oDir):
     os.mkdir(oDir)
 
 # Define input files
-folder_paths_file = os.path.join(wDir, 'Folder_Paths.csv')
+folder_paths_file = os.path.join(wDir, 'folder_paths.csv')
 config_file = os.path.join(wDir, 'filter_plexos_config.csv')
 
 # Check existence of input files
@@ -104,7 +104,7 @@ def define_outdata(f):
         outData = pd.concat([outData, df], ignore_index=True)
     outData = outData.copy().fillna(0)
     outData["DATETIME"] = pd.to_datetime(
-        outData["DATETIME"], format="mixed")
+        outData["DATETIME"], format='mixed')
     outData.insert(1, "Year", outData["DATETIME"].dt.year)
     outData.insert(2, "Month", outData["DATETIME"].dt.month)
     outData.insert(3, "Day", outData["DATETIME"].dt.day)

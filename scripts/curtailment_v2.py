@@ -1,34 +1,60 @@
+# -*- coding: utf-8 -*-
+'''
+Curtailment script
+
+Take PLP outputs and redistribute curtailment values
+to be used by the Curtailment Model
+
+Inputs (tr is the time resolution, 12B or 24H):
+- outBarCMg_%tr%.csv
+- outCurtail_%tr%.csv
+- outEnerg_%tr%.csv
+
+Dicts:
+- BarsZones.csv
+- ID_Gen_PLP-Plexos.csv
+
+Outputs:
+- Block and Hour folders, each with:
+    - curtailment.csv
+    - curtailment_grouped.csv
+    - curtailment_redistrib.csv
+    - curtailment_redistrib_grouped.csv
+    - outEnerg_12B_redistrib.csv
+'''
+
+import os
 import pandas as pd
 from pathlib import Path
 
-inputs_path = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP\Output_test"
+cur_dir = Path(r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP")
+# cur_dir = Path(os.getcwd())
+inputs_path = Path(cur_dir, "Output_Filter_Plexos")
 # Input Data files
-cmg_file = Path(inputs_path, "outBarCMg_12B.csv")
-cur_file = Path(inputs_path, "outCurtail_12B.csv")
-ener_file = Path(inputs_path, "outEnerg_12B.csv")
+INPUT_FILES = {
+    "Block": {
+        "cmg_file_name": "outBarCMg_12B.csv",
+        "cur_file_name": "outCurtail_12B.csv",
+        "ener_file_name": "outEnerg_12B.csv"
+    },
+    "Hour": {
+        "cmg_file_name": "outBarCMg_24H.csv",
+        "cur_file_name": "outCurtail_24H.csv",
+        "ener_file_name": "outEnerg_24H.csv"
+    }
+}
 # Input Dict files
-zonas_file = Path(inputs_path, "BarsZones.csv")
-gen2zone_file = Path(inputs_path, "ID_Gen_PLP-Plexos.csv")
+zonas_file = Path(cur_dir, "BarsZones.csv")
+gen2zone_file = Path(cur_dir, "ID_Gen_PLP-Plexos.csv")
 # Create output folder
-output_folder = Path(inputs_path, "Curtailment_Outputs")
+output_folder = Path(cur_dir, "Output_Curtailment")
 output_folder.mkdir(exist_ok=True)
-# Output Data files
-cur_out_file = Path(
-    output_folder, 'curtailment.csv')
-cur_grouped_out_file = Path(
-    output_folder, 'curtailment_grouped.csv')
-cur_redistrib_out_file = Path(
-    output_folder, 'curtailment_redistrib.csv')
-cur_redistrib_grouped_out_file = Path(
-    output_folder, 'curtailment_redistrib_grouped.csv')
-out_ener_redistrib_out_file = Path(
-    output_folder, 'outEnerg_12B_redistrib.csv')
 
 # Hydrology to filter
 Hyd = 20
 
 
-def load_data(cmg_file, cur_file, ener_file):
+def load_data(time_resolution):
     """
     Load the data required for analysis.
 
@@ -37,27 +63,40 @@ def load_data(cmg_file, cur_file, ener_file):
     - df_cur: DataFrame containing CUR data filtered by Hyd
     - df_ener: DataFrame containing ENER data filtered by Hyd
     """
+    # Define input file paths
+    cmg_file = Path(
+        inputs_path, INPUT_FILES[time_resolution]["cmg_file_name"])
+    cur_file = Path(
+        inputs_path, INPUT_FILES[time_resolution]["cur_file_name"])
+    ener_file = Path(
+        inputs_path, INPUT_FILES[time_resolution]["ener_file_name"])
 
+    print('--Loading data from:')
+    print(f'--CMG: {cmg_file}')
+    print(f'--CUR: {cur_file}')
+    print(f'--ENER: {ener_file}')
+
+    # Load data
     df_cmg = pd.read_csv(cmg_file, encoding="latin1",
                          skiprows=1, low_memory=False)
     if "Hyd" in df_cmg.columns:
         df_cmg = df_cmg[df_cmg["Hyd"] == Hyd]
         df_cmg = df_cmg.drop(columns=["Hyd"])
-    df_cmg = df_cmg.set_index(["Year", "Month", "Block"])
+    df_cmg = df_cmg.set_index(["Year", "Month", time_resolution])
 
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
     if "Hyd" in df_cur.columns:
         df_cur = df_cur[df_cur["Hyd"] == Hyd]
         df_cur = df_cur.drop(columns=["Hyd"])
-    df_cur = df_cur.set_index(["Year", "Month", "Block"])
+    df_cur = df_cur.set_index(["Year", "Month", time_resolution])
 
     df_ener = pd.read_csv(ener_file, encoding="latin1",
                           skiprows=3, low_memory=False)
     if "Hyd" in df_ener.columns:
         df_ener = df_ener[df_ener["Hyd"] == Hyd]
         df_ener = df_ener.drop(columns=["Hyd"])
-    df_ener = df_ener.set_index(["Year", "Month", "Block"])
+    df_ener = df_ener.set_index(["Year", "Month", time_resolution])
 
     return df_cmg, df_cur, df_ener
 
@@ -116,18 +155,19 @@ def validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node):
     '''
 
 
-def process_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node):
-    new_indexes = ['Year', 'Month', 'Block', 'Gen', 'Node', 'Zone']
+def process_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node,
+                   time_resolution="Block"):
+    new_indexes = ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone']
     # Process curtailment data
     df_cur = df_cur.stack().reset_index()
-    df_cur.columns = ['Year', 'Month', 'Block', 'Gen', 'Curtailment']
+    df_cur.columns = ['Year', 'Month', time_resolution, 'Gen', 'Curtailment']
     df_cur['Node'] = df_cur['Gen'].map(dict_gen2node)
     df_cur['Zone'] = df_cur['Node'].map(dict_node2zone)
     df_cur.set_index(new_indexes, inplace=True)
 
     # Process energy data
     df_ener = df_ener.stack().reset_index()
-    df_ener.columns = ['Year', 'Month', 'Block', 'Gen', 'Energy']
+    df_ener.columns = ['Year', 'Month', time_resolution, 'Gen', 'Energy']
     df_ener['Node'] = df_ener['Gen'].map(dict_gen2node)
     df_ener['Zone'] = df_ener['Node'].map(dict_node2zone)
     df_ener.set_index(new_indexes, inplace=True)
@@ -139,26 +179,29 @@ def process_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node):
     return df_all
 
 
-def group_data(df_all):
+def group_data(df_all, time_resolution="Block"):
     # Group values by zone
-    df_all_grouped = df_all.groupby(['Year', 'Month', 'Block', 'Zone']).sum()
+    df_all_grouped = df_all.groupby(
+        ['Year', 'Month', time_resolution, 'Zone']).sum()
     # Calculate grouped values per zone
     df_all_grouped['Curtailment %'] = \
         df_all_grouped['Curtailment'] / df_all_grouped['Total Energy']
     return df_all_grouped
 
 
-def redistribute_totals(df_all, df_all_grouped):
+def redistribute_totals(df_all, df_all_grouped, time_resolution="Block"):
     # First, copy the percentage of corresponding to the zone
     df_all_redistrib = df_all.copy().reset_index()
     df_all_redistrib = df_all_redistrib.join(
-        df_all_grouped['Curtailment %'], on=['Year', 'Month', 'Block', 'Zone'])
+        df_all_grouped['Curtailment %'],
+        on=['Year', 'Month', time_resolution, 'Zone'])
     # Then, redistribute the total energy
     df_all_redistrib['Redistributed Curtailment'] = \
         df_all_redistrib['Curtailment %'] * df_all_redistrib['Total Energy']
     # Set index back
     df_all_redistrib.set_index(
-        ['Year', 'Month', 'Block', 'Gen', 'Node', 'Zone'], inplace=True)
+        ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone'],
+        inplace=True)
     # Drop original curtailment % column
     df_all_redistrib.drop(columns=['Curtailment %'], inplace=True)
     # Calculate redistributed total energy
@@ -168,10 +211,10 @@ def redistribute_totals(df_all, df_all_grouped):
     return df_all_redistrib
 
 
-def group_data_redistrib(df_all_redistrib):
+def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
     # Group values by zone
     df_all_redistrib_grouped = df_all_redistrib.groupby(
-        ['Year', 'Month', 'Block', 'Zone']).sum()
+        ['Year', 'Month', time_resolution, 'Zone']).sum()
     # Calculate grouped values per zone
     df_all_redistrib_grouped['Redistributed Curtailment %'] = \
         df_all_redistrib_grouped['Redistributed Curtailment'] / \
@@ -179,18 +222,18 @@ def group_data_redistrib(df_all_redistrib):
     return df_all_redistrib_grouped
 
 
-def process_redistributed_out_ener(df_all_redistrib):
+def process_redistributed_out_ener(df_all_redistrib, time_resolution="Block"):
     df_out_ener_redistrib = df_all_redistrib.copy()
     # Add Hyd column
     df_out_ener_redistrib['Hyd'] = Hyd
     # Keep only Hyd, Year, Month, Block, Gen, Redistributed Energy
     df_out_ener_redistrib = df_out_ener_redistrib.reset_index()
-    new_indexes = ['Hyd', 'Year', 'Month', 'Block', 'Gen',
+    new_indexes = ['Hyd', 'Year', 'Month', time_resolution, 'Gen',
                    'Redistributed Energy']
     df_out_ener_redistrib = df_out_ener_redistrib[new_indexes]
     # Unstack the data
     df_out_ener_redistrib = df_out_ener_redistrib.set_index(
-        ['Hyd', 'Year', 'Month', 'Block', 'Gen'])
+        ['Hyd', 'Year', 'Month', time_resolution, 'Gen'])
     df_out_ener_redistrib = df_out_ener_redistrib.unstack()
     df_out_ener_redistrib.columns = df_out_ener_redistrib.columns.droplevel()
     return df_out_ener_redistrib
@@ -205,35 +248,34 @@ def add_blank_lines(out_file, lines):
         modified.write(data)
 
 
-def main():
-    print('--Starting curtailment script')
-    # Load Data
-    print('--Loading data from:')
-    print(f'--CMG: {cmg_file}')
-    print(f'--CUR: {cur_file}')
-    print(f'--ENER: {ener_file}')
-    df_cmg, df_cur, df_ener = load_data(cmg_file, cur_file, ener_file)
-    dict_node2zone, dict_gen2node = load_dicts(zonas_file, gen2zone_file)
+def print_outputs_to_csv(output_folder, df_all, df_all_grouped,
+                         df_all_redistrib, df_all_redistrib_grouped,
+                         df_out_ener_redistrib, time_resolution="Block"):
 
-    # Validate inputs
-    print('--Validating inputs')
-    validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node)
+    # Create output folder per time resolution
+    output_folder_aux = Path(output_folder, time_resolution)
+    output_folder_aux.mkdir(exist_ok=True)
 
-    # Process data
-    print('--Processing data')
-    df_all = process_inputs(df_cmg, df_cur, df_ener,
-                            dict_node2zone, dict_gen2node)
-    df_all_grouped = group_data(df_all)
+    # Output suffix
+    if time_resolution == "Block":
+        suffix = "12B"
+    elif time_resolution == "Hour":
+        suffix = "24H"
+    else:
+        suffix = ""
 
-    # Redistribute totals
-    print('--Redistributing totals')
-    df_all_redistrib = redistribute_totals(df_all, df_all_grouped)
-    df_all_redistrib_grouped = group_data_redistrib(df_all_redistrib)
-    df_out_ener_redistrib = process_redistributed_out_ener(
-        df_all_redistrib)
+    # Output Data files
+    cur_out_file = Path(
+        output_folder_aux, 'curtailment_%s.csv' % suffix)
+    cur_grouped_out_file = Path(
+        output_folder_aux, 'curtailment_grouped_%s.csv' % suffix)
+    cur_redistrib_out_file = Path(
+        output_folder_aux, 'curtailment_redistrib_%s.csv' % suffix)
+    cur_redistrib_grouped_out_file = Path(
+        output_folder_aux, 'curtailment_redistrib_grouped_%s.csv' % suffix)
+    out_ener_redistrib_out_file = Path(
+        output_folder_aux, 'outEnerg_redistrib_%s.csv' % suffix)
 
-    # Print results
-    print('--Printing results to csv files')
     df_all.to_csv(cur_out_file)
     df_all_grouped.to_csv(cur_grouped_out_file)
     df_all_redistrib.to_csv(cur_redistrib_out_file)
@@ -243,6 +285,43 @@ def main():
     # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
     # to match format
     add_blank_lines(out_ener_redistrib_out_file, 3)
+
+
+def main():
+    print('--Starting curtailment script')
+
+    for time_resolution in ["Block", "Hour"]:
+        print(f'--Processing curtailment with time '
+              ' resolution in: {time_resolution}')
+        # Load Data
+        print('--Loading data')
+        df_cmg, df_cur, df_ener = load_data(time_resolution)
+        dict_node2zone, dict_gen2node = load_dicts(zonas_file, gen2zone_file)
+
+        # Validate inputs
+        print('--Validating inputs')
+        validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node)
+
+        # Process data
+        print('--Processing data')
+        df_all = process_inputs(df_cmg, df_cur, df_ener,
+                                dict_node2zone, dict_gen2node, time_resolution)
+        df_all_grouped = group_data(df_all, time_resolution)
+
+        # Redistribute totals
+        print('--Redistributing totals')
+        df_all_redistrib = redistribute_totals(
+            df_all, df_all_grouped, time_resolution)
+        df_all_redistrib_grouped = group_data_redistrib(
+            df_all_redistrib, time_resolution)
+        df_out_ener_redistrib = process_redistributed_out_ener(
+            df_all_redistrib, time_resolution)
+
+        # Print results
+        print('--Printing results to csv files')
+        print_outputs_to_csv(output_folder, df_all, df_all_grouped,
+                             df_all_redistrib, df_all_redistrib_grouped,
+                             df_out_ener_redistrib, time_resolution)
 
     print('--Finished curtailment script')
 
