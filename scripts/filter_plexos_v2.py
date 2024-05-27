@@ -14,6 +14,7 @@ import datetime
 Hydro = 20
 folder_paths = 'Folder_Paths.csv'
 
+# Define directories
 # wDir = os.getcwd()
 wDir = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP"
 pDir = os.path.join(wDir, "PLP")
@@ -28,7 +29,24 @@ oDir = os.path.join(wDir, "Output_test")
 if not os.path.exists(oDir):
     os.mkdir(oDir)
 
-fp = pd.read_csv(r"scripts\Folder_Paths.csv")
+# Define input files
+folder_paths_file = os.path.join(wDir, 'Folder_Paths.csv')
+config_file = os.path.join(wDir, 'filter_plexos_config.csv')
+
+# Check existence of input files
+if not os.path.exists(folder_paths_file):
+    print("Folder Paths file not found. Cannot proceed.")
+    print("Please create the file 'Folder_Paths.csv' "
+          "in the working directory.")
+    exit()
+if not os.path.exists(config_file):
+    print("Filter Plexos Config file not found. Cannot proceed.")
+    print("Please create the file 'filter_plexos_config.csv' "
+          "in the working directory.")
+    exit()
+
+# Read folder paths file with paths to Plexos results
+fp = pd.read_csv(folder_paths_file)
 NPaths = len(fp)
 RPaths = fp.to_numpy()
 Yini = RPaths[0, 1]
@@ -38,8 +56,7 @@ Mend = RPaths[NPaths - 1, 4]
 
 
 # Read configuration from filter_plexos_config.json
-FileName = pd.read_json(r"scripts\filter_plexos_config.json")
-
+filter_config = pd.read_csv(config_file)
 
 Hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
@@ -108,10 +125,9 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
         outData_12B, by=['Year', 'Month', 'Block', Item_Name], func=Group_By)
     # Format as in PLP
     csv_out = os.path.join(oDir, File_12B)
-    rows_to_skip = len(PLP_Row)
     print_in_plp_format(
         outData_12B, ['Year', 'Month', 'Block', Item_Name], csv_out,
-        rows_to_skip)
+        PLP_Row)
 
 
 def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
@@ -124,10 +140,9 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
     outData_24H = groupby_func(
         outData_24H, by=['Year', 'Month', 'Hour', Item_Name], func=Group_By)
     csv_out = os.path.join(oDir, File_24H)
-    rows_to_skip = len(PLP_Row)
     print_in_plp_format(
         outData_24H, ['Year', 'Month', 'Hour', Item_Name], csv_out,
-        rows_to_skip)
+        PLP_Row)
 
 
 def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row):
@@ -139,22 +154,22 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row):
         outData, by=['Year', 'Month', Item_Name], func=Group_By)
     # Print in PLP format
     csv_out = os.path.join(oDir, File_M)
-    rows_to_skip = len(PLP_Row)
     print_in_plp_format(
-        outData, ['Year', 'Month', Item_Name], csv_out, rows_to_skip)
+        outData, ['Year', 'Month', Item_Name], csv_out, PLP_Row)
     return outData
 
 
 def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div):
     print("---Printing outPLP: ", File_M)
     csv_in = os.path.join(pDir, File_M)
-    outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=len(PLP_Row))
+    outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
     # Filtrar por Hyd
     outPLP = outPLP.loc[outPLP['Hyd'] == Hydro]
 
     outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
                      var_name=Item_Name, value_name=Value_Name)
 
+    # Drop rows that are not in the range of interest
     outPLP['Year'] = pd.to_numeric(outPLP['Year'])
     outPLP['Month'] = pd.to_numeric(outPLP['Month'])
     outPLP['DateTime'] = pd.to_datetime(
@@ -163,12 +178,15 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div):
     mask_end = (outPLP.DateTime > datetime.datetime(Yend, Mend, 1))
     outPLP = outPLP.loc[mask_ini | mask_end]
 
+    # Drop columns that are not in the range of interest
     outPLP = outPLP.drop(['DateTime'], axis=1)
+    # Add Hydro index
     outData.insert(0, "Hyd", Hydro)
+    # Adjust magnitude of values
     outData[Value_Name] = outData[Value_Name].transform(
-        lambda x: x / PLP_Div)  # Dividir por 1000 para pasar a MW
+        lambda x: x / PLP_Div)
 
-    # TODO revisar si este paso tiene que sobreescribir - en ese caso no sería concat
+    # Concatenate outData and outPLP
     outPLP = pd.concat([outPLP, outData], ignore_index=True)
     outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
     outPLP = outPLP.reset_index()
@@ -178,16 +196,23 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div):
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month'])
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     csv_out = os.path.join(oDir, File_M)
-    rows_to_skip = len(PLP_Row)
     print_in_plp_format(
-        outPLP, ['Hyd', 'Year', 'Month', Item_Name], csv_out, rows_to_skip)
+        outPLP, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
 
 
 def main():
     print("--Start script Filter Plexos")
+    print("---General Inputs directory: ", wDir)
+    print("---PLP Inputs directory: ", pDir)
+    print("---Folder paths file: ", folder_paths_file)
+    print("---Config file: ", config_file)
+    print("---Number of paths: ", NPaths)
+    print("---Output directory: ", oDir)
+
     # Node Price
-    for idx, row in FileName.iterrows():
-        print("--Processing file %s: %s" % (idx + 1, row['Origin']))
+    for idx, row in filter_config.iterrows():
+        print("--Processing file %s/%s: %s" %
+              (idx + 1, len(filter_config), row['Origin']))
         f = row['Origin']
         Item_Name = row['Item']
         Value_Name = row['Value']
