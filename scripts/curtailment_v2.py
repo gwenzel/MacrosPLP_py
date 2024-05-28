@@ -222,21 +222,23 @@ def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
     return df_all_redistrib_grouped
 
 
-def process_redistributed_out_ener(df_all_redistrib, time_resolution="Block"):
-    df_out_ener_redistrib = df_all_redistrib.copy()
+def process_redistributed_out(df_all_redistrib, time_resolution="Block",
+                              value="Energy"):
+    value_header = f"Redistributed {value}"  # Energy or Curtailment
+    df_out_redistrib = df_all_redistrib.copy()
     # Add Hyd column
-    df_out_ener_redistrib['Hyd'] = Hyd
-    # Keep only Hyd, Year, Month, Block, Gen, Redistributed Energy
-    df_out_ener_redistrib = df_out_ener_redistrib.reset_index()
+    df_out_redistrib['Hyd'] = Hyd
+    # Keep only Hyd, Year, Month, Block, Gen, Redistributed Value
+    df_out_redistrib = df_out_redistrib.reset_index()
     new_indexes = ['Hyd', 'Year', 'Month', time_resolution, 'Gen',
-                   'Redistributed Energy']
-    df_out_ener_redistrib = df_out_ener_redistrib[new_indexes]
+                   value_header]
+    df_out_redistrib = df_out_redistrib[new_indexes]
     # Unstack the data
-    df_out_ener_redistrib = df_out_ener_redistrib.set_index(
+    df_out_redistrib = df_out_redistrib.set_index(
         ['Hyd', 'Year', 'Month', time_resolution, 'Gen'])
-    df_out_ener_redistrib = df_out_ener_redistrib.unstack()
-    df_out_ener_redistrib.columns = df_out_ener_redistrib.columns.droplevel()
-    return df_out_ener_redistrib
+    df_out_redistrib = df_out_redistrib.unstack()
+    df_out_redistrib.columns = df_out_redistrib.columns.droplevel()
+    return df_out_redistrib
 
 
 def add_blank_lines(out_file, lines):
@@ -250,7 +252,8 @@ def add_blank_lines(out_file, lines):
 
 def print_outputs_to_csv(output_folder, df_all, df_all_grouped,
                          df_all_redistrib, df_all_redistrib_grouped,
-                         df_out_ener_redistrib, time_resolution="Block"):
+                         df_out_ener_redistrib, df_out_curtail_redistrib,
+                         time_resolution="Block"):
 
     # Create output folder per time resolution
     output_folder_aux = Path(output_folder, time_resolution)
@@ -275,12 +278,15 @@ def print_outputs_to_csv(output_folder, df_all, df_all_grouped,
         output_folder_aux, 'curtailment_redistrib_grouped_%s.csv' % suffix)
     out_ener_redistrib_out_file = Path(
         output_folder_aux, 'outEnerg_redistrib_%s.csv' % suffix)
+    out_curtail_redistrib_out_file = Path(
+        output_folder_aux, 'outCurtail_redistrib_%s.csv' % suffix)
 
     df_all.to_csv(cur_out_file)
     df_all_grouped.to_csv(cur_grouped_out_file)
     df_all_redistrib.to_csv(cur_redistrib_out_file)
     df_all_redistrib_grouped.to_csv(cur_redistrib_grouped_out_file)
     df_out_ener_redistrib.to_csv(out_ener_redistrib_out_file)
+    df_out_curtail_redistrib.to_csv(out_curtail_redistrib_out_file)
 
     # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
     # to match format
@@ -291,8 +297,8 @@ def main():
     print('--Starting curtailment script')
 
     for time_resolution in ["Block", "Hour"]:
-        print(f'--Processing curtailment with time '
-              ' resolution in: {time_resolution}')
+        print('--Processing curtailment with time resolution in: ' +
+              time_resolution + ' resolution')
         # Load Data
         print('--Loading data')
         df_cmg, df_cur, df_ener = load_data(time_resolution)
@@ -314,14 +320,17 @@ def main():
             df_all, df_all_grouped, time_resolution)
         df_all_redistrib_grouped = group_data_redistrib(
             df_all_redistrib, time_resolution)
-        df_out_ener_redistrib = process_redistributed_out_ener(
-            df_all_redistrib, time_resolution)
+        df_out_ener_redistrib = process_redistributed_out(
+            df_all_redistrib, time_resolution, "Energy")
+        df_out_curtail_redistrib = process_redistributed_out(
+            df_all_redistrib, time_resolution, "Curtailment")
 
         # Print results
         print('--Printing results to csv files')
         print_outputs_to_csv(output_folder, df_all, df_all_grouped,
                              df_all_redistrib, df_all_redistrib_grouped,
-                             df_out_ener_redistrib, time_resolution)
+                             df_out_ener_redistrib, df_out_curtail_redistrib,
+                             time_resolution)
 
     print('--Finished curtailment script')
 
