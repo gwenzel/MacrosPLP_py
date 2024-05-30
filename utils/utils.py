@@ -316,7 +316,7 @@ def get_hourly_indexed_df(blo_eta: pd.DataFrame,
         blo_eta.iloc[0]['Year'], blo_eta.iloc[0]['Month'], 1)
     end_date = datetime(
         blo_eta.iloc[-1]['Year'], blo_eta.iloc[-1]['Month'], num_days)
-    index = pd.date_range(start=ini_date, end=end_date, freq='H')
+    index = pd.date_range(start=ini_date, end=end_date, freq='h')
     if all_caps:
         df = pd.DataFrame(index=index,
                           columns=['YEAR', 'MONTH', 'DAY', 'HOUR'])
