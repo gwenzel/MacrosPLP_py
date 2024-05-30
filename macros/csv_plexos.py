@@ -395,7 +395,13 @@ def print_gas_files(
     # read gnl sheet PLPGNL_PolCom y seleccionar escenario
     df_gnl = pd.read_excel(iplp_path, sheet_name='PLPGNL_PolCom',
                            skiprows=1, header=[0, 1])
-    df_gnl = df_gnl.dropna(axis=1)
+    df_gnl = df_gnl.dropna(axis=1, how='all')
+
+    # Warn if there are any NaN values
+    if df_gnl.dropna(axis=1, how='all').isna().any().any():
+        logger.warning('There are NaN values in PLPGNL_PolCom sheet')
+        logger.warning('Check the file and fix the NaN values')
+        logger.warning('Missing gas volumes will be replaced by 0')
 
     df_gnl[('Unnamed: 1_level_0', 'Fecha')] = df_gnl[
         ('Unnamed: 1_level_0', 'Fecha')].apply(from_excel)
@@ -427,7 +433,6 @@ def print_gas_files(
     # for each contract, get:
     # YEAR	MONTH	DAY	PERIOD	VALUE
     # and print file to csv in folder
-
     for contract in list_of_contracts:
         list_of_cols = ['YEAR', 'MONTH', 'DAY', 'PERIOD', contract]
         df_aux = df_gnl[list_of_cols].copy()
