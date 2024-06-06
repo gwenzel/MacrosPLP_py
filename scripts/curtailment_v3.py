@@ -6,7 +6,6 @@ Take PLP outputs and redistribute curtailment values
 to be used by the Curtailment Model
 
 Inputs (tr is the time resolution, 12B or 24H):
-- outBarCMg_%tr%.csv
 - outCurtail_%tr%.csv
 - outEnerg_%tr%.csv
 
@@ -27,18 +26,18 @@ import os
 import pandas as pd
 from pathlib import Path
 
+pd.set_option('display.precision', 2)
+
 cur_dir = Path(r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP")
 # cur_dir = Path(os.getcwd())
 inputs_path = Path(cur_dir, "Output_Filter_Plexos")
 # Input Data files
 INPUT_FILES = {
     "Block": {
-        "cmg_file_name": "outBarCMg_12B.csv",
         "cur_file_name": "outCurtail_12B.csv",
         "ener_file_name": "outEnerg_12B.csv"
     },
     "Hour": {
-        "cmg_file_name": "outBarCMg_24H.csv",
         "cur_file_name": "outCurtail_24H.csv",
         "ener_file_name": "outEnerg_24H.csv"
     }
@@ -59,30 +58,18 @@ def load_data(time_resolution):
     Load the data required for analysis.
 
     Returns:
-    - df_cmg: DataFrame containing CMG data filtered by Hyd
     - df_cur: DataFrame containing CUR data filtered by Hyd
     - df_ener: DataFrame containing ENER data filtered by Hyd
     """
     # Define input file paths
-    cmg_file = Path(
-        inputs_path, INPUT_FILES[time_resolution]["cmg_file_name"])
     cur_file = Path(
         inputs_path, INPUT_FILES[time_resolution]["cur_file_name"])
     ener_file = Path(
         inputs_path, INPUT_FILES[time_resolution]["ener_file_name"])
 
     print('--Loading data from:')
-    print(f'--CMG: {cmg_file}')
     print(f'--CUR: {cur_file}')
     print(f'--ENER: {ener_file}')
-
-    # Load data
-    df_cmg = pd.read_csv(cmg_file, encoding="latin1",
-                         skiprows=1, low_memory=False)
-    if "Hyd" in df_cmg.columns:
-        df_cmg = df_cmg[df_cmg["Hyd"] == Hyd]
-        df_cmg = df_cmg.drop(columns=["Hyd"])
-    df_cmg = df_cmg.set_index(["Year", "Month", time_resolution])
 
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
@@ -98,7 +85,7 @@ def load_data(time_resolution):
         df_ener = df_ener.drop(columns=["Hyd"])
     df_ener = df_ener.set_index(["Year", "Month", time_resolution])
 
-    return df_cmg, df_cur, df_ener
+    return df_cur, df_ener
 
 
 def load_dicts(zonas_file, gen2zone_file):
@@ -128,7 +115,7 @@ def load_dicts(zonas_file, gen2zone_file):
 # def load_gen2pmax_per_year(df_pmax_file):
 
 
-def validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node):
+def validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node):
     # Validate that generators are aligned
     '''
     for gen, node in dict_gen2node.items():
@@ -150,21 +137,8 @@ def validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node):
         if gen not in df_ener.columns:
             print(f"Gen {gen} not found in Energy file")
 
-    # Validate that nodes are aligned
-    '''
-    for node, zone in dict_node2zone.items():
-        if node not in df_cmg.columns:
-            print(f"Node {node} not found in CMg file")
-    for node in dict_gen2node.values():
-        if node not in dict_node2zone.keys():
-            print(f"Node {node} not found in Node2Zone file")
-    for node in df_cmg.columns:
-        if node not in dict_node2zone.keys():
-            print(f"Node {node} not found in Node2Zone file")
-    '''
 
-
-def process_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node,
+def process_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
                    time_resolution="Block"):
     new_indexes = ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone']
     # Process curtailment data
@@ -184,7 +158,7 @@ def process_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node,
     # Process total generation data
     df_all = pd.merge(df_cur, df_ener, left_on=new_indexes,
                       right_on=new_indexes)
-    df_all['Total Energy'] = df_all['Curtailment'] + df_all['Energy']
+    df_all['Energy+Curtailment'] = df_all['Curtailment'] + df_all['Energy']
     return df_all
 
 
@@ -195,7 +169,7 @@ def group_data(df_all, time_resolution="Block"):
         ['Year', 'Month', time_resolution, 'Zone']).sum()
     # Calculate grouped values per zone
     df_all_grouped['Curtailment %'] = \
-        df_all_grouped['Curtailment'] / df_all_grouped['Total Energy']
+        df_all_grouped['Curtailment'] / df_all_grouped['Energy+Curtailment']
     return df_all_grouped
 '''
 
@@ -216,7 +190,7 @@ def get_pmax(dict_gen2node, dict_node2zone, dict_gen2pmax,
 
 
 def redistribute_totals(df_all, df_gen_data,
-                        time_resolution="Block"):
+                        time_resolution="Block", ITER_MAX=5):
     '''
     Algoritmo de redistribución de curtailment
 
@@ -225,110 +199,134 @@ def redistribute_totals(df_all, df_gen_data,
     3. 
     '''
     # 1. Copiar el porcentaje de curtailment correspondiente a la zona
-    df_all_redistrib = df_all.copy().reset_index()
+    df = df_all.copy().reset_index()
 
     # 2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
-    df_all_redistrib['Pmax'] = df_all_redistrib['Gen'].map(
+    df['Pmax'] = df['Gen'].map(
         dict(zip(df_gen_data['Gen'], df_gen_data['Pmax'])))
-    df_all_redistrib['Enable Curtailment'] = df_all_redistrib['Gen'].map(
+    df['Enable Curtailment'] = df['Gen'].map(
         dict(zip(df_gen_data['Gen'], df_gen_data['Enable Curtailment'])))
-    df_all_redistrib['Enable Curtailment'] = df_all_redistrib[
+    df['Enable Curtailment'] = df[
         'Enable Curtailment'].fillna(0)
 
     # 3. Llenar los valores NaN con 0
-    df_all_redistrib['Pmax'] = df_all_redistrib['Pmax'].fillna(0)
+    df['Pmax'] = df['Pmax'].fillna(0)
 
-    # 4. Colocación máxima de energía es igual a Total Energy si participa
-    df_all_redistrib['Colocación #0'] = df_all_redistrib['Total Energy'] * \
-        (df_all_redistrib['Total Energy'] > 0) * \
-        (df_all_redistrib['Enable Curtailment'])
+    # 4. Energía disponible es igual a Energy+Curtailment si participa
+    df['Energía Disponible #0'] = \
+        df['Energy+Curtailment'] * \
+        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 5. Colocación Total de energia es la suma de Colocación para todas
+    # 5. Colocación de energía es igual a Energy si participa
+    df['Colocación #0'] = \
+        df['Energy'] * \
+        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
+
+    # 6. Colocación Total de energia es la suma de Colocación para todas
     # las unidades participantes
-    df_all_redistrib['Colocación Total #0'] = df_all_redistrib.groupby(
+    df['Colocación Total #0'] = df.groupby(
         ['Year', 'Month', time_resolution, 'Zone'])[
             'Colocación #0'].transform(lambda x: x.sum())
 
-    df_all_redistrib['Pmax si participa #0'] = \
-        df_all_redistrib['Pmax'] * \
-        (df_all_redistrib['Total Energy'] > 0) * \
-        (df_all_redistrib['Enable Curtailment'])
+    df['Pmax si participa #0'] = \
+        df['Pmax'] * \
+        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
     # Proceso iterativo:
 
-    ITER_MAX = 5
-
     for i in range(ITER_MAX):
         # a. Calcular factor de prorrata
-        df_all_redistrib['Factor Prorrata #%s' % i] = df_all_redistrib.groupby(
+        df['Factor Prorrata #%s' % i] = df.groupby(
             ['Year', 'Month', time_resolution, 'Zone'])[
                 'Pmax si participa #%s' % i].transform(
             lambda x: x / x.sum() if x.sum() > 0 else 0)
 
-        # b. Calcular punto de operación, saturando con la colocación anterior
-        df_all_redistrib['Punto Operación sin saturar #%s' % i] = \
-            df_all_redistrib['Colocación Total #%s' % i] * \
-            df_all_redistrib['Factor Prorrata #%s' % i]
+        # b. Calcular punto de operación sugerido
+        df['Punto Operación sugerido #%s' % i] = \
+            df['Colocación Total #%s' % i] * df['Factor Prorrata #%s' % i]
 
-        df_all_redistrib['Punto Operación #%s' % i] = \
-            df_all_redistrib[
-                ['Punto Operación sin saturar #%s' % i,
-                 'Colocación #%s' % i]].min(axis=1)
+        # c. Calcular punto de operación saturando con la Energía Disponible
+        df['Punto Operación #%s' % i] = \
+            df[['Punto Operación sugerido #%s' % i,
+                'Energía Disponible #%s' % i]].min(axis=1)
 
-        # Guardar diferencia entre punto de operación y colocación y usar para
-        # calcular siguiente colocación
-        df_all_redistrib['Diferencia #%s' % i] = \
-            df_all_redistrib['Punto Operación sin saturar #%s' % i] - \
-            df_all_redistrib['Colocación #%s' % i]
+        # d. Calcular la nueva energía disponible
+        df['Energía Disponible #%s' % (i+1)] = \
+            df['Energía Disponible #%s' % i] - df['Punto Operación #%s' % i]
 
-        df_all_redistrib['Cero'] = 0
-
-        df_all_redistrib['Colocación #%s' % (i+1)] = \
-            df_all_redistrib[
-                ['Diferencia #%s' % i, 'Cero']].max(axis=1)
-
-        # d. Calcular la colocación total
-        df_all_redistrib['Colocación Total #%s' % (i+1)] = \
-            df_all_redistrib.groupby(
+        '''
+        df['Energía Disponible Total #%s' % i] = \
+            df.groupby(
                 ['Year', 'Month', time_resolution, 'Zone'])[
-                'Colocación #%s' % (i+1)].transform(lambda x: x.sum())
+                'Energía Disponible #%s' % (i+1)].transform(
+                    lambda x: x.sum()) * \
+            (df['Enable Curtailment'])
+        '''
+        # Calcular Energía Asignada, sumando Puntos Op. hasta el actual
+        df['Energía Asignada #<=%s' % i] = \
+            df[['Punto Operación #%s' % j for j in range(i+1)]].sum(axis=1)
+
+        # Calcular Energía Asignada Total
+        df['Energía Asignada Total #<=%s' % i] = \
+            df.groupby(
+                ['Year', 'Month', time_resolution, 'Zone'])[
+                'Energía Asignada #<=%s' % i].transform(
+                    lambda x: x.sum()) * \
+            (df['Enable Curtailment'])
+
+        # f. Calcular nueva colocación total
+        df['Colocación #%s' % (i+1)] = \
+            (df['Energy+Curtailment'] -
+             df['Energía Asignada #<=%s' % i]) * \
+            (df['Enable Curtailment'])
+
+        df['Colocación Total #%s' % (i+1)] = \
+            df.groupby(
+                ['Year', 'Month', time_resolution, 'Zone'])[
+                'Colocación #%s' % (i+1)].transform(
+                    lambda x: x.sum()) * \
+            (df['Enable Curtailment'])
+
+        # g. Evaluar condición de término: si Energía Asignada Total ya
+        # alcanzó la Colocación Total #0
+        df['Terminar #%s' % i] = \
+            1 * (df['Energía Asignada Total #<=%s' % i] >=
+                 df['Colocación Total #0'])
 
         # f. Redefinir potencia máxima si participa en la sgte iteración
-        # Participa si aún hay energía por colocar
-        df_all_redistrib['Pmax si participa #%s' % (i+1)] = \
-            df_all_redistrib['Pmax'] * \
-            (df_all_redistrib['Total Energy'] > 0) * \
-            (df_all_redistrib['Enable Curtailment']) * \
-            (df_all_redistrib['Colocación #%s' % (i+1)] > 0)
+        # Participa si Energía Disponible > 0
+        df['Pmax si participa #%s' % (i+1)] = \
+            df['Pmax'] * \
+            (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment']) * \
+            (df['Energía Disponible #%s' % (i+1)] > 0) *\
+            (1 - df['Terminar #%s' % i])
 
-    # import pdb; pdb.set_trace()
+    # Calcular Punto de Operación final
+    df['Punto Operación Final'] = df[
+        ['Punto Operación #%s' % j for j in range(ITER_MAX)]].sum(axis=1)
 
-    # Calcular Colocación final como la suma de las colocaciones
-    df_all_redistrib['Colocación'] = df_all_redistrib[
-        ['Colocación #%s' % i for i in range(ITER_MAX)]].sum(axis=1)
-
-    # Calcular curtailment en base a la última iteración
-    df_all_redistrib['Redistributed Curtailment'] = \
-        ['Punto Operación #%s' % i for i in range(ITER_MAX)].sum()
+    # Calcular curtailment como la diferencia entre Energy+Curtailment y
+    # el punto de operación final
+    df['Redistributed Curtailment'] = \
+        df['Energy+Curtailment'] - df['Punto Operación Final'] *\
+        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
     # 9. Formatear salidas
-    df_all_redistrib.set_index(
+    df.set_index(
         ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone'],
         inplace=True)
-    df_all_redistrib['Redistributed Energy'] = \
-        df_all_redistrib['Total Energy'] - \
-        df_all_redistrib['Redistributed Curtailment']
-    df_all_redistrib['Original Curtailment %'] = \
-        df_all_redistrib['Curtailment'] / df_all_redistrib['Total Energy']
-    df_all_redistrib['Redistributed Curtailment %'] = \
-        df_all_redistrib['Redistributed Curtailment'] / \
-        df_all_redistrib['Total Energy']
+    df['Redistributed Energy'] = \
+        df['Energy+Curtailment'] - df['Redistributed Curtailment']
+    df['Original Curtailment %'] = \
+        df['Curtailment'] / df['Energy+Curtailment']
+    df['Redistributed Curtailment %'] = \
+        df['Redistributed Curtailment'] / df['Energy+Curtailment']
     # Fill NaN with 0
-    df_all_redistrib['Original Curtailment %'] = \
-        df_all_redistrib['Original Curtailment %'].fillna(0)
-    df_all_redistrib['Redistributed Curtailment %'] = \
-        df_all_redistrib['Redistributed Curtailment %'].fillna(0)
-    return df_all_redistrib
+    df['Original Curtailment %'] = \
+        df['Original Curtailment %'].fillna(0)
+    df['Redistributed Curtailment %'] = \
+        df['Redistributed Curtailment %'].fillna(0)
+    return df
 
 
 def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
@@ -338,7 +336,7 @@ def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
     # Calculate grouped values per zone
     df_all_redistrib_grouped['Redistributed Curtailment %'] = \
         df_all_redistrib_grouped['Redistributed Curtailment'] / \
-        df_all_redistrib_grouped['Total Energy']
+        df_all_redistrib_grouped['Energy+Curtailment']
     return df_all_redistrib_grouped
 
 
@@ -418,17 +416,17 @@ def main():
               time_resolution + ' resolution')
         # Load Data
         print('--Loading data')
-        df_cmg, df_cur, df_ener = load_data(time_resolution)
+        df_cur, df_ener = load_data(time_resolution)
         dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
             load_dicts(zonas_file, gen2zone_file)
 
         # Validate inputs
         print('--Validating inputs')
-        validate_inputs(df_cmg, df_cur, df_ener, dict_node2zone, dict_gen2node)
+        validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node)
 
         # Process data
         print('--Processing data')
-        df_all = process_inputs(df_cmg, df_cur, df_ener,
+        df_all = process_inputs(df_cur, df_ener,
                                 dict_node2zone, dict_gen2node,
                                 time_resolution)
 
