@@ -88,10 +88,10 @@ def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
                 new_dict["Factor Barra Consumo"][idx] = df_as_dict[
                     "Factor Barra Consumo %s" % barra][i]
             idx += 1
-    df_dda_por_barra = pd.DataFrame(new_dict).reset_index(drop=True)
-    df_dda_por_barra['Coordinado'] = \
-        df_dda_por_barra['Coordinado'].fillna("NA")
-    return df_dda_por_barra
+    df_dem_por_barra = pd.DataFrame(new_dict).reset_index(drop=True)
+    df_dem_por_barra['Coordinado'] = \
+        df_dem_por_barra['Coordinado'].fillna("NA")
+    return df_dem_por_barra
 
 
 def validate_dda_por_barra(df: pd.DataFrame):
@@ -227,6 +227,26 @@ def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
     return df
 
 
+def get_hourly_profiles_plexos(iplp_path: Path) -> pd.DataFrame:
+    # Read Perfiles_8760 sheet, skipping first column and first row,
+    # and the using the 3 first rows as header,
+    # and the 3 first columns as index
+    df = pd.read_excel(iplp_path, sheet_name='Perfiles_8760',
+                       skiprows=1, header=[0, 1], index_col=[1, 3])
+    # Drop first two columns (Escenario, mes in str)
+    df = df.drop([df.columns[0], df.columns[1]], axis=1)
+    # Drop first rows (hora in str, column names)
+    df = df.drop([df.index[0], df.index[1]])
+    # Use pivot table to get the desired rows format
+    df = df.stack([0, 1], future_stack=True).reset_index()
+    # Rename columns
+    df = df.rename(columns={'level_0': 'Profile', 'level_1': 'Month',
+                            'dia': 'Day', 'hora': 'Hour', 0: 'PowerFactor'})
+    # Drop rows with PowerFactor in 0 - days that do not exist
+    df = df[df['PowerFactor'] > 0]
+    return df
+
+
 def validate_hourly_profiles(df: pd.DataFrame):
     # Check if all columns are present
     cols_to_check = ["#", "Perfil día tipo", "Mes", "Año",
@@ -271,17 +291,6 @@ def calculate_consumption(x):
     return num / den
 
 
-def calculate_consumption_plexos(x):
-    # Consumption is calculated as follows:
-    # [Monthly demand] * [% of demand in current bus] *
-    #   [% of demand in current block] * 1000
-    # divided by
-    #  ([Days in Month] * [Hours per day in current block])
-    num = x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000
-    den = (x['DaysInMonth'] * 1)
-    return num / den
-
-
 def add_timedata_to_monthly_demand(
         df_monthly_demand: pd.DataFrame) -> pd.DataFrame:
     # Add data to monthly demand df
@@ -315,29 +324,10 @@ def get_consumption_per_barra(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_consumption_per_barra_plexos(df: pd.DataFrame) -> pd.DataFrame:
-    '''
-    Calculate consumption, group by Barra and sum
-    Then reorder and sort
-    '''
-    df['Consumo'] = df.apply(lambda x: calculate_consumption_plexos(x), axis=1)
-    cols_to_drop = ['Demand', 'Factor Barra Consumo', 'PowerFactor',
-                    'DaysInMonth']
-    cols_for_groupby = ['Year', 'Month', 'Hour', 'Barra Consumo']
-    df = df.drop(cols_to_drop, axis=1)
-    df = df.groupby(cols_for_groupby).sum(numeric_only=True).reset_index()
-    # Reorder columns and sort
-    cols_to_select = ['Barra Consumo', 'Year', 'Month', 'Hour', 'Consumo']
-    cols_to_sort = ['Barra Consumo', 'Year', 'Month', 'Hour']
-    df = df[cols_to_select]
-    df = df.sort_values(by=cols_to_sort).reset_index(drop=True)
-    return df
-
-
 def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
                      df_monthly_demand: pd.DataFrame,
                      df_hourly_profiles: pd.DataFrame,
-                     df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
+                     df_dem_por_barra: pd.DataFrame) -> pd.DataFrame:
     '''
     Get all profiles with block resolution for PLP
     '''
@@ -346,7 +336,7 @@ def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
 
     # Merge dataframes
     df = pd.merge(
-        df_monthly_demand, df_dda_por_barra, on=['Coordinado', 'Cliente'])
+        df_monthly_demand, df_dem_por_barra, on=['Coordinado', 'Cliente'])
     df = pd.merge(df, df_blockly_profiles, on=['Profile', 'Month'])
     df = pd.merge(df, blo_eta, on=['Year', 'Month', 'Block'])
 
@@ -355,29 +345,16 @@ def get_all_profiles(blo_eta: pd.DataFrame, block2day: pd.DataFrame,
     return df
 
 
-def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
-                            df_hourly_profiles: pd.DataFrame,
-                            df_dda_por_barra: pd.DataFrame) -> pd.DataFrame:
-    '''
-    Get all profiles with hourly resolution for Plexos
-    '''
-    # Merge dataframes
-    df = pd.merge(
-        df_monthly_demand, df_dda_por_barra, on=['Coordinado', 'Cliente'])
-    df = pd.merge(df, df_hourly_profiles, on=['Profile', 'Month'])
-    # Calculate consumption, group by Barra and sum, reorder and sort
-    df = get_consumption_per_barra_plexos(df)
-    return df
-
-
 def write_plpdem_dat(df_all_profiles: pd.DataFrame, iplp_path: Path):
-
+    '''
+    Function that writes plpdem.dat file
+    '''
     plpdem_path = iplp_path.parent / 'Temp' / 'plpdem.dat'
 
     list_all_barras = get_list_of_all_barras(iplp_path)
     list_dem_barras = df_all_profiles['Barra Consumo'].unique().tolist()
 
-    # Translate month to hidromonth
+    # Translate month to hydromonth
     df_all_profiles = translate_to_hydromonth(df_all_profiles)
 
     lines = ['# Archivo de demandas por barra (plpdem.dat)']
@@ -484,8 +461,14 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
         write_lines_appending(lines, plpfal_path)
 
 
-def print_df_dda_por_barra(path_df: Path, df_dda_por_barra: pd.DataFrame):
-    df_dda_por_barra.to_csv(path_df / 'df_dda_por_barra.csv', index=False)
+def print_df_for_plexos(path_df: Path, df_dem_por_barra: pd.DataFrame,
+                        df_monthly_demand: pd.DataFrame,
+                        df_hourly_profiles_plexos: pd.DataFrame):
+    df_dem_por_barra.to_csv(path_df / 'df_dem_por_barra.csv', index=False)
+    df_monthly_demand.to_csv(path_df / 'df_dem_monthly_demand.csv',
+                             index=False)
+    df_hourly_profiles_plexos.to_csv(
+        path_df / 'df_dem_hourly_profiles_plexos.csv', index=False)
 
 
 @timeit
@@ -516,8 +499,7 @@ def main():
 
         # Sheet "DdaPorBarra" to row format
         logger.info('Processing DdaPorBarra sheet')
-        df_dda_por_barra = dda_por_barra_to_row_format(iplp_path)
-        print_df_dda_por_barra(path_df, df_dda_por_barra)
+        df_dem_por_barra = dda_por_barra_to_row_format(iplp_path)
 
         # Get monthly demand from Sheet "DdaEnergia"
         logger.info('Processing DdaEnergia sheet')
@@ -531,7 +513,7 @@ def main():
         logger.info('Generating dataframes with profiles per Etapa per Barra')
         df_all_profiles = get_all_profiles(
             blo_eta, block2day,
-            df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
+            df_monthly_demand, df_hourly_profiles, df_dem_por_barra)
 
         # Print to plpdem and uni_plpdem
         logger.info('Printing plpdem.dat and uni_plpdem.dat')
@@ -547,16 +529,14 @@ def main():
         logger.info('Processing DdaEnergia sheet for plexos')
         df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
 
-        # Generate dataframe with profiles per Etapa
-        logger.info('Generating dataframes with profiles per Etapa per'
-                    ' Barra for plexos')
-        df_all_profiles = get_all_profiles_plexos(
-            df_monthly_demand, df_hourly_profiles, df_dda_por_barra)
+        # Get Month-Day-Hourly profiles for Plexos
+        logger.info('Processing Perfiles_8760 sheet for plexos profiles')
+        df_hourly_profiles_plexos = get_hourly_profiles_plexos(iplp_path)
 
-        # Print df_all_profiles to csv to be used in plexos
-        logger.info('Printing df_all_profiles.csv for Plexos')
-        df_all_profiles.to_csv(path_df / 'df_dda_all_profiles_plexos.csv',
-                               index=False)
+        # Export dataframes for plexos as csv
+        logger.info('Printing dataframes for Plexos')
+        print_df_for_plexos(path_df, df_dem_por_barra, df_monthly_demand,
+                            df_hourly_profiles_plexos)
 
     except Exception as e:
         logger.error(e, exc_info=True)
