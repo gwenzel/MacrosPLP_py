@@ -90,7 +90,7 @@ def dda_por_barra_to_row_format(iplp_path: Path) -> pd.DataFrame:
             idx += 1
     df_dem_por_barra = pd.DataFrame(new_dict).reset_index(drop=True)
     df_dem_por_barra['Coordinado'] = \
-        df_dem_por_barra['Coordinado'].fillna("NA")
+        df_dem_por_barra['Coordinado'].fillna("Unknown")
     return df_dem_por_barra
 
 
@@ -144,9 +144,11 @@ def clean_monthly_demand_data(df: pd.DataFrame) -> pd.DataFrame:
     cols_to_drop = ['#', 'Coordinado.1', 'Cliente.1', 'Perfil',
                     'Clasificacion SEN', 'Clasificacion ENGIE']
     df = df.drop(cols_to_drop, axis=1)
-    # Drop columns if there all values are nan
+    # Drop columns if all values are nan
     df = df.dropna(how='all', axis=1)
-    df.loc[:, 'Coordinado'] = df['Coordinado'].fillna('NA')
+    # Fill nan values in Coordinado and Cliente
+    df.loc[:, 'Coordinado'] = df['Coordinado'].fillna('Unknown')
+    df.loc[:, 'Cliente'] = df['Cliente'].fillna('Unknown')
     # Drop columns if name begins with 'Unnamed'
     mask_is_not_unnamed = []
     for col in df.columns:
@@ -205,7 +207,8 @@ def validate_monthly_demand(df: pd.DataFrame):
 
 
 def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
-    df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA')
+    df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA',
+                       usecols='A:AC')
     validate_hourly_profiles(df)
     # Clean data
     cols_to_drop = ['#', 'Año', 'Verificador consumo']
@@ -224,26 +227,6 @@ def get_hourly_profiles(iplp_path: Path) -> pd.DataFrame:
         columns={'Perfil día tipo': 'Profile',
                  'Mes': 'Month',
                  'Hora': 'Hour'})
-    return df
-
-
-def get_hourly_profiles_plexos(iplp_path: Path) -> pd.DataFrame:
-    # Read Perfiles_8760 sheet, skipping first column and first row,
-    # and the using the 3 first rows as header,
-    # and the 3 first columns as index
-    df = pd.read_excel(iplp_path, sheet_name='Perfiles_8760',
-                       skiprows=1, header=[0, 1], index_col=[1, 3])
-    # Drop first two columns (Escenario, mes in str)
-    df = df.drop([df.columns[0], df.columns[1]], axis=1)
-    # Drop first rows (hora in str, column names)
-    df = df.drop([df.index[0], df.index[1]])
-    # Use pivot table to get the desired rows format
-    df = df.stack([0, 1], future_stack=True).reset_index()
-    # Rename columns
-    df = df.rename(columns={'level_0': 'Profile', 'level_1': 'Month',
-                            'dia': 'Day', 'hora': 'Hour', 0: 'PowerFactor'})
-    # Drop rows with PowerFactor in 0 - days that do not exist
-    df = df[df['PowerFactor'] > 0]
     return df
 
 
@@ -461,16 +444,6 @@ def write_plpfal_prn(blo_eta: pd.DataFrame, df_all_profiles: pd.DataFrame,
         write_lines_appending(lines, plpfal_path)
 
 
-def print_df_for_plexos(path_df: Path, df_dem_por_barra: pd.DataFrame,
-                        df_monthly_demand: pd.DataFrame,
-                        df_hourly_profiles_plexos: pd.DataFrame):
-    df_dem_por_barra.to_csv(path_df / 'df_dem_por_barra.csv', index=False)
-    df_monthly_demand.to_csv(path_df / 'df_dem_monthly_demand.csv',
-                             index=False)
-    df_hourly_profiles_plexos.to_csv(
-        path_df / 'df_dem_hourly_profiles_plexos.csv', index=False)
-
-
 @timeit
 def main():
     '''
@@ -523,20 +496,6 @@ def main():
         # Get failure units and generate plpfal.prn
         logger.info('Printing plpfal.prn')
         write_plpfal_prn(blo_eta, df_all_profiles, iplp_path)
-
-        # Plexos outputs
-        # Get monthly demand from Sheet "DdaEnergia"
-        logger.info('Processing DdaEnergia sheet for plexos')
-        df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
-
-        # Get Month-Day-Hourly profiles for Plexos
-        logger.info('Processing Perfiles_8760 sheet for plexos profiles')
-        df_hourly_profiles_plexos = get_hourly_profiles_plexos(iplp_path)
-
-        # Export dataframes for plexos as csv
-        logger.info('Printing dataframes for Plexos')
-        print_df_for_plexos(path_df, df_dem_por_barra, df_monthly_demand,
-                            df_hourly_profiles_plexos)
 
     except Exception as e:
         logger.error(e, exc_info=True)

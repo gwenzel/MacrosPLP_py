@@ -2,6 +2,8 @@
 Generate Plexos files in CSV folder
 '''
 from macros.cvar import read_unit_cvar_nominal
+from macros.dem import (dda_por_barra_to_row_format,
+                        get_monthly_demand)
 from macros.lin import read_df_lines
 from macros.manli import (add_manli_data_row_by_row,
                           get_df_manli,
@@ -409,10 +411,10 @@ def print_gas_files(
     df_gnl.index = df_gnl.index.rename('Fecha')
 
     # Get list of contracts and monthly volumes
-    list_of_contracts = df_gnl.stack().columns.tolist()
+    list_of_contracts = df_gnl.stack(future_stack=True).columns.tolist()
 
     # Finish reshaping
-    df_gnl = df_gnl.stack().reset_index()
+    df_gnl = df_gnl.stack(future_stack=True).reset_index()
     df_gnl = df_gnl.rename(columns={'level_1': 'Scenario'})
     df_gnl = df_gnl.fillna(0)
 
@@ -518,33 +520,33 @@ def print_generator_rating_factor(iplp_path: Path,
     df_profiles.to_csv(path_csv / 'Generator_RatingFactor.csv', index=False)
 
 
-def print_node_load_new(df_hourly, path_csv, path_df):
-    '''
-    Print Node Load New
-    '''
-    # Read 3 csv files
-    try:
-        df_dem_por_barra = pd.read_csv(path_df / 'df_dem_por_barra.csv')
-        df_monthly_demand = pd.read_csv(path_df / 'df_dem_monthly_demand.csv')
-        df_hourly_profiles = pd.read_csv(
-            path_df / 'df_dem_hourly_profiles_plexos.csv')
-    except FileNotFoundError:
-        logger.error('File .csv for plexos not found')
-        exit()
+def get_monthly_demand_plexos(iplp_path: Path,
+                              year_ini: int, year_end: int) -> pd.DataFrame:
+    df_monthly_demand = get_monthly_demand(iplp_path, plexos=True)
     # Filter dates
-    mask_ini = df_monthly_demand['Year'] >= df_hourly['Date'].iloc[0].year
-    mask_end = df_monthly_demand['Year'] <= df_hourly['Date'].iloc[-1].year
+    mask_ini = df_monthly_demand['Year'] >= year_ini
+    mask_end = df_monthly_demand['Year'] <= year_end
     df_monthly_demand = df_monthly_demand[mask_ini & mask_end]
+    return df_monthly_demand
 
-    # Get all profiles with hourly resolution for Plexos
-    df = get_all_profiles_plexos(df_monthly_demand,
-                                 df_hourly_profiles, df_dem_por_barra)
 
-    # Use merge to repeat hourly profiles for each day
+def format_node_load_file(df_hourly: pd.DataFrame, df: pd.DataFrame):
+    '''
+    Format Node Load file for plexos
+
+    Start from df_hourly to make sure all real hours are considered,
+    fill missing days (Feb-29) with previous day
+    '''
     cols_to_merge_on = ['Year', 'Month', 'Day', 'Hour']
     df = pd.merge(df_hourly, df, on=cols_to_merge_on)
     df = df.drop('Date', axis=1)
     df = df.sort_values(cols_to_merge_on)
+    # Fill na with 0
+    df = df.fillna(0)
+    # If entire Day has 0 Consumption, copy previous day
+    mask = df.groupby(['Year', 'Month', 'Day'])['Consumo'].transform(
+        'sum') == 0
+    df.loc[mask, 'Consumo'] = df.loc[mask, 'Consumo'].shift(24)
     # Use nodes as column names
     df = df.set_index(['Barra Consumo', 'Year', 'Month', 'Day', 'Hour'])\
            .unstack('Barra Consumo')\
@@ -556,69 +558,95 @@ def print_node_load_new(df_hourly, path_csv, path_df):
     df.columns.values[1] = 'MONTH'
     df.columns.values[2] = 'DAY'
     df.columns.values[3] = 'PERIOD'
-    # Print
+    return df
+
+
+def print_node_load_new(df_hourly: pd.DataFrame, path_csv: Path,
+                        iplp_path: Path, path_df: Path):
+    '''
+    Print Node Load New
+    '''
+    # Get initial and final year
+    year_ini = df_hourly['Date'].iloc[0].year
+    year_end = df_hourly['Date'].iloc[-1].year
+
+    logger.info('Getting dem_por_barra, monthly demand and hourly profiles')
+    df_dem_por_barra = dda_por_barra_to_row_format(iplp_path)
+    df_monthly_demand = get_monthly_demand_plexos(
+        iplp_path, year_ini, year_end)
+    df_hourly_profiles_plexos = get_hourly_profiles_plexos(iplp_path)
+
+    logger.info('Merging dataframes to get hourly demand per node')
+    # Get all profiles with hourly resolution for Plexos
+    df = get_all_profiles_plexos(df_monthly_demand,
+                                 df_hourly_profiles_plexos,
+                                 df_dem_por_barra)
+
+    logger.info('Formatting Node Load file')
+    df = format_node_load_file(df_hourly, df)
+
+    logger.info('Printing Node Load file')
     df.to_csv(path_csv / 'Node_Load.csv', index=False)
 
+    logger.info('Printing demand dataframes')
+    df_dem_por_barra.to_csv(path_df / 'dem_por_barra.csv', index=False)
+    df_monthly_demand.to_csv(path_df / 'monthly_demand.csv', index=False)
+    df_hourly_profiles_plexos.to_csv(
+        path_df / 'hourly_profiles_plexos.csv', index=False)
 
-def print_node_load(df_hourly, path_csv, path_df):
-    '''
-    Print Node Load
-    '''
-    # Get node load
-    try:
-        df = pd.read_csv(path_df / 'df_dda_all_profiles_plexos.csv')
-    except FileNotFoundError:
-        logger.error('File df_dda_all_profiles_plexos.csv not found')
-        return
-    # Filter dates
-    mask_ini = df['Year'] >= df_hourly['Date'].iloc[0].year
-    mask_end = df['Year'] <= df_hourly['Date'].iloc[-1].year
-    df = df[mask_ini & mask_end]
 
-    # Use merge to repeat hourly profiles for each day
-    df = pd.merge(df_hourly, df, on=['Year', 'Month', 'Hour'])
-    df = df.drop('Date', axis=1)
-    df = df.sort_values(['Year', 'Month', 'Day', 'Hour'])
-    # Use nodes as column names
-    df = df.set_index(['Barra Consumo', 'Year', 'Month', 'Day', 'Hour'])\
-           .unstack('Barra Consumo')\
-           .reset_index()
-    df = df.round(4)
-    # Rename index columns
-    df.columns = df.columns.droplevel()
-    df.columns.values[0] = 'YEAR'
-    df.columns.values[1] = 'MONTH'
-    df.columns.values[2] = 'DAY'
-    df.columns.values[3] = 'PERIOD'
-    # Print
-    df.to_csv(path_csv / 'Node_Load.csv', index=False)
+def get_hourly_profiles_plexos(iplp_path: Path) -> pd.DataFrame:
+    # Read PerfilesDDA_Plx sheet, skipping first column and first row,
+    # and the using the 3 first rows as header,
+    # and the 3 first columns as index
+    df = pd.read_excel(iplp_path, sheet_name='PerfilesDDA_Plx',
+                       skiprows=1, header=[0, 1], index_col=[1, 3])
+    # Drop first two columns (Escenario, mes in str)
+    df = df.drop([df.columns[0], df.columns[1]], axis=1)
+    # Drop first rows (hora in str, column names)
+    df = df.drop([df.index[0], df.index[1]])
+    # Use pivot table to get the desired rows format
+    df = df.stack([0, 1], future_stack=True).reset_index()
+    # Rename columns
+    df = df.rename(columns={'level_0': 'Profile', 'level_1': 'Month',
+                            'dia': 'Day', 'hora': 'Hour', 0: 'PowerFactor'})
+    # Drop rows is PowerFactor is 0 for the entire day
+    mask = df.groupby(['Profile', 'Month', 'Day'])['PowerFactor'].transform(
+        'sum') == 0
+    df = df[~mask]
+    return df
 
 
 def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
                             df_hourly_profiles_plexos: pd.DataFrame,
                             df_dem_por_barra: pd.DataFrame) -> pd.DataFrame:
     '''
-    Get all profiles with hourly resolution for Plexos
+    Get all profiles with hourly resolution for Plexos by merging
+    the three dataframes given
     '''
     # First drop columns that won't be used, to accelerate merge
     df_monthly_demand = df_monthly_demand.drop(['DaysInMonth'], axis=1)
-    # Then calculate yearly demand, as plexos profiles are % of yearly demand
-    df_yearly_demand = df_monthly_demand.groupby(
-        ['Coordinado', 'Cliente', 'Year']).sum().reset_index()
-    # Drop Month
-    df_yearly_demand = df_yearly_demand.drop(['Month'], axis=1)
-    # Merge dataframes of monthly demand and dda_por_barra
+    # Set index to improve merge performance
+    df_monthly_demand.set_index(['Coordinado', 'Cliente'],
+                                inplace=True)
+    df_dem_por_barra.set_index(['Coordinado', 'Cliente'],
+                               inplace=True)
+    # Then calculate yearly demand, as plexos profiles are % of monthly demand
+    # Merge dataframes of demand and dda_por_barra
     df = pd.merge(
-        df_yearly_demand, df_dem_por_barra, on=['Coordinado', 'Cliente'])
-    # Drop Coordinado and Cliente
-    df = df.drop(['Coordinado', 'Cliente'], axis=1)
-    # To avoid memory problems, merge by year-month, then concatenate
+        df_monthly_demand, df_dem_por_barra, on=['Coordinado', 'Cliente'])
+    # Make sure Profile is string on df and df_hourly_profiles_plexos
+    df['Profile'] = df['Profile'].astype(str)
+    df_hourly_profiles_plexos['Profile'] = df_hourly_profiles_plexos[
+        'Profile'].astype(str)
+    # Merge with hourly profiles
+    # To avoid memory problems, merge by year, then concatenate
     list_of_df = []
-    # Build Year-Month tuples
     for year in df['Year'].unique():
-        logger.info('Processing year %s' % year)
-        df_aux = pd.merge(df[df['Year'] == year], df_hourly_profiles_plexos,
-                          on=['Profile'])
+        logger.info('Node Load - Processing year %s' % year)
+        df_aux = pd.merge(df[df['Year'] == year],
+                          df_hourly_profiles_plexos,
+                          on=['Profile', 'Month'])
         # Calculate consumption, group by Barra and sum, reorder and sort
         df_cons = get_consumption_per_barra_plexos(df_aux)
         list_of_df.append(df_cons)
@@ -655,7 +683,6 @@ def calculate_consumption_plexos(x):
     return x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000
 
 
-@timeit
 def main():
     '''
     Main routine
@@ -688,7 +715,7 @@ def main():
 
         # Print Node Load (Demand)
         logger.info('Processing plexos Node Load')
-        print_node_load_new(df_hourly, path_csv, path_df)
+        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
 
         # Generator files
         logger.info('Processing plexos Generator files')
