@@ -541,19 +541,20 @@ def format_node_load_file(df_hourly: pd.DataFrame, df: pd.DataFrame):
     df = pd.merge(df_hourly, df, on=cols_to_merge_on)
     df = df.drop('Date', axis=1)
     df = df.sort_values(cols_to_merge_on)
-    # Fill na with 0
-    df = df.fillna(0)
-    # If entire Day has 0 Consumption, copy previous day
-    mask = df.groupby(['Year', 'Month', 'Day'])['Consumo'].transform(
-        'sum') == 0
-    df.loc[mask, 'Consumo'] = df.loc[mask, 'Consumo'].shift(24)
     # Use nodes as column names
     df = df.set_index(['Barra Consumo', 'Year', 'Month', 'Day', 'Hour'])\
-           .unstack('Barra Consumo')\
-           .reset_index()
+           .unstack('Barra Consumo')
+    # Drop level
+    df.columns = df.columns.droplevel()
+    # For each column, if entire Day has 0 Consumption, copy previous day
+    df = df.fillna(0)
+    for col in df.columns:
+        mask = df.groupby(['Year', 'Month', 'Day'])[col].transform(
+            'sum') == 0
+        df.loc[mask, col] = df.loc[:, col].shift(24)
     df = df.round(4)
     # Rename index columns
-    df.columns = df.columns.droplevel()
+    df.reset_index(inplace=True)
     df.columns.values[0] = 'YEAR'
     df.columns.values[1] = 'MONTH'
     df.columns.values[2] = 'DAY'
