@@ -1,0 +1,87 @@
+# Log de versiones
+
+Las versiones tienen 3 números para identificarlas: a.b.c
+
+a. Versión principal. Se cambia cuando los cambios agregan funcionalidades nuevas o requieren cambios de forma en la planilla.
+b. Versión secundaria. Se cambia cuando hay cambios que agregan funcionalidades nuevas que pueden convivir con la planilla tal como estaba.
+c. Versión terciaria. Se cambia cuando se corrigen bugs sobre la versión actual.
+
+Esta lógica es válida desde la versión 1.0.0.
+
+## Versión 0
+
+### Versión 0.0.1
+
+- Versión inicial ERNC
+  - Parte final plpmance.dat
+- Versión inicial Demanda
+  - plpdem.dat
+  - uni_plpdem.dat
+  - plpfal.prn
+
+### Versión 0.0.2
+
+- Versión inicial Costo Variable
+  - plpcosce.dat
+- Versión inicial Mantención de Centrales + integración ERNC
+  - plpmance_ini.dat y plpmance.dat
+
+### Versión 0.0.3
+
+- Mejora Script de generación de perfiles ERNC - requiere los perfiles en la planilla IPLP (no en una carpeta centralizada)
+
+### Versión 0.0.4
+
+- Versión inicial Líneas y MantLin/x, incluyendo restricciones de transformadores
+  - plpcnfli.dat
+  - plpmanli.dat
+  - plpmanlix.dat
+- Versión inicial Afluentes
+  - plpaflce.dat
+  - Storage_NaturalInflow.csv
+
+### Versión 0.0.5
+
+- Versión inicial Script Plexos
+  - Carpeta CSV + archivos varios
+- Versión inicial Script Centrales + FuncCDEC
+  - plpcnfce.dat
+  - plptec.dat
+- Versión inicial PLPBLO
+  - PLPBLO.dat
+  - PLPETA.dat 
+  - Etapa2Dates.csv
+- Versión inicial Bar
+  - plpbar.dat
+  - uni_plpbar.dat
+  - plpbar_full.dat
+- Versión inicial PLPMAT
+  - plpmat.dat
+- Mejoras Script Afluentes
+- Mejoras Costo Variable
+- Mejoras Script ERNC
+- Mejora Script Demanda (nombre centrales de falla)
+
+## Versión 1
+
+### Versión 1.0.0
+
+- Validación de Inputs
+- Manejo de errores y mensajes 
+
+### Versión 1.1.0
+
+- Quitar restricciones de Transformadores
+
+### Versión 1.2.0
+
+- Quitar función de reducción de incertidumbre en Script Afluentes
+- Arreglo de error en archivo de volumen de Gas Plexos, dejaba en 0 la el horizonte completo si había una celda vacía
+
+### Versión 1.3.0
+
+ - Demanda Plexos con resolución horaria
+
+### Versión 1.3.1
+
+- Arreglar bug en Demanda Plexos Horaria con el 29 de Febrero.
