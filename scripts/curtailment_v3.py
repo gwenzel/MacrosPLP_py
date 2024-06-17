@@ -195,8 +195,28 @@ def redistribute_totals(df_all, df_gen_data,
     Algoritmo de redistribución de curtailment
 
     1. Copiar el porcentaje de curtailment correspondiente a la zona
-    2. Agregar las columnas Pmax y Enable Curtailment de df_gen_data
-    3. 
+    2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
+    3. Llenar los valores NaN con 0
+    4. Energía disponible es igual a Energy+Curtailment si participa
+    5. Colocación de energía es igual a Energy si participa
+    6. Colocación Total de energia es la suma de Colocación para todas
+    las unidades participantes
+    7. Pmax si participa es igual a Pmax si participa en la iteración 0
+    8. Proceso iterativo:
+        a. Calcular factor de prorrata
+        b. Calcular punto de operación sugerido
+        c. Calcular punto de operación saturando con la Energía Disponible
+        d. Calcular la nueva energía disponible
+        e. Calcular Energía Asignada, sumando Puntos Op. hasta el actual
+        f. Calcular nueva colocación total
+        g. Evaluar condición de término: si Energía Asignada Total ya
+        alcanzó la Colocación Total #0
+        f. Redefinir potencia máxima si participa en la sgte iteración
+        Participa si Energía Disponible > 0
+    9. Calcular Punto de Operación final
+    10. Calcular curtailment como la diferencia entre Energy+Curtailment y
+    el punto de operación final
+    11. Formatear salidas
     '''
     # 1. Copiar el porcentaje de curtailment correspondiente a la zona
     df = df_all.copy().reset_index()
@@ -266,26 +286,27 @@ def redistribute_totals(df_all, df_gen_data,
         df['Energía Asignada #<=%s' % i] = \
             df[['Punto Operación #%s' % j for j in range(i+1)]].sum(axis=1)
 
-        # Calcular Energía Asignada Total
+        # Calcular Energía Asignada Total hasta iteracion actual
         df['Energía Asignada Total #<=%s' % i] = \
             df.groupby(
                 ['Year', 'Month', time_resolution, 'Zone'])[
                 'Energía Asignada #<=%s' % i].transform(
-                    lambda x: x.sum()) * \
-            (df['Enable Curtailment'])
+                    lambda x: x.sum())
 
         # f. Calcular nueva colocación total
+        # números particulares pueden ser negativos, pero la suma no
         df['Colocación #%s' % (i+1)] = \
-            (df['Energy+Curtailment'] -
-             df['Energía Asignada #<=%s' % i]) * \
-            (df['Enable Curtailment'])
+            (df['Colocación #0'] - df['Energía Asignada #<=%s' % i])
 
         df['Colocación Total #%s' % (i+1)] = \
             df.groupby(
                 ['Year', 'Month', time_resolution, 'Zone'])[
                 'Colocación #%s' % (i+1)].transform(
-                    lambda x: x.sum()) * \
-            (df['Enable Curtailment'])
+                    lambda x: x.sum())
+
+        # Asegurar que Colocación Total no sea negativa
+        df['Colocación Total #%s' % (i+1)] = \
+            df['Colocación Total #%s' % (i+1)]
 
         # g. Evaluar condición de término: si Energía Asignada Total ya
         # alcanzó la Colocación Total #0
@@ -297,8 +318,8 @@ def redistribute_totals(df_all, df_gen_data,
         # Participa si Energía Disponible > 0
         df['Pmax si participa #%s' % (i+1)] = \
             df['Pmax'] * \
-            (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment']) * \
-            (df['Energía Disponible #%s' % (i+1)] > 0) *\
+            (df['Energía Disponible #0'] > 0) * \
+            (df['Energía Disponible #%s' % (i+1)] > 0) * \
             (1 - df['Terminar #%s' % i])
 
     # Calcular Punto de Operación final
@@ -308,8 +329,8 @@ def redistribute_totals(df_all, df_gen_data,
     # Calcular curtailment como la diferencia entre Energy+Curtailment y
     # el punto de operación final
     df['Redistributed Curtailment'] = \
-        df['Energy+Curtailment'] - df['Punto Operación Final'] *\
-        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
+        (df['Energy+Curtailment'] - df['Punto Operación Final']) *\
+        (df['Energía Disponible #0'] > 0)
 
     # 9. Formatear salidas
     df.set_index(
