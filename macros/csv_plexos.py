@@ -590,10 +590,10 @@ def print_node_load_new(df_hourly: pd.DataFrame, path_csv: Path,
     df.to_csv(path_csv / 'Node_Load.csv', index=False)
 
     logger.info('Printing demand dataframes')
-    df_dem_por_barra.to_csv(path_df / 'dem_por_barra.csv', index=False)
-    df_monthly_demand.to_csv(path_df / 'monthly_demand.csv', index=False)
+    df_dem_por_barra.to_csv(path_df / 'dem_dem_por_barra.csv', index=False)
+    df_monthly_demand.to_csv(path_df / 'dem_monthly_demand.csv', index=False)
     df_hourly_profiles_plexos.to_csv(
-        path_df / 'hourly_profiles_plexos.csv', index=False)
+        path_df / 'dem_hourly_profiles_plexos.csv', index=False)
 
 
 def get_hourly_profiles_plexos(iplp_path: Path) -> pd.DataFrame:
