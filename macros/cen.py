@@ -497,6 +497,8 @@ def main():
         check_is_path(path_inputs)
         path_dat = iplp_path.parent / "Temp" / "Dat"
         check_is_path(path_dat)
+        path_df = iplp_path.parent / "Temp" / "df"
+        check_is_path(path_df)
 
         # Add destination folder to logger
         path_log = iplp_path.parent / "Temp" / "log"
@@ -506,6 +508,11 @@ def main():
         # Read centrales data
         logger.info('Reading centrales data')
         df_centrales = read_df_centrales_all(iplp_path)
+
+        # Print df_centrales as csv
+        logger.info('Printing df_centrales')
+        df_centrales.to_csv(path_df / 'df_centrales.csv', index=False,
+                            encoding='latin1')
 
         # Print plptec
         logger.info('Printing plptec')
