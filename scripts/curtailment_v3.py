@@ -135,21 +135,27 @@ def get_df_rating_factors(final_year):
     df_rating_factor["DateFrom"] = pd.to_datetime(df_rating_factor["DateFrom"])
     # Filter by end year
     df_rating_factor = df_rating_factor[df_rating_factor["Year"] <= final_year]
-    # Drop Day, DaysInMonth, Year-Month
-    df_rating_factor = df_rating_factor.drop(
-        ["Day", "DaysInMonth", "Year-Month"], axis=1)
-    initial_datefrom = df_rating_factor["DateFrom"].min()
-
+    # Drop rows with NaN
+    df_rating_factor = df_rating_factor.dropna()
+    #
+    # Remove this section once the rating factors are clean
     # For each row, replace DateFrom, with ini DateFrom + Initial_Eta - 1
     # Each Etapa represents a month
+    initial_datefrom = df_rating_factor["DateFrom"].min()
+    df_rating_factor['MonthOffset'] = (
+        (df_rating_factor['Initial_Eta'] - 1)/12).astype(int)
     df_rating_factor["DateFrom"] = df_rating_factor.apply(
         lambda x: initial_datefrom + pd.DateOffset(
-            months=x["Initial_Eta"] - 1), axis=1)
+            months=x['MonthOffset']), axis=1)
     # Replace Year and Month with the ones from DateFrom
     df_rating_factor["Year"] = df_rating_factor["DateFrom"].dt.year
     df_rating_factor["Month"] = df_rating_factor["DateFrom"].dt.month
-    # Drop Initial_Eta
-    df_rating_factor = df_rating_factor.drop(["Initial_Eta", "DateFrom"], axis=1)
+    # End of section to remove
+    #
+    # Drop columns
+    cols_to_drop = ["Day", "DaysInMonth", "Year-Month", "MonthOffset",
+                    "Initial_Eta", "DateFrom"]
+    df_rating_factor = df_rating_factor.drop(cols_to_drop, axis=1)
     # Rename Name to Gen, Value [Mw] to Pmax
     df_rating_factor = df_rating_factor.rename(
         columns={"Name": "Gen", "Value [MW]": "Pmax"})
@@ -160,7 +166,10 @@ def get_df_rating_factors(final_year):
     return df_rating_factor
 
 
-def load_gen2pmax_per_month(df_ener, dict_gen2pmax, time_resolution="Block"):
+def load_gen2pmax_per_month(df_ener, dict_gen2pmax, dict_gen2enable):
+    '''
+    Get dataframe with Pmax per month for each generator
+    '''
     # Get time limits
     # initial_year = df_ener.index.get_level_values("Year").min()
     # initial_month = df_ener.index.get_level_values("Month").min()
@@ -172,33 +181,40 @@ def load_gen2pmax_per_month(df_ener, dict_gen2pmax, time_resolution="Block"):
 
     # Build dataframe, using time indexes from df_ener, and columns from
     # dict_gen2pmax
-    df_pmax_per_month = pd.DataFrame(index=df_ener.index,
+    year_month_index = df_ener.index.droplevel(level=2).unique()
+    df_pmax_per_month = pd.DataFrame(index=year_month_index,
                                      columns=dict_gen2pmax.keys())
-    # Fill with Pmax values
+    # Fill with Pmax values, filtering by enable curtailment
     for gen, pmax in dict_gen2pmax.items():
-        df_pmax_per_month[gen] = pmax
+        if dict_gen2enable[gen] == 1:
+            df_pmax_per_month[gen] = pmax
     # Pass to long format
     df_pmax_per_month = df_pmax_per_month.stack().reset_index()
-    df_pmax_per_month.columns = ["Year", "Month", time_resolution,
-                                 "Gen", "Pmax"]
-    import pdb; pdb.set_trace()
-    # Overwrite Pmax with rating factors
-    df_pmax_per_month = pd.merge(df_pmax_per_month, df_rating_factor,
-                                 left_on=["Year", "Month", "Gen"],
-                                 right_index=True, how="left")
-    import pdb; pdb.set_trace()
+    df_pmax_per_month.columns = ["Year", "Month", "Gen", "Pmax"]
+    # Sort by Gen, Year, Month
+    df_pmax_per_month = df_pmax_per_month.sort_values(
+        by=["Gen", "Year", "Month"])
+    # Merge Pmax with rating factors - left join
+    df_pmax_per_month = pd.merge(
+        df_pmax_per_month, df_rating_factor,
+        left_on=["Year", "Month", "Gen"],
+        right_index=True, how='left')
     # Go back to wide format
+    # The result is a dataframe repeated columns for each Gen that
+    # changes its rating factor
     df_pmax_per_month = df_pmax_per_month.set_index(
-        ["Year", "Month", time_resolution, "Gen"])
+        ["Year", "Month", "Gen"])
     df_pmax_per_month = df_pmax_per_month.unstack()
     df_pmax_per_month.columns = df_pmax_per_month.columns.droplevel()
-    import pdb; pdb.set_trace()
-    # Detect when value changes, and fill with previous value
-
+    # Forward fill with previous value
     df_pmax_per_month = df_pmax_per_month.fillna(method="ffill")
-
-    import pdb; pdb.set_trace()
-
+    # If a column is repeated, drop the first appearance
+    df_pmax_per_month = df_pmax_per_month.loc[
+        :, df_pmax_per_month.columns.duplicated()]
+    # Fill NaN with 0
+    df_pmax_per_month = df_pmax_per_month.fillna(0)
+    # Print to csv
+    df_pmax_per_month.to_csv(Path(output_folder, "df_pmax_per_month.csv"))
     return df_pmax_per_month
 
 
@@ -252,37 +268,30 @@ def process_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
     return df_all
 
 
-def get_pmax(dict_gen2node, dict_node2zone, dict_gen2pmax,
-             dict_gen2enable):
-    # Create dataframe with each generador by zone and its Pmax percentage
+def get_gen_data(dict_gen2node, dict_node2zone, dict_gen2enable):
+    # Create dataframe with each generator by zone and its Pmax percentage
     df_gen_data = pd.DataFrame(dict_gen2node.items(), columns=['Gen', 'Node'])
     df_gen_data['Zone'] = df_gen_data['Node'].map(dict_node2zone)
-    df_gen_data['Pmax'] = df_gen_data['Gen'].map(dict_gen2pmax)
     df_gen_data['Enable Curtailment'] = df_gen_data['Gen'].map(dict_gen2enable)
-    # Add Pmax % as a the cuotient of Pmax and the sum of all Pmax per zone,
-    # if generator is enabled
-    df_gen_data['Pmax'] = df_gen_data['Pmax'].fillna(0)
-    df_gen_data['Pmax'] = df_gen_data['Pmax'] * df_gen_data[
-        'Enable Curtailment']
-    # Fix Pmax value if Energy+Curtailment is > 0 and Enable Curtailment is 1
-    # TODO
     return df_gen_data
 
 
-def redistribute_totals(df_all, df_gen_data,
+def redistribute_totals(df_all, df_gen_data, df_pmax_per_month,
                         time_resolution="Block", ITER_MAX=5):
     '''
     Algoritmo de redistribución de curtailment
 
     1. Copiar el porcentaje de curtailment correspondiente a la zona
-    2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
-    3. Llenar los valores NaN con 0
-    4. Energía disponible es igual a Energy+Curtailment si participa
-    5. Colocación de energía es igual a Energy si participa
-    6. Colocación Total de energia es la suma de Colocación para todas
+    2. Agregar las columnas Pmax y Enable
+        a. df_pmax_per_month a formato largo, nombrando columnas Pmax
+        b. Merge con df
+        c. Agregar Enable Curtailment
+    3. Energía disponible es igual a Energy+Curtailment si participa
+    4. Colocación de energía es igual a Energy si participa
+    5. Colocación Total de energia es la suma de Colocación para todas
     las unidades participantes
-    7. Pmax si participa es igual a Pmax si participa en la iteración 0
-    8. Proceso iterativo:
+    6. Pmax si participa es igual a Pmax si participa en la iteración 0
+    7. Proceso iterativo:
         a. Calcular factor de prorrata
         b. Calcular Punto de Operación sugerido
         c. Calcular Punto de Operación saturando con la Energía Disponible
@@ -293,47 +302,49 @@ def redistribute_totals(df_all, df_gen_data,
         alcanzó la Colocación Total #0
         f. Redefinir potencia máxima si participa en la sgte iteración
         Participa si Energía Disponible > 0
-    9. Calcular Punto de Operación final
-    10. Calcular curtailment como la diferencia entre Energy+Curtailment y
+    8. Calcular Punto de Operación final
+    9. Calcular curtailment como la diferencia entre Energy+Curtailment y
     el Punto de Operación final
-    11. Formatear salidas
+    10. Formatear salidas
     '''
     # 1. Copiar el porcentaje de curtailment correspondiente a la zona
     df = df_all.copy().reset_index()
 
     # 2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
-    df['Pmax'] = df['Gen'].map(
-        dict(zip(df_gen_data['Gen'], df_gen_data['Pmax'])))
+    # 2.a df_pmax_per_month a formato largo, nombrando columnas Pmax
+    df_pmax_per_month = df_pmax_per_month.stack().reset_index()
+    df_pmax_per_month.columns = ['Year', 'Month', 'Gen', 'Pmax']
+    # 2.b Merge con df
+    df = pd.merge(df, df_pmax_per_month, on=['Year', 'Month', 'Gen'],
+                  how='left').fillna(0)
+    # 2.c Agregar Enable Curtailment
     df['Enable Curtailment'] = df['Gen'].map(
         dict(zip(df_gen_data['Gen'], df_gen_data['Enable Curtailment'])))
     df['Enable Curtailment'] = df[
         'Enable Curtailment'].fillna(0)
 
-    # 3. Llenar los valores NaN con 0
-    df['Pmax'] = df['Pmax'].fillna(0)
-
-    # 4. Energía disponible es igual a Energy+Curtailment si participa
+    # 3. Energía disponible es igual a Energy+Curtailment si participa
     df['Energía Disponible #0'] = \
         df['Energy+Curtailment'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 5. Colocación de energía es igual a Energy si participa
+    # 4. Colocación de energía es igual a Energy si participa
     df['Colocación #0'] = \
         df['Energy'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 6. Colocación Total de energia es la suma de Colocación para todas
+    # 5. Colocación Total de energia es la suma de Colocación para todas
     # las unidades participantes
     df['Colocación Total #0'] = df.groupby(
         ['Year', 'Month', time_resolution, 'Zone'])[
             'Colocación #0'].transform(lambda x: x.sum())
 
+    # 6. Pmax si participa es igual a Pmax si participa en la iteración 0
     df['Pmax si participa #0'] = \
         df['Pmax'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # Proceso iterativo:
-
+    # 7. Proceso iterativo:
     for i in range(ITER_MAX):
         # a. Calcular factor de prorrata
         df['Factor Prorrata #%s' % i] = df.groupby(
@@ -402,17 +413,17 @@ def redistribute_totals(df_all, df_gen_data,
             (df['Energía Disponible #%s' % (i+1)] > 0) * \
             (1 - df['Terminar #%s' % i])
 
-    # Calcular Punto de Operación final
+    # 8. Calcular Punto de Operación final
     df['Punto Operación Final'] = df[
         ['Punto Operación #%s' % j for j in range(ITER_MAX)]].sum(axis=1)
 
-    # Calcular curtailment como la diferencia entre Energy+Curtailment y
+    # 9. Calcular curtailment como la diferencia entre Energy+Curtailment y
     # el punto de operación final
     df['Redistributed Curtailment'] = \
         (df['Energy+Curtailment'] - df['Punto Operación Final']) *\
         (df['Energía Disponible #0'] > 0)
 
-    # 9. Formatear salidas
+    # 10. Formatear salidas
     df.set_index(
         ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone'],
         inplace=True)
@@ -520,7 +531,8 @@ def main():
         df_cur, df_ener = load_data(time_resolution)
         dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
             load_dicts(zonas_file, df_centrales_file, tec2enable_file)
-        df_pmax_per_month = load_gen2pmax_per_month(df_ener, dict_gen2pmax)
+        df_pmax_per_month = load_gen2pmax_per_month(
+            df_ener, dict_gen2pmax, dict_gen2enable)
 
         # Validate inputs
         print('--Validating inputs')
@@ -534,13 +546,13 @@ def main():
                                 time_resolution)
 
         # Get generator data - pmax percentage for curtailment
-        df_gen_data = get_pmax(
-            dict_gen2node, dict_node2zone, dict_gen2pmax, dict_gen2enable)
+        df_gen_data = get_gen_data(
+            dict_gen2node, dict_node2zone, dict_gen2enable)
 
         # Redistribute totals
         print('--Redistributing totals')
         df_all_redistrib = redistribute_totals(
-            df_all, df_gen_data, time_resolution)
+            df_all, df_gen_data, df_pmax_per_month, time_resolution)
         df_all_redistrib_grouped = group_data_redistrib(
             df_all_redistrib, time_resolution)
         df_out_ener_redistrib = process_redistributed_out(
