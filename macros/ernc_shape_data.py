@@ -5,9 +5,6 @@ from pathlib import Path
 from utils.utils import append_rows
 
 PRINT_FILES = False
-HOURS_IN_MONTH = 24
-HOURS_PER_BLOCK = 2
-BLOCKS_IN_MONTH = HOURS_IN_MONTH / HOURS_PER_BLOCK
 
 
 def hour2block(df: pd.DataFrame, block2day: pd.DataFrame) -> pd.DataFrame:
@@ -153,12 +150,7 @@ def process_semi_months(df_rf: pd.DataFrame) -> pd.DataFrame:
                 (previous_value * fraction_before)
             # Insert new row
             new_row2 = row.copy()
-            new_row2['DateFrom'] = row['DateFrom'] + pd.DateOffset(months=1)
-            new_row2['Year'] = new_row2['DateFrom'].year
-            new_row2['Month'] = new_row2['DateFrom'].month
-            new_row2['Day'] = 1
-            new_row2['DaysInMonth'] = new_row2['DateFrom'].days_in_month
-            new_row2['Initial_Eta'] = row['Initial_Eta'] + BLOCKS_IN_MONTH
+            new_row2['Initial_Eta'] = row['Initial_Eta'] + 1
             # Concat all
             new_df_rf = append_rows(new_df_rf, new_row1, new_row2)
         previous_row = row
