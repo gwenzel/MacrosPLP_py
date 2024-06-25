@@ -85,3 +85,11 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 1.3.1
 
 - Arreglar bug en Demanda Plexos Horaria con el 29 de Febrero.
+
+### Versión 1.4.0
+
+- Cambios críticos para curtailment + actualización script
+  - imprimir df_centrales
+  - arreglar archivo df_ernc_rf_final
+- Otros bugs
+  - Espacio en mensaje de error costo de falla
