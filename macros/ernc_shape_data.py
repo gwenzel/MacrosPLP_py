@@ -154,9 +154,10 @@ def process_semi_months(df_rf: pd.DataFrame) -> pd.DataFrame:
             # Insert new row
             new_row2 = row.copy()
             new_row2['DateFrom'] = row['DateFrom'] + pd.DateOffset(months=1)
+            new_row2['DateFrom'] = new_row2['DateFrom'].replace(day=1)
             new_row2['Year'] = new_row2['DateFrom'].year
             new_row2['Month'] = new_row2['DateFrom'].month
-            new_row2['Day'] = 1
+            new_row2['Day'] = new_row2['DateFrom'].day
             new_row2['DaysInMonth'] = new_row2['DateFrom'].days_in_month
             new_row2['Year-Month'] = (new_row2['Year'], new_row2['Month'])
             new_row2['Initial_Eta'] = row['Initial_Eta'] + BLOCKS_IN_MONTH
