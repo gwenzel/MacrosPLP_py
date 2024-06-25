@@ -11,7 +11,11 @@ Inputs (tr is the time resolution, 12B or 24H):
 
 Dicts:
 - BarsZones.csv
-- ID_Gen_PLP-Plexos.csv
+- enable_curtailment.csv
+
+Files from df folder:
+- df_centrales.csv
+- df_ernc_rf_final.csv
 
 Outputs:
 - Block and Hour folders, each with:
@@ -25,6 +29,8 @@ Outputs:
 import os
 import pandas as pd
 from pathlib import Path
+
+TOLERANCE_GAP_PERCENTAGE = 0.0001
 
 pd.set_option('display.precision', 2)
 
@@ -128,6 +134,9 @@ def load_dicts(zonas_file, df_centrales_file, tec2enable_file):
 
 
 def get_df_rating_factors(final_year):
+    '''
+    Get rating factors dataframe, with Pmax per month for each generator
+    '''
     # Read rating factors and clean
     df_rating_factor = pd.read_csv(rating_factor_file, encoding="latin1",
                                    low_memory=False)
@@ -220,8 +229,8 @@ def validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
         if gen not in df_ener.columns:
             print(f"Gen {gen} not found in Energy file")
     '''
-    print("Checking if all generators are in all files")
-    print("Generators not found will not be considered for curtailment")
+    print("--Checking if all generators are in all files")
+    print("--Generators not found will not be considered for curtailment")
     for gen in df_ener.columns:
         if gen in dict_gen2enable.keys():
             if gen not in dict_gen2node.keys():
@@ -238,25 +247,29 @@ def validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
 
 def process_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
                    time_resolution="Block"):
+    '''
+    Process inputs to create a single dataframe with all the data
+    '''
     new_indexes = ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone']
     # Process curtailment data
     df_cur = df_cur.stack().reset_index()
-    df_cur.columns = ['Year', 'Month', time_resolution, 'Gen', 'Curtailment']
-    df_cur['Node'] = df_cur['Gen'].map(dict_gen2node)
-    df_cur['Zone'] = df_cur['Node'].map(dict_node2zone)
+    df_cur.columns = [
+        'Year', 'Month', time_resolution, 'Gen', 'Curtailment Original']
+    df_cur['Node'] = df_cur['Gen'].map(dict_gen2node).fillna('NoNode')
+    df_cur['Zone'] = df_cur['Node'].map(dict_node2zone).fillna('NoZone')
     df_cur.set_index(new_indexes, inplace=True)
 
     # Process energy data
     df_ener = df_ener.stack().reset_index()
-    df_ener.columns = ['Year', 'Month', time_resolution, 'Gen', 'Energy']
-    df_ener['Node'] = df_ener['Gen'].map(dict_gen2node)
-    df_ener['Zone'] = df_ener['Node'].map(dict_node2zone)
+    df_ener.columns = [
+        'Year', 'Month', time_resolution, 'Gen', 'Energy Original']
+    df_ener['Node'] = df_ener['Gen'].map(dict_gen2node).fillna('NoNode')
+    df_ener['Zone'] = df_ener['Node'].map(dict_node2zone).fillna('NoZone')
     df_ener.set_index(new_indexes, inplace=True)
 
     # Process total generation data
     df_all = pd.merge(df_cur, df_ener, left_on=new_indexes,
                       right_on=new_indexes)
-    df_all['Energy+Curtailment'] = df_all['Curtailment'] + df_all['Energy']
     return df_all
 
 
@@ -268,8 +281,7 @@ def get_gen_data(dict_gen2node, dict_node2zone, dict_gen2enable):
     return df_gen_data
 
 
-def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month,
-                           time_resolution='Block'):
+def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month):
     '''
     Pasos previos a la redistribución de curtailment:
     1. Copiar el porcentaje de curtailment correspondiente a la zona
@@ -279,6 +291,9 @@ def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month,
     '''
     # 1. Copiar el porcentaje de curtailment correspondiente a la zona
     df = df_all.copy().reset_index()
+    df['Curtailment'] = df['Curtailment Original']
+    df['Energy'] = df['Energy Original']
+    df['Energy+Curtailment'] = df['Curtailment'] + df['Energy']
 
     # 2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
     # 2.a df_pmax_per_month a formato largo, nombrando columnas Pmax
@@ -292,19 +307,19 @@ def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month,
         dict(zip(df_gen_data['Gen'],
                  df_gen_data['Enable Curtailment']))).fillna(0)
 
-    # 3. Para cada Year, Month, time_resolution, Zone, sumar el curtailment de
-    # las que no participan, y almacenar en columna adicional
-    df['Curtailment Adicional'] = \
+    # 3. Determinar el curtailment de las que no participan,
+    # y almacenar en columna adicional. Luego dejar en 0
+    df['Curtailment Adicional 1'] = \
         df['Curtailment'] * (1 - df['Enable Curtailment'])
-    # Sumar el curtailment adicional para cada grupo
-    df['Curtailment Adicional Total'] = df.groupby(
-        ['Year', 'Month', time_resolution, 'Zone'])[
-            'Curtailment Adicional'].transform(lambda x: x.sum())
-
-    # 4. Para las unidades que no participen en curtailment pero que sí tengan,
-    # se deja suma su curtailment a Energy, y luego se deja en 0
-    df['Energy'] = df['Energy'] + df['Curtailment Adicional']
+    df['Energy'] = df['Energy'] + df['Curtailment Adicional 1']
     df['Curtailment'] = df['Curtailment'] * df['Enable Curtailment']
+
+    # 4. Si hay curtailment en unidades que participan pero con Pmax = 0,
+    # guardar como Curtailment Adicional 2, y dejar en 0
+    df['Curtailment Adicional 2'] = \
+        df['Curtailment'] * (df['Pmax'] == 0)
+    df['Energy'] = df['Energy'] + df['Curtailment Adicional 2']
+    df['Curtailment'] = df['Curtailment'] * (df['Pmax'] > 0)
 
     return df
 
@@ -353,9 +368,13 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
     # de las unidades que no participan
     df['Colocación Total #0'] = df.groupby(
         ['Year', 'Month', time_resolution, 'Zone'])[
-            'Colocación #0'].transform(lambda x: x.sum()) - df.groupby(
+            'Colocación #0'].transform(lambda x: x.sum()) - \
+        df.groupby(
             ['Year', 'Month', time_resolution, 'Zone'])[
-            'Curtailment Adicional'].transform(lambda x: x.sum())
+            'Curtailment Adicional 1'].transform(lambda x: x.sum()) - \
+        df.groupby(
+            ['Year', 'Month', time_resolution, 'Zone'])[
+            'Curtailment Adicional 2'].transform(lambda x: x.sum())
 
     # 5. Pmax si participa es igual a Pmax si participa en la iteración 0
     df['Pmax si participa #0'] = \
@@ -383,14 +402,6 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
         df['Energía Disponible #%s' % (i+1)] = \
             df['Energía Disponible #%s' % i] - df['Punto Operación #%s' % i]
 
-        '''
-        df['Energía Disponible Total #%s' % i] = \
-            df.groupby(
-                ['Year', 'Month', time_resolution, 'Zone'])[
-                'Energía Disponible #%s' % (i+1)].transform(
-                    lambda x: x.sum()) * \
-            (df['Enable Curtailment'])
-        '''
         # Calcular Energía Asignada, sumando Puntos Op. hasta el actual
         df['Energía Asignada #<=%s' % i] = \
             df[['Punto Operación #%s' % j for j in range(i+1)]].sum(axis=1)
@@ -413,15 +424,11 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
                 'Colocación #%s' % (i+1)].transform(
                     lambda x: x.sum())
 
-        # Asegurar que Colocación Total no sea negativa
-        df['Colocación Total #%s' % (i+1)] = \
-            df['Colocación Total #%s' % (i+1)]
-
         # g. Evaluar condición de término: si Energía Asignada Total ya
         # alcanzó la Colocación Total #0
         df['Terminar #%s' % i] = \
             1 * (df['Energía Asignada Total #<=%s' % i] >=
-                 df['Colocación Total #0'])
+                 df['Colocación Total #0'] * (1 - TOLERANCE_GAP_PERCENTAGE))
 
         # f. Redefinir potencia máxima si participa en la sgte iteración
         # Participa si Energía Disponible > 0
@@ -456,7 +463,7 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
         df['Original Curtailment %'].fillna(0)
     df['Redistributed Curtailment %'] = \
         df['Redistributed Curtailment %'].fillna(0)
-    return df
+    return df.round(4)
 
 
 def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
@@ -472,6 +479,9 @@ def group_data_redistrib(df_all_redistrib, time_resolution="Block"):
 
 def process_redistributed_out(df_all_redistrib, time_resolution="Block",
                               value="Energy"):
+    '''
+    Turn file to outEner or outCurtail format
+    '''
     value_header = f"Redistributed {value}"  # Energy or Curtailment
     df_out_redistrib = df_all_redistrib.copy()
     # Add Hyd column
@@ -571,7 +581,7 @@ def main():
             dict_gen2node, dict_node2zone, dict_gen2enable)
         # Preprocess curtailment data
         df_all = preprocess_curtailment(
-            df_all, df_gen_data, df_pmax_per_month, time_resolution)
+            df_all, df_gen_data, df_pmax_per_month)
 
         # Redistribute totals
         print('--Redistributing totals')
