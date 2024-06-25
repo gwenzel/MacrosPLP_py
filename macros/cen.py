@@ -204,7 +204,7 @@ def add_failure_generators(iplp_path: Path,
         logger.error('GxFalla sheet must have only 1 row')
     # Check column names
     if df_gx_falla.columns.tolist() != [
-            'TRAMO', 'PROFUNDIDAD', 'COSTO DE FALLA']:
+            'TRAMO ', 'PROFUNDIDAD', 'COSTO DE FALLA']:
         logger.error('GxFalla sheet must have columns: '
                      'TRAMO, PROFUNDIDAD, COSTO DE FALLA')
     # tramo = df_gx_falla.iloc[0, 0]
