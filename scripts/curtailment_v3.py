@@ -180,41 +180,33 @@ def load_gen2pmax_per_month(df_ener, dict_gen2pmax, dict_gen2enable):
     df_rating_factor = get_df_rating_factors(final_year)
 
     # Build dataframe, using time indexes from df_ener, and columns from
-    # dict_gen2pmax
+    # dict_gen2pmax, if the generator is enabled for curtailment
     year_month_index = df_ener.index.droplevel(level=2).unique()
+    enabled_gens = [
+        gen for gen in dict_gen2pmax.keys() if dict_gen2enable[gen] == 1]
     df_pmax_per_month = pd.DataFrame(index=year_month_index,
-                                     columns=dict_gen2pmax.keys())
-    # Fill with Pmax values, filtering by enable curtailment
-    for gen, pmax in dict_gen2pmax.items():
-        if dict_gen2enable[gen] == 1:
-            df_pmax_per_month[gen] = pmax
-    # Pass to long format
-    df_pmax_per_month = df_pmax_per_month.stack().reset_index()
-    df_pmax_per_month.columns = ["Year", "Month", "Gen", "Pmax"]
-    # Sort by Gen, Year, Month
-    df_pmax_per_month = df_pmax_per_month.sort_values(
-        by=["Gen", "Year", "Month"])
-    # Merge Pmax with rating factors - left join
-    df_pmax_per_month = pd.merge(
-        df_pmax_per_month, df_rating_factor,
-        left_on=["Year", "Month", "Gen"],
-        right_index=True, how='left')
-    # Go back to wide format
-    # The result is a dataframe repeated columns for each Gen that
-    # changes its rating factor
-    df_pmax_per_month = df_pmax_per_month.set_index(
-        ["Year", "Month", "Gen"])
-    df_pmax_per_month = df_pmax_per_month.unstack()
-    df_pmax_per_month.columns = df_pmax_per_month.columns.droplevel()
-    # Forward fill with previous value
-    df_pmax_per_month = df_pmax_per_month.fillna(method="ffill")
-    # If a column is repeated, drop the first appearance
-    df_pmax_per_month = df_pmax_per_month.loc[
-        :, df_pmax_per_month.columns.duplicated()]
+                                     columns=enabled_gens)
+    # Fill with Pmax values
+    for gen in enabled_gens:
+        first_index = df_pmax_per_month.index[0]
+        df_pmax_per_month.loc[first_index, gen] = dict_gen2pmax[gen]
+    # Name columns
+    df_pmax_per_month.columns.name = 'Gen'
+    # Turn df_rating_factor to wide format
+    df_rating_factor = df_rating_factor.unstack()
+    df_rating_factor.columns = df_rating_factor.columns.droplevel()
+    # Update Pmax values with rating factors
+    df_pmax_per_month.update(df_rating_factor)
+    # Forward fill with previous value for each month
+    # Specify as float to avoid future warning
+    df_pmax_per_month = df_pmax_per_month.astype(float).ffill()
+    # Drop columns if all nan
+    df_pmax_per_month = df_pmax_per_month.dropna(axis=1, how='all')
     # Fill NaN with 0
     df_pmax_per_month = df_pmax_per_month.fillna(0)
     # Print to csv
-    df_pmax_per_month.to_csv(Path(output_folder, "df_pmax_per_month.csv"))
+    df_pmax_per_month.to_csv(Path(output_folder, "df_pmax_per_month.csv"),
+                             encoding="latin1")
     return df_pmax_per_month
 
 
@@ -276,36 +268,14 @@ def get_gen_data(dict_gen2node, dict_node2zone, dict_gen2enable):
     return df_gen_data
 
 
-def redistribute_totals(df_all, df_gen_data, df_pmax_per_month,
-                        time_resolution="Block", ITER_MAX=5):
+def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month,
+                           time_resolution='Block'):
     '''
-    Algoritmo de redistribución de curtailment
-
+    Pasos previos a la redistribución de curtailment:
     1. Copiar el porcentaje de curtailment correspondiente a la zona
-    2. Agregar las columnas Pmax y Enable
-        a. df_pmax_per_month a formato largo, nombrando columnas Pmax
-        b. Merge con df
-        c. Agregar Enable Curtailment
-    3. Energía disponible es igual a Energy+Curtailment si participa
-    4. Colocación de energía es igual a Energy si participa
-    5. Colocación Total de energia es la suma de Colocación para todas
-    las unidades participantes
-    6. Pmax si participa es igual a Pmax si participa en la iteración 0
-    7. Proceso iterativo:
-        a. Calcular factor de prorrata
-        b. Calcular Punto de Operación sugerido
-        c. Calcular Punto de Operación saturando con la Energía Disponible
-        d. Calcular la nueva energía disponible
-        e. Calcular Energía Asignada, sumando Puntos Op. hasta el actual
-        f. Calcular nueva colocación total
-        g. Evaluar condición de término: si Energía Asignada Total ya
-        alcanzó la Colocación Total #0
-        f. Redefinir potencia máxima si participa en la sgte iteración
-        Participa si Energía Disponible > 0
-    8. Calcular Punto de Operación final
-    9. Calcular curtailment como la diferencia entre Energy+Curtailment y
-    el Punto de Operación final
-    10. Formatear salidas
+    2. Agregar las columnas Pmax y Enable de df_gen_data (con fillna 0)
+    3. Para cada Year, Month, time_resolution, Zone, sumar el curtailment de
+    las que no participan, y guardar en columna adicional
     '''
     # 1. Copiar el porcentaje de curtailment correspondiente a la zona
     df = df_all.copy().reset_index()
@@ -319,32 +289,80 @@ def redistribute_totals(df_all, df_gen_data, df_pmax_per_month,
                   how='left').fillna(0)
     # 2.c Agregar Enable Curtailment
     df['Enable Curtailment'] = df['Gen'].map(
-        dict(zip(df_gen_data['Gen'], df_gen_data['Enable Curtailment'])))
-    df['Enable Curtailment'] = df[
-        'Enable Curtailment'].fillna(0)
+        dict(zip(df_gen_data['Gen'],
+                 df_gen_data['Enable Curtailment']))).fillna(0)
 
-    # 3. Energía disponible es igual a Energy+Curtailment si participa
+    # 3. Para cada Year, Month, time_resolution, Zone, sumar el curtailment de
+    # las que no participan, y almacenar en columna adicional
+    df['Curtailment Adicional'] = \
+        df['Curtailment'] * (1 - df['Enable Curtailment'])
+    # Sumar el curtailment adicional para cada grupo
+    df['Curtailment Adicional Total'] = df.groupby(
+        ['Year', 'Month', time_resolution, 'Zone'])[
+            'Curtailment Adicional'].transform(lambda x: x.sum())
+
+    # 4. Para las unidades que no participen en curtailment pero que sí tengan,
+    # se deja suma su curtailment a Energy, y luego se deja en 0
+    df['Energy'] = df['Energy'] + df['Curtailment Adicional']
+    df['Curtailment'] = df['Curtailment'] * df['Enable Curtailment']
+
+    return df
+
+
+def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
+    '''
+    Algoritmo de redistribución de curtailment
+
+    1. Copiar dataframe inicial
+    2. Energía disponible es igual a Energy+Curtailment si participa
+    3. Colocación de energía es igual a Energy si participa
+    4. Colocación Total de energia es la suma de Colocación para todas
+    las unidades participantes
+    5. Pmax si participa es igual a Pmax si participa en la iteración 0
+    6. Proceso iterativo:
+        a. Calcular factor de prorrata
+        b. Calcular Punto de Operación sugerido
+        c. Calcular Punto de Operación saturando con la Energía Disponible
+        d. Calcular la nueva energía disponible
+        e. Calcular Energía Asignada, sumando Puntos Op. hasta el actual
+        f. Calcular nueva colocación total
+        g. Evaluar condición de término: si Energía Asignada Total ya
+        alcanzó la Colocación Total #0
+        f. Redefinir potencia máxima si participa en la sgte iteración
+        Participa si Energía Disponible > 0
+    7. Calcular Punto de Operación final
+    8. Calcular curtailment como la diferencia entre Energy+Curtailment y
+    el Punto de Operación final
+    9. Formatear salidas
+    '''
+    # 1. Copiar dataframe inicial
+    df = df_all.copy()
+
+    # 2. Energía disponible es igual a Energy+Curtailment si participa
     df['Energía Disponible #0'] = \
         df['Energy+Curtailment'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 4. Colocación de energía es igual a Energy si participa
+    # 3. Colocación de energía es igual a Energy si participa
     df['Colocación #0'] = \
         df['Energy'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 5. Colocación Total de energia es la suma de Colocación para todas
-    # las unidades participantes
+    # 4. Colocación Total de energia es la suma de Colocación para todas
+    # las unidades participantes, menos el Curtailment Adicional, que viene
+    # de las unidades que no participan
     df['Colocación Total #0'] = df.groupby(
         ['Year', 'Month', time_resolution, 'Zone'])[
-            'Colocación #0'].transform(lambda x: x.sum())
+            'Colocación #0'].transform(lambda x: x.sum()) - df.groupby(
+            ['Year', 'Month', time_resolution, 'Zone'])[
+            'Curtailment Adicional'].transform(lambda x: x.sum())
 
-    # 6. Pmax si participa es igual a Pmax si participa en la iteración 0
+    # 5. Pmax si participa es igual a Pmax si participa en la iteración 0
     df['Pmax si participa #0'] = \
         df['Pmax'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
-    # 7. Proceso iterativo:
+    # 6. Proceso iterativo:
     for i in range(ITER_MAX):
         # a. Calcular factor de prorrata
         df['Factor Prorrata #%s' % i] = df.groupby(
@@ -413,17 +431,17 @@ def redistribute_totals(df_all, df_gen_data, df_pmax_per_month,
             (df['Energía Disponible #%s' % (i+1)] > 0) * \
             (1 - df['Terminar #%s' % i])
 
-    # 8. Calcular Punto de Operación final
+    # 7. Calcular Punto de Operación final
     df['Punto Operación Final'] = df[
         ['Punto Operación #%s' % j for j in range(ITER_MAX)]].sum(axis=1)
 
-    # 9. Calcular curtailment como la diferencia entre Energy+Curtailment y
+    # 8. Calcular curtailment como la diferencia entre Energy+Curtailment y
     # el punto de operación final
     df['Redistributed Curtailment'] = \
         (df['Energy+Curtailment'] - df['Punto Operación Final']) *\
         (df['Energía Disponible #0'] > 0)
 
-    # 10. Formatear salidas
+    # 9. Formatear salidas
     df.set_index(
         ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone'],
         inplace=True)
@@ -509,11 +527,15 @@ def print_outputs_to_csv(output_folder, df_all,
     out_curtail_redistrib_out_file = Path(
         output_folder_aux, 'outCurtail_redistrib_%s.csv' % suffix)
 
-    df_all.to_csv(cur_out_file)
-    df_all_redistrib.to_csv(cur_redistrib_out_file)
-    df_all_redistrib_grouped.to_csv(cur_redistrib_grouped_out_file)
-    df_out_ener_redistrib.to_csv(out_ener_redistrib_out_file)
-    df_out_curtail_redistrib.to_csv(out_curtail_redistrib_out_file)
+    df_all.to_csv(cur_out_file, encoding="latin1")
+    df_all_redistrib.to_csv(
+        cur_redistrib_out_file, encoding="latin1")
+    df_all_redistrib_grouped.to_csv(
+        cur_redistrib_grouped_out_file, encoding="latin1")
+    df_out_ener_redistrib.to_csv(
+        out_ener_redistrib_out_file, encoding="latin1")
+    df_out_curtail_redistrib.to_csv(
+        out_curtail_redistrib_out_file, encoding="latin1")
 
     # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
     # to match format
@@ -540,19 +562,20 @@ def main():
                         dict_gen2enable)
 
         # Process data
-        print('--Processing data')
+        print('--Processing inputs')
         df_all = process_inputs(df_cur, df_ener,
                                 dict_node2zone, dict_gen2node,
                                 time_resolution)
-
-        # Get generator data - pmax percentage for curtailment
+        # Get generator data
         df_gen_data = get_gen_data(
             dict_gen2node, dict_node2zone, dict_gen2enable)
+        # Preprocess curtailment data
+        df_all = preprocess_curtailment(
+            df_all, df_gen_data, df_pmax_per_month, time_resolution)
 
         # Redistribute totals
         print('--Redistributing totals')
-        df_all_redistrib = redistribute_totals(
-            df_all, df_gen_data, df_pmax_per_month, time_resolution)
+        df_all_redistrib = redistribute_totals(df_all, time_resolution)
         df_all_redistrib_grouped = group_data_redistrib(
             df_all_redistrib, time_resolution)
         df_out_ener_redistrib = process_redistributed_out(
