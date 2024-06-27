@@ -138,27 +138,20 @@ def validate_dda_por_barra(df: pd.DataFrame):
 
 
 def clean_monthly_demand_data(df: pd.DataFrame) -> pd.DataFrame:
-    # Drop rows if column # is nan
+    # Drop rows if value in column # is nan
     df = df.dropna(subset=['#'], how='any')
-    # Clean data
-    cols_to_drop = ['#', 'Coordinado.1', 'Cliente.1', 'Perfil',
-                    'Clasificacion SEN', 'Clasificacion ENGIE']
-    df = df.drop(cols_to_drop, axis=1)
+    # Set Coordinado and Cliente as index
+    df = df.set_index(['Coordinado', 'Cliente'])
     # Drop columns if all values are nan
     df = df.dropna(how='all', axis=1)
+    # Keep only columns whose names are integers
+    mask_is_int = [represents_int(col) for col in df.columns]
+    df = df.loc[:, mask_is_int]
+    # Reset index
+    df = df.reset_index()
     # Fill nan values in Coordinado and Cliente
     df.loc[:, 'Coordinado'] = df['Coordinado'].fillna('Unknown')
     df.loc[:, 'Cliente'] = df['Cliente'].fillna('Unknown')
-    # Drop columns if name begins with 'Unnamed'
-    mask_is_not_unnamed = []
-    for col in df.columns:
-        if represents_int(col):
-            mask_is_not_unnamed.append(True)
-        elif col.startswith('Unnamed'):
-            mask_is_not_unnamed.append(False)
-        else:
-            mask_is_not_unnamed.append(True)
-    df = df.loc[:, mask_is_not_unnamed]
     return df
 
 
