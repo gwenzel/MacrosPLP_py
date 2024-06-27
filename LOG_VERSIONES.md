@@ -93,3 +93,7 @@ Esta lógica es válida desde la versión 1.0.0.
   - arreglar archivo df_ernc_rf_final
 - Otros bugs
   - Espacio en mensaje de error costo de falla
+
+### Versión 1.4.1
+
+- Corrección de bug en script demanda - ahora no se cae con columnas nuevas
