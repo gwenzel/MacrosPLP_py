@@ -97,3 +97,7 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 1.4.1
 
 - Corrección de bug en script demanda - ahora no se cae con columnas nuevas
+
+### Versión 1.4.2
+
+- Quitar restricciones adicionales de gas en hoja mantcen
