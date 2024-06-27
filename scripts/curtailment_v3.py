@@ -146,23 +146,8 @@ def get_df_rating_factors(final_year):
     df_rating_factor = df_rating_factor[df_rating_factor["Year"] <= final_year]
     # Drop rows with NaN
     df_rating_factor = df_rating_factor.dropna()
-    #
-    # Remove this section once the rating factors are clean
-    # For each row, replace DateFrom, with ini DateFrom + Initial_Eta - 1
-    # Each Etapa represents a month
-    initial_datefrom = df_rating_factor["DateFrom"].min()
-    df_rating_factor['MonthOffset'] = (
-        (df_rating_factor['Initial_Eta'] - 1)/12).astype(int)
-    df_rating_factor["DateFrom"] = df_rating_factor.apply(
-        lambda x: initial_datefrom + pd.DateOffset(
-            months=x['MonthOffset']), axis=1)
-    # Replace Year and Month with the ones from DateFrom
-    df_rating_factor["Year"] = df_rating_factor["DateFrom"].dt.year
-    df_rating_factor["Month"] = df_rating_factor["DateFrom"].dt.month
-    # End of section to remove
-    #
     # Drop columns
-    cols_to_drop = ["Day", "DaysInMonth", "Year-Month", "MonthOffset",
+    cols_to_drop = ["Day", "DaysInMonth", "Year-Month",
                     "Initial_Eta", "DateFrom"]
     df_rating_factor = df_rating_factor.drop(cols_to_drop, axis=1)
     # Rename Name to Gen, Value [Mw] to Pmax
