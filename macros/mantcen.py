@@ -234,33 +234,6 @@ def validate_mant_ciclicos(df: pd.DataFrame):
     logger.info('Validation process for MantCEN Cíclicos successful')
 
 
-def read_extra_mant_gas(iplp_path: Path,
-                        blo_eta: pd.DataFrame) -> pd.DataFrame:
-    end_year = blo_eta.iloc[-1]['Year']
-    # Gas
-    df_gas = pd.read_excel(
-        iplp_path, sheet_name="MantenimientosIM",
-        skiprows=1, usecols="O:AC", index_col=0).dropna(how='any')
-    validate_mant_gas(df_gas)
-    df_gas = df_gas.replace('*', str(end_year))
-    dict_out = {'Nombre': [], 'INICIAL': [], 'FINAL': [],
-                'Pmin': [], 'Pmax': []}
-    for idx_unit, row in df_gas.iterrows():
-        for year in range(int(row['AnoInic']), int(row['AnoFinal']) + 1):
-            for month, monthnum in MONTH2NUMBER.items():
-                date_ini = datetime(year, monthnum, 1)
-                date_end = date_ini + \
-                    relativedelta(months=+1) - timedelta(days=1)
-                dict_out['Nombre'].append(idx_unit)
-                dict_out['INICIAL'].append(date_ini)
-                dict_out['FINAL'].append(date_end)
-                dict_out['Pmin'].append(0)
-                dict_out['Pmax'].append(row[month])
-    df_out = pd.DataFrame.from_dict(dict_out)
-    df_out['Description'] = 'Gas'
-    return df_out
-
-
 def validate_mant_gas(df: pd.DataFrame):
     # Check if columns are [AnoInic, AnoFinal, Ene, Feb, Mar, Abr, May, Jun,
     # Jul, Ago, Sep, Oct, Nov, Dic]
@@ -290,10 +263,9 @@ def add_extra_mantcen(iplp_path: Path, df_mantcen: pd.DataFrame,
     '''
     df_no_ciclicos = read_extra_mant_no_ciclicos(iplp_path)
     df_ciclicos = read_extra_mant_ciclicos(iplp_path, blo_eta)
-    df_gas = read_extra_mant_gas(iplp_path, blo_eta)
     # Append new dataframes to df_mantcen if they are not empty
     list_of_dfs = []
-    for df in [df_mantcen, df_gas, df_no_ciclicos, df_ciclicos]:
+    for df in [df_mantcen, df_no_ciclicos, df_ciclicos]:
         if len(df) > 0:
             list_of_dfs.append(df)
     df_mantcen = pd.concat(list_of_dfs, ignore_index=True)
@@ -535,7 +507,7 @@ def main():
         # Read directly from MantenimientosIM and add to df_mantcen before
         # generating output
         # No cíclicos, cíclicos, restricciones de gas, genmin
-        logger.info('Adding extra maintenance (cyclic, non cyclic, gas)')
+        logger.info('Adding extra maintenance (order: non cyclic, cyclic)')
         df_mantcen = add_extra_mantcen(iplp_path, df_mantcen, blo_eta)
 
         logger.info('Filtering required')
