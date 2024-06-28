@@ -232,7 +232,7 @@ def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
     df.to_csv(path_csv / 'Generator_HeatRate.csv')
 
 
-def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv, path_df):
+def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv):
     '''
     Read df_cvar_with_emissions.csv file and print
     Generator HeatRate (pure Heatrate) with plexos format
@@ -285,7 +285,7 @@ def print_generator_files(iplp_path: Path,
     print_generator_heatrate(df_daily, iplp_path, path_csv, path_df)
     # Generator HeatRate (Pure HeatRate)
     logger.info('Processing plexos Generator HeatRate Fuel')
-    print_generator_heatrate_fuel(df_daily, iplp_path, path_csv, path_df)
+    print_generator_heatrate_fuel(df_daily, iplp_path, path_csv)
     logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
@@ -748,7 +748,7 @@ def main():
 
         # Print Node Load (Demand)
         logger.info('Processing plexos Node Load')
-        #print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
+        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
 
         # Generator files
         logger.info('Processing plexos Generator files')
