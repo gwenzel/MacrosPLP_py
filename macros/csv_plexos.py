@@ -255,7 +255,7 @@ def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv):
     # Drop nan column
     df = df.dropna(axis=1, how='all')
     # Forward fill values - heatrate is the same in all the horizon
-    df = df.fillna(method='ffill', axis=0)
+    df = df.ffill(axis=0)
     # Print file
     df.to_csv(path_csv / 'Generator_HeatRate_Fuel.csv')
 
@@ -289,6 +289,12 @@ def print_generator_files(iplp_path: Path,
     logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
+    # BESS MaxCapacity
+    logger.info('Processing plexos BESS MaxCapacity')
+    print_bess_max_capacity(iplp_path, path_csv, path_df)
+    # BESS Efficiencies
+    logger.info('Processing plexos BESS Efficiencies')
+    print_bess_efficiencies(iplp_path, path_csv, path_df)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -495,9 +501,121 @@ def print_generator_maxcapacity(path_df: Path, path_csv: Path):
     df['DAY'] = df['DateFrom'].dt.day
     df['PERIOD'] = 1
     df['BAND'] = 1
+    # Order cols
     ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
     df = df[ordered_cols]
+    # Print csv
     df.to_csv(path_csv / 'Generator_MaxCapacity.csv', index=False)
+
+
+def read_bess_properties(iplp_path: Path, path_df: Path) -> pd.DataFrame:
+    '''
+    Read BESS properties from iplp_path
+    '''
+    df_bess = pd.read_excel(iplp_path, sheet_name='Centrales',
+                            skiprows=4, usecols="B,C,AB,BG,DL:DO")
+    # Rename by position
+    df_bess.columns = ['Name', 'Type', 'Pmax MW', 'Tech', 'Eff_Charge',
+                       'Eff_Discharge', 'Duration_h', 'Associated_Unit']
+    # Filter if Type != X
+    df_bess = df_bess[df_bess['Type'] != 'X']
+    # Filter BESS if Tech contains bess
+    df_bess['Tech'] = df_bess['Tech'].fillna('Ninguna')
+    df_bess = df_bess[df_bess['Tech'].str.contains('BESS')]
+    df_bess['CapMax MWh'] = df_bess['Pmax MW'] * df_bess['Duration_h']
+    # Print to csv
+    df_bess.to_csv(path_df / 'df_bess_properties.csv', index=False)
+    return df_bess
+
+
+def print_bess_max_capacity(iplp_path: Path,
+                            path_csv: Path, path_df: Path):
+    '''
+    Print file with BESS max capacity, based on ERNC tab
+    '''
+    try:
+        df = pd.read_csv(path_df / 'ernc_RatingFactor.csv')
+    except FileNotFoundError:
+        logger.error('Sheet BESS not found in %s' % path_df)
+        logger.error('File BESS_MaxCapacity could not be printed')
+        return
+    # Filter BESS
+    df = df[df['Name'].str.contains('BESS')]
+    # Format
+    df = df.rename(
+        columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
+    # Parse DateFrom
+    df['DateFrom'] = pd.to_datetime(
+        df['DateFrom'])
+    df['YEAR'] = df['DateFrom'].dt.year
+    df['MONTH'] = df['DateFrom'].dt.month
+    df['DAY'] = df['DateFrom'].dt.day
+    df['PERIOD'] = 1
+    df['BAND'] = 1
+    # Read BESS properties
+    df_bess = read_bess_properties(iplp_path, path_df)
+    # Merge with BESS properties
+    df = df.merge(df_bess[['Name', 'Duration_h']],
+                  left_on='NAME', right_on='Name')
+    # Calculate Energy Capacity as former Capacity MW (VALUE) * Duration_h
+    df['VALUE'] = df['VALUE'] * df['Duration_h']
+    # Drop Duration_h
+    df = df.drop(['DateFrom', 'Duration_h'], axis=1)
+    # Order cols
+    ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
+    df = df[ordered_cols]
+    # Remove rows if consecutive VALUES are the same for the same NAME
+    mask = df['VALUE'] == df.groupby('NAME')['VALUE'].shift(1)
+    df = df[~mask]
+    # Print to csv
+    df.to_csv(path_csv / 'BESS_MaxCapacity.csv', index=False)
+
+
+def print_bess_efficiencies(iplp_path: Path,
+                            path_csv: Path, path_df: Path):
+    '''
+    Print file with BESS max capacity, based on ERNC tab
+    '''
+    try:
+        df = pd.read_csv(path_df / 'ernc_RatingFactor.csv')
+    except FileNotFoundError:
+        logger.error('Sheet BESS not found in %s' % path_df)
+        logger.error('File BESS_MaxCapacity could not be printed')
+        return
+    # Filter BESS
+    df = df[df['Name'].str.contains('BESS')]
+    # Format
+    df = df.rename(
+        columns={'Name': 'NAME', 'Value [MW]': 'VALUE'})
+    # Parse DateFrom
+    df['DateFrom'] = pd.to_datetime(
+        df['DateFrom'])
+    df['YEAR'] = df['DateFrom'].dt.year
+    df['MONTH'] = df['DateFrom'].dt.month
+    df['DAY'] = df['DateFrom'].dt.day
+    df['PERIOD'] = 1
+    df['BAND'] = 1
+    # Replace VALUE for 1 if >0, else 0
+    df['VALUE'] = df['VALUE'].apply(lambda x: 1 if x > 0 else 0)
+    # Read BESS properties
+    df_bess = read_bess_properties(iplp_path, path_df)
+    # Merge with BESS properties
+    df = df.merge(df_bess[['Name', 'Eff_Charge', 'Eff_Discharge']],
+                  left_on='NAME', right_on='Name')
+    eff_cols = ['Eff_Charge', 'Eff_Discharge']
+    for col in eff_cols:
+        df_aux = df.copy()
+        # Replace Eff_Charge if VALUE > 0
+        df_aux['VALUE'] = df_aux['VALUE'] * df_aux[col]
+        # Drop Duration_h
+        df_aux = df_aux.drop(['DateFrom'], axis=1)
+        df_aux = df_aux.drop(eff_cols, axis=1)
+        # Order cols
+        ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY',
+                        'PERIOD', 'VALUE']
+        df_aux = df_aux[ordered_cols]
+        # Print to csv
+        df_aux.to_csv(path_csv / ('BESS_%s.csv' % col), index=False)
 
 
 def print_generator_rating_factor(iplp_path: Path,
@@ -746,10 +864,6 @@ def main():
         df_daily = get_df_daily_plexos(blo_eta, iplp_path)
         df_hourly = get_df_hourly_plexos(blo_eta, iplp_path)
 
-        # Print Node Load (Demand)
-        logger.info('Processing plexos Node Load')
-        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
-
         # Generator files
         logger.info('Processing plexos Generator files')
         print_generator_files(iplp_path, df_daily, path_csv,
@@ -762,6 +876,10 @@ def main():
         # GNL Base - volumen mensual de cada estanque de gas
         logger.info('Processing plexos Gas volumes')
         print_gas_files(iplp_path, df_daily, path_csv)
+
+        # Print Node Load (Demand)
+        logger.info('Processing plexos Node Load')
+        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
 
     except Exception as e:
         logger.error(e, exc_info=True)
