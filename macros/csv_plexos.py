@@ -1,7 +1,8 @@
 '''
 Generate Plexos files in CSV folder
 '''
-from macros.cvar import read_unit_cvar_nominal
+from macros.cvar import (read_heatrate_and_unit_fuel_mapping,
+                         read_unit_cvar_nominal)
 from macros.dem import (dda_por_barra_to_row_format,
                         get_monthly_demand)
 from macros.lin import read_df_lines
@@ -231,6 +232,34 @@ def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
     df.to_csv(path_csv / 'Generator_HeatRate.csv')
 
 
+def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv, path_df):
+    '''
+    Read df_cvar_with_emissions.csv file and print
+    Generator HeatRate (pure Heatrate) with plexos format
+    '''
+    df = read_heatrate_and_unit_fuel_mapping(iplp_path)
+    # Format dataframe
+    df = df.drop(['Fuel Name', 'Non-Fuel Cost'], axis=1)
+    df['YEAR'] = df_daily['YEAR'][0]
+    df['MONTH'] = df_daily['MONTH'][0]
+    df['DAY'] = 1
+    df['PERIOD'] = 1
+    df = df.set_index(['YEAR', 'MONTH', 'DAY', 'PERIOD'])
+    df_daily = df_daily.drop('DATE', axis=1)
+    df_daily['PERIOD'] = 1
+    # Merge dataframes
+    df = df_daily.merge(df, on=['YEAR', 'MONTH', 'DAY', 'PERIOD'], how='left')
+    # Pass to wide format
+    df = df.pivot(index=['YEAR', 'MONTH', 'DAY', 'PERIOD'],
+                  columns='Central', values='Heat Rate')
+    # Drop nan column
+    df = df.dropna(axis=1, how='all')
+    # Forward fill values - heatrate is the same in all the horizon
+    df = df.fillna(method='ffill', axis=0)
+    # Print file
+    df.to_csv(path_csv / 'Generator_HeatRate_Fuel.csv')
+
+
 def print_generator_files(iplp_path: Path,
                           df_daily: pd.DataFrame,
                           path_csv: Path,
@@ -254,6 +283,9 @@ def print_generator_files(iplp_path: Path,
     # Generator HeatRate (Variable Cost)
     logger.info('Processing plexos Generator HeatRate')
     print_generator_heatrate(df_daily, iplp_path, path_csv, path_df)
+    # Generator HeatRate (Pure HeatRate)
+    logger.info('Processing plexos Generator HeatRate Fuel')
+    print_generator_heatrate_fuel(df_daily, iplp_path, path_csv, path_df)
     logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
@@ -716,7 +748,7 @@ def main():
 
         # Print Node Load (Demand)
         logger.info('Processing plexos Node Load')
-        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
+        #print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
 
         # Generator files
         logger.info('Processing plexos Generator files')
