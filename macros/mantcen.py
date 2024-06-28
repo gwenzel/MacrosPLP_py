@@ -7,8 +7,6 @@ plpmance.dat file
 import pandas as pd
 import sys
 from openpyxl.utils.datetime import from_excel
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 from pathlib import Path
 
 from utils.utils import (define_arg_parser,
