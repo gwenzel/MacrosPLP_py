@@ -289,12 +289,15 @@ def print_generator_files(iplp_path: Path,
     logger.info('Processing plexos Generator Other')
     # Other (MinDown, MinUp, ShutDownCost, StartCost, MinTecNeto)
     print_generator_other(df_daily, iplp_path, path_csv)
+    # BESS Properties
+    logger.info('Processing plexos BESS Properties')
+    df_bess = read_bess_properties(iplp_path, path_df)
     # BESS MaxCapacity
     logger.info('Processing plexos BESS MaxCapacity')
-    print_bess_max_capacity(iplp_path, path_csv, path_df)
+    print_bess_max_capacity(iplp_path, path_csv, path_df, df_bess)
     # BESS Efficiencies
     logger.info('Processing plexos BESS Efficiencies')
-    print_bess_efficiencies(iplp_path, path_csv, path_df)
+    print_bess_efficiencies(iplp_path, path_csv, path_df, df_bess)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -529,7 +532,9 @@ def read_bess_properties(iplp_path: Path, path_df: Path) -> pd.DataFrame:
 
 
 def print_bess_max_capacity(iplp_path: Path,
-                            path_csv: Path, path_df: Path):
+                            path_csv: Path,
+                            path_df: Path,
+                            df_bess: pd.DataFrame):
     '''
     Print file with BESS max capacity, based on ERNC tab
     '''
@@ -547,13 +552,12 @@ def print_bess_max_capacity(iplp_path: Path,
     # Parse DateFrom
     df['DateFrom'] = pd.to_datetime(
         df['DateFrom'])
+    ini_date = df['DateFrom'].min()
     df['YEAR'] = df['DateFrom'].dt.year
     df['MONTH'] = df['DateFrom'].dt.month
     df['DAY'] = df['DateFrom'].dt.day
     df['PERIOD'] = 1
     df['BAND'] = 1
-    # Read BESS properties
-    df_bess = read_bess_properties(iplp_path, path_df)
     # Merge with BESS properties
     df = df.merge(df_bess[['Name', 'Duration_h']],
                   left_on='NAME', right_on='Name')
@@ -564,15 +568,29 @@ def print_bess_max_capacity(iplp_path: Path,
     # Order cols
     ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
     df = df[ordered_cols]
-    # Remove rows if consecutive VALUES are the same for the same NAME
-    mask = df['VALUE'] == df.groupby('NAME')['VALUE'].shift(1)
-    df = df[~mask]
+
+    # From df_bess, take initial values, format as the other file for 
+    # the initial date, and concat
+    df_bess = df_bess.rename(columns={'Name': 'NAME', 'CapMax MWh': 'VALUE'})
+    df_bess['DateFrom'] = ini_date
+    df_bess['YEAR'] = df_bess['DateFrom'].dt.year
+    df_bess['MONTH'] = df_bess['DateFrom'].dt.month
+    df_bess['DAY'] = df_bess['DateFrom'].dt.day
+    df_bess['PERIOD'] = 1
+    df_bess['BAND'] = 1
+    df_bess = df_bess[ordered_cols]
+
+    # Concat both dataframes
+    df = pd.concat([df_bess, df])
+
     # Print to csv
     df.to_csv(path_csv / 'BESS_MaxCapacity.csv', index=False)
 
 
 def print_bess_efficiencies(iplp_path: Path,
-                            path_csv: Path, path_df: Path):
+                            path_csv: Path,
+                            path_df: Path,
+                            df_bess: pd.DataFrame):
     '''
     Print file with BESS max capacity, based on ERNC tab
     '''
@@ -590,6 +608,7 @@ def print_bess_efficiencies(iplp_path: Path,
     # Parse DateFrom
     df['DateFrom'] = pd.to_datetime(
         df['DateFrom'])
+    ini_date = df['DateFrom'].min()
     df['YEAR'] = df['DateFrom'].dt.year
     df['MONTH'] = df['DateFrom'].dt.month
     df['DAY'] = df['DateFrom'].dt.day
@@ -597,12 +616,13 @@ def print_bess_efficiencies(iplp_path: Path,
     df['BAND'] = 1
     # Replace VALUE for 1 if >0, else 0
     df['VALUE'] = df['VALUE'].apply(lambda x: 1 if x > 0 else 0)
-    # Read BESS properties
-    df_bess = read_bess_properties(iplp_path, path_df)
     # Merge with BESS properties
     df = df.merge(df_bess[['Name', 'Eff_Charge', 'Eff_Discharge']],
                   left_on='NAME', right_on='Name')
     eff_cols = ['Eff_Charge', 'Eff_Discharge']
+    # Order cols
+    ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY',
+                    'PERIOD', 'VALUE']
     for col in eff_cols:
         df_aux = df.copy()
         # Replace Eff_Charge if VALUE > 0
@@ -610,10 +630,23 @@ def print_bess_efficiencies(iplp_path: Path,
         # Drop Duration_h
         df_aux = df_aux.drop(['DateFrom'], axis=1)
         df_aux = df_aux.drop(eff_cols, axis=1)
-        # Order cols
-        ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY',
-                        'PERIOD', 'VALUE']
+
         df_aux = df_aux[ordered_cols]
+
+        # From df_bess, take initial values, format as the other file for 
+        # the initial date, and concat
+        df_bess = df_bess.rename(columns={'Name': 'NAME', col: 'VALUE'})
+        df_bess['DateFrom'] = ini_date
+        df_bess['YEAR'] = df_bess['DateFrom'].dt.year
+        df_bess['MONTH'] = df_bess['DateFrom'].dt.month
+        df_bess['DAY'] = df_bess['DateFrom'].dt.day
+        df_bess['PERIOD'] = 1
+        df_bess['BAND'] = 1
+        df_bess = df_bess[ordered_cols]
+
+        # Concat both dataframes
+        df_aux = pd.concat([df_bess, df_aux])
+
         # Print to csv
         df_aux.to_csv(path_csv / ('BESS_%s.csv' % col), index=False)
 
