@@ -27,6 +27,7 @@ Outputs:
 '''
 
 from argparse import ArgumentParser
+from logger import create_logger, add_file_handler
 import os
 import pandas as pd
 from pathlib import Path
@@ -50,6 +51,8 @@ INPUT_FILES = {
 # Hydrology to filter
 Hyd = 20
 
+logger = create_logger('curtailment')
+
 
 def load_data(time_resolution, inputs_path):
     """
@@ -65,9 +68,9 @@ def load_data(time_resolution, inputs_path):
     ener_file = Path(
         inputs_path, INPUT_FILES[time_resolution]["ener_file_name"])
 
-    print('--Loading data from:')
-    print(f'--CUR: {cur_file}')
-    print(f'--ENER: {ener_file}')
+    logger.info('--Loading data from:')
+    logger.info(f'--CUR: {cur_file}')
+    logger.info(f'--ENER: {ener_file}')
 
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
@@ -200,24 +203,24 @@ def validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
     '''
     for gen, node in dict_gen2node.items():
         #if gen not in df_cur.columns:
-        #    print(f"Gen {gen} not found in Curtailment file")
+        #    logger.info(f"Gen {gen} not found in Curtailment file")
         if gen not in df_ener.columns:
-            print(f"Gen {gen} not found in Energy file")
+            logger.info(f"Gen {gen} not found in Energy file")
     '''
-    print("--Checking if all generators are in all files")
-    print("--Generators not found will not be considered for curtailment")
+    logger.info("--Checking if all generators are in all files")
+    logger.info("--Generators not found will not be considered for curt.")
     for gen in df_ener.columns:
         if gen in dict_gen2enable.keys():
             if gen not in dict_gen2node.keys():
-                print(f"Gen {gen} not found in Gen2Node file")
+                logger.info(f"Gen {gen} not found in Gen2Node file")
             if gen not in df_cur.columns:
-                print(f"Gen {gen} not found in Curtailment file")
+                logger.info(f"Gen {gen} not found in Curtailment file")
     for gen in df_cur.columns:
         if gen in dict_gen2enable.keys():
             if gen not in dict_gen2node.keys():
-                print(f"Gen {gen} not found in Gen2Node file")
+                logger.info(f"Gen {gen} not found in Gen2Node file")
             if gen not in df_ener.columns:
-                print(f"Gen {gen} not found in Energy file")
+                logger.info(f"Gen {gen} not found in Energy file")
 
 
 def process_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
@@ -569,71 +572,80 @@ def define_arg_parser() -> ArgumentParser:
 
 
 def main():
-    print('--Starting curtailment script')
-    parser = define_arg_parser()
-    args = parser.parse_args()
-    # Inputs from dictionaries
-    zonas_file = args.zonas_file
-    tec2enable_file = args.tec2enable_file
-    # Inputs from IPLP df
-    df_centrales_file = args.df_centrales_file
-    rating_factor_file = args.rating_factor_file
-    # Inputs from IPLP outputs
-    inputs_path = args.inputs_path
-    # Outputs folder
-    output_folder = args.output_folder
-    # Time resolution (Block or Hour)
-    time_resolution = args.time_resolution
+    logger.info('--Starting curtailment script')
 
-    # Create output folder if it does not exist
-    Path(output_folder).mkdir(exist_ok=True)
+    try:
+        parser = define_arg_parser()
+        args = parser.parse_args()
+        # Inputs from dictionaries
+        zonas_file = args.zonas_file
+        tec2enable_file = args.tec2enable_file
+        # Inputs from IPLP df
+        df_centrales_file = args.df_centrales_file
+        rating_factor_file = args.rating_factor_file
+        # Inputs from IPLP outputs
+        inputs_path = args.inputs_path
+        # Outputs folder
+        output_folder = args.output_folder
+        # Time resolution (Block or Hour)
+        time_resolution = args.time_resolution
+        # Logger
+        add_file_handler(logger, 'log_curtailment', output_folder)
 
-    print('--Processing curtailment with time resolution in: ' +
-          time_resolution + ' resolution')
-    # Load Data
-    print('--Loading data')
-    df_cur, df_ener = load_data(time_resolution, inputs_path)
-    dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
-        load_dicts(zonas_file, df_centrales_file, tec2enable_file)
-    df_pmax_per_month = load_gen2pmax_per_month(
-        df_ener, dict_gen2pmax, dict_gen2enable, rating_factor_file,
-        output_folder)
+        # Create output folder if it does not exist
+        Path(output_folder).mkdir(exist_ok=True)
 
-    # Validate inputs
-    print('--Validating inputs')
-    validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
-                    dict_gen2enable)
+        logger.info('--Processing curtailment with time resolution in: ' +
+                    time_resolution + ' resolution')
+        # Load Data
+        logger.info('--Loading data')
+        df_cur, df_ener = load_data(time_resolution, inputs_path)
+        dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
+            load_dicts(zonas_file, df_centrales_file, tec2enable_file)
+        df_pmax_per_month = load_gen2pmax_per_month(
+            df_ener, dict_gen2pmax, dict_gen2enable, rating_factor_file,
+            output_folder)
 
-    # Process data
-    print('--Processing inputs')
-    df_all = process_inputs(df_cur, df_ener,
-                            dict_node2zone, dict_gen2node,
-                            time_resolution)
-    # Get generator data
-    df_gen_data = get_gen_data(
-        dict_gen2node, dict_node2zone, dict_gen2enable)
-    # Preprocess curtailment data
-    df_all = preprocess_curtailment(
-        df_all, df_gen_data, df_pmax_per_month)
+        # Validate inputs
+        logger.info('--Validating inputs')
+        validate_inputs(df_cur, df_ener, dict_node2zone, dict_gen2node,
+                        dict_gen2enable)
 
-    # Redistribute totals
-    print('--Redistributing totals')
-    df_all_redistrib = redistribute_totals(df_all, time_resolution)
-    df_all_redistrib_grouped = group_data_redistrib(
-        df_all_redistrib, time_resolution)
-    df_out_ener_redistrib = process_redistributed_out(
-        df_all_redistrib, time_resolution, "Energy")
-    df_out_curtail_redistrib = process_redistributed_out(
-        df_all_redistrib, time_resolution, "Curtailment")
+        # Process data
+        logger.info('--Processing inputs')
+        df_all = process_inputs(df_cur, df_ener,
+                                dict_node2zone, dict_gen2node,
+                                time_resolution)
+        # Get generator data
+        df_gen_data = get_gen_data(
+            dict_gen2node, dict_node2zone, dict_gen2enable)
+        # Preprocess curtailment data
+        df_all = preprocess_curtailment(
+            df_all, df_gen_data, df_pmax_per_month)
 
-    # Print results
-    print('--Printing results to csv files')
-    print_outputs_to_csv(output_folder, df_all,
-                         df_all_redistrib, df_all_redistrib_grouped,
-                         df_out_ener_redistrib, df_out_curtail_redistrib,
-                         time_resolution)
+        # Redistribute totals
+        logger.info('--Redistributing totals')
+        df_all_redistrib = redistribute_totals(df_all, time_resolution)
+        df_all_redistrib_grouped = group_data_redistrib(
+            df_all_redistrib, time_resolution)
+        df_out_ener_redistrib = process_redistributed_out(
+            df_all_redistrib, time_resolution, "Energy")
+        df_out_curtail_redistrib = process_redistributed_out(
+            df_all_redistrib, time_resolution, "Curtailment")
 
-    print('--Finished curtailment script')
+        # Print results
+        logger.info('--Printing results to csv files')
+        print_outputs_to_csv(output_folder, df_all,
+                             df_all_redistrib, df_all_redistrib_grouped,
+                             df_out_ener_redistrib, df_out_curtail_redistrib,
+                             time_resolution)
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
+
+    logger.info('--Finished curtailment script')
 
 
 if __name__ == "__main__":
