@@ -589,11 +589,12 @@ def main():
         output_folder = args.output_folder
         # Time resolution (Block or Hour)
         time_resolution = args.time_resolution
-        # Logger
-        add_file_handler(logger, 'log_curtailment', output_folder)
 
         # Create output folder if it does not exist
         Path(output_folder).mkdir(exist_ok=True)
+
+        # Add destination folder to logger
+        add_file_handler(logger, 'log_curtailment', Path(output_folder))
 
         logger.info('--Processing curtailment with time resolution in: ' +
                     time_resolution + ' resolution')
