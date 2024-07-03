@@ -8,55 +8,16 @@ to be used by the Curtailment Model
 import os
 import pandas as pd
 import datetime
+from pathlib import Path
+from argparse import ArgumentParser
+from logger import create_logger, add_file_handler
 
+
+logger = create_logger('filter_plexos')
 
 # Define global variables
 Hydro = 20
-folder_paths = 'Folder_Paths.csv'
 
-# Define directories
-# wDir = os.getcwd()
-wDir = r"C:\Users\BH5873\OneDrive - ENGIE\Bureau\BE Mar24 PLP"
-pDir = os.path.join(wDir, "PLP")
-if not os.path.exists(pDir):
-    # Warn the user and stop
-    print("PLP folder not found. Cannot proceed.")
-    # Indicate the folder that should exist
-    print("Please create the folder 'PLP' in the working directory.")
-    print("The folder should be located at: ", pDir)
-    exit()
-oDir = os.path.join(wDir, "Output_Filter_Plexos")
-if not os.path.exists(oDir):
-    os.mkdir(oDir)
-
-# Define input files
-folder_paths_file = os.path.join(wDir, 'folder_paths.csv')
-config_file = os.path.join(wDir, 'filter_plexos_config.csv')
-
-# Check existence of input files
-if not os.path.exists(folder_paths_file):
-    print("Folder Paths file not found. Cannot proceed.")
-    print("Please create the file 'Folder_Paths.csv' "
-          "in the working directory.")
-    exit()
-if not os.path.exists(config_file):
-    print("Filter Plexos Config file not found. Cannot proceed.")
-    print("Please create the file 'filter_plexos_config.csv' "
-          "in the working directory.")
-    exit()
-
-# Read folder paths file with paths to Plexos results
-fp = pd.read_csv(folder_paths_file)
-NPaths = len(fp)
-RPaths = fp.to_numpy()
-Yini = RPaths[0, 1]
-Mini = RPaths[0, 2]
-Yend = RPaths[NPaths - 1, 3]
-Mend = RPaths[NPaths - 1, 4]
-
-
-# Read configuration from filter_plexos_config.json
-filter_config = pd.read_csv(config_file)
 
 Hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
@@ -66,6 +27,18 @@ Blocks = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
 B2H = pd.DataFrame()
 B2H['Hour'] = Hours
 B2H['Block'] = Blocks
+
+
+def check_is_file(path: Path):
+    if not path.is_file():
+        logger.error("file %s does not exist" % path)
+
+
+def check_is_path(path: Path):
+    if not path.exists():
+        logger.warning("Path is not valid: %s" % path)
+        path.mkdir(parents=True, exist_ok=True)
+        logger.info("Path was created: %s" % path)
 
 
 def print_in_plp_format(df, new_indexes, csv_out, rows_to_skip):
@@ -95,8 +68,8 @@ def add_blank_lines(out_file, lines):
         modified.write(data)
 
 
-def define_outdata(f):
-    print("---Defining outData: ", f)
+def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
+    logger.info("---Defining outData: %s" % f)
     outData = pd.read_csv(os.path.join(wDir, RPaths[0, 0], "Interval", f))
     for i in range(NPaths - 1):
         csv_path = os.path.join(wDir, RPaths[i + 1, 0], "Interval", f)
@@ -114,8 +87,8 @@ def define_outdata(f):
 
 
 def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
-                      PLP_Row):
-    print("---Printing outData 12B: ", File_12B)
+                      PLP_Row, oDir):
+    logger.info("---Printing outData 12B: %s" % File_12B)
     outData_12B = outData.copy()
     outData_12B = pd.merge(outData_12B, B2H, on='Hour', how='right')
     outData_12B = outData_12B.drop(['DATETIME', 'Day', 'Hour'], axis=1)
@@ -131,8 +104,8 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
 
 
 def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
-                      PLP_Row):
-    print("---Printing outData 24H: ", File_24H)
+                      PLP_Row, oDir):
+    logger.info("---Printing outData 24H: %s" % File_24H)
     outData_24H = outData.copy()
     outData_24H = outData_24H.drop(['DATETIME', 'Day'], axis=1)
     outData_24H = pd.melt(outData_24H, id_vars=['Year', 'Month', 'Hour'],
@@ -145,8 +118,9 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
         PLP_Row)
 
 
-def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row):
-    print("---Printing outData: ", File_M)
+def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
+                  oDir):
+    logger.info("---Printing outData: %s" % File_M)
     outData = outData.drop(['DATETIME', 'Day', 'Hour'], axis=1)
     outData = pd.melt(outData, id_vars=['Year', 'Month'], var_name=Item_Name,
                       value_name=Value_Name)
@@ -159,8 +133,9 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row):
     return outData
 
 
-def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div):
-    print("---Printing outPLP: ", File_M)
+def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
+                  Yini, Mini, Yend, Mend, oDir, pDir):
+    logger.info("---Printing outPLP: %s" % File_M)
     csv_in = os.path.join(pDir, File_M)
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
     # Filtrar por Hyd
@@ -200,50 +175,123 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div):
         outPLP, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
 
 
+def define_arg_parser() -> ArgumentParser:
+    parser = ArgumentParser(description="Get Filter Plexos input filepaths")
+    parser.add_argument(
+        "-w", "--working_directory", help="Working directory",
+        required=True, dest="wDir", type=str)
+    parser.add_argument(
+        "-p", "--plp_directory", help="PLP directory",
+        required=True, dest="pDir", type=str)
+    parser.add_argument(
+        "-o", "--output_directory", help="Output directory",
+        required=True, dest="oDir", type=str)
+    parser.add_argument(
+        "-f", "--folder_paths_file", help="Folder paths file",
+        required=True, dest="folder_paths_file",
+        type=lambda x: is_valid_file(parser, x))
+    parser.add_argument(
+        "-c", "--config_file", help="Config file",
+        required=True, dest="config_file",
+        type=lambda x: is_valid_file(parser, x))
+    return parser
+
+
+def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
+    if not os.path.exists(arg):
+        parser.error("The file or path %s does not exist!" % arg)
+    else:
+        return Path(arg)
+
+
 def main():
-    print("--Start script Filter Plexos")
-    print("---General Inputs directory: ", wDir)
-    print("---PLP Inputs directory: ", pDir)
-    print("---Folder paths file: ", folder_paths_file)
-    print("---Config file: ", config_file)
-    print("---Number of paths: ", NPaths)
-    print("---Output directory: ", oDir)
 
-    # Node Price
-    for idx, row in filter_config.iterrows():
-        print("--Processing file %s/%s: %s" %
-              (idx + 1, len(filter_config), row['Origin']))
-        f = row['Origin']
-        Item_Name = row['Item']
-        Value_Name = row['Value']
-        Group_By = row['GroupBy']
-        File_24H = row['File_24H']
-        File_12B = row['File_12B']
-        File_M = row['File_M']
-        PLP_Row = row['PLP_Row']
-        PLP_Div = row['PLP_Div']
+    try:
+        parser = define_arg_parser()
+        args = parser.parse_args()
 
-        # Define outdata
-        outData = define_outdata(f)
+        # Define paths and files, and check
+        wDir = Path(args.wDir)
+        check_is_path(wDir)
+        pDir = Path(args.pDir)
+        check_is_path(pDir)
+        oDir = Path(args.oDir)
+        check_is_path(oDir)
+        folder_paths_file = args.folder_paths_file
+        check_is_file(folder_paths_file)
+        config_file = args.config_file
+        check_is_file(config_file)
 
-        # Print outdata 12B
-        print_outdata_12B(
-            outData, Item_Name, Value_Name, Group_By, File_12B, PLP_Row)
+        # Add destination folder to logger
+        add_file_handler(logger, 'log_filter_plexos',
+                         Path(oDir))
 
-        # Print outdata 24H
-        print_outdata_24H(
-            outData, Item_Name, Value_Name, Group_By, File_24H, PLP_Row)
+        logger.info("--Start script Filter Plexos")
+        logger.info("---General Inputs directory: %s" % wDir)
+        logger.info("---PLP Inputs directory: %s" % pDir)
+        logger.info("---Folder paths file: %s" % folder_paths_file)
+        logger.info("---Config file: %s" % config_file)
+        logger.info("---Output directory: %s" % oDir)
 
-        # Print outData
-        outData = print_outdata(
-            outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row)
+        # Read folder paths file with paths to Plexos results
+        fp = pd.read_csv(folder_paths_file)
+        NPaths = len(fp)
+        RPaths = fp.to_numpy()
+        Yini = RPaths[0, 1]
+        Mini = RPaths[0, 2]
+        Yend = RPaths[NPaths - 1, 3]
+        Mend = RPaths[NPaths - 1, 4]
 
-        # Print plp files
-        if row['PLP_Bool']:
-            print_out_plp(
-                outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div)
+        logger.info("---Number of paths: %s" % NPaths)
 
-    print("--Filter Plexos script ready")
+        # Read configuration from filter_plexos_config.json
+        filter_config = pd.read_csv(config_file)
+
+        # Node Price
+        for idx, row in filter_config.iterrows():
+            logger.info("--Processing file %s/%s: %s" %
+                        (idx + 1, len(filter_config), row['Origin']))
+            f = row['Origin']
+            Item_Name = row['Item']
+            Value_Name = row['Value']
+            Group_By = row['GroupBy']
+            File_24H = row['File_24H']
+            File_12B = row['File_12B']
+            File_M = row['File_M']
+            PLP_Row = row['PLP_Row']
+            PLP_Div = row['PLP_Div']
+
+            # Define outdata
+            outData = define_outdata(f, wDir, RPaths, NPaths, oDir)
+
+            # Print outdata 12B
+            print_outdata_12B(
+                outData, Item_Name, Value_Name, Group_By, File_12B, PLP_Row,
+                oDir)
+
+            # Print outdata 24H
+            print_outdata_24H(
+                outData, Item_Name, Value_Name, Group_By, File_24H, PLP_Row,
+                oDir)
+
+            # Print outData
+            outData = print_outdata(
+                outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
+                oDir)
+
+            # Print plp files
+            if row['PLP_Bool']:
+                print_out_plp(
+                    outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
+                    Yini, Mini, Yend, Mend, oDir, pDir)
+
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        logger.error('Process finished with errors. Check above for details')
+    else:
+        logger.info('Process finished successfully')
+
+    logger.info('--Finished Filter Plexos script')
 
 
 if __name__ == "__main__":

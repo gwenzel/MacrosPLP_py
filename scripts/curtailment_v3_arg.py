@@ -527,7 +527,7 @@ def print_outputs_to_csv(output_folder, df_all,
     out_ener_redistrib_monthly_out_file = Path(
         output_folder_aux, 'outEnerg_redistrib_monthly_%s.csv' % suffix)
     out_curtail_redistrib_monthly_out_file = Path(
-        output_folder_aux, 'outCurtail_redistrib_monthly_%s.csv' % suffix)   
+        output_folder_aux, 'outCurtail_redistrib_monthly_%s.csv' % suffix)
 
     df_all.to_csv(cur_out_file, encoding="latin1")
     df_all_redistrib.to_csv(
