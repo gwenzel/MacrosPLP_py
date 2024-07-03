@@ -256,8 +256,10 @@ def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv):
     df = df.dropna(axis=1, how='all')
     # Forward fill values - heatrate is the same in all the horizon
     df = df.ffill(axis=0)
+    # Divide values by 1000 because inputs are in TBTu
+    df = df / 1000
     # Print file
-    df.to_csv(path_csv / 'Generator_HeatRate_Fuel.csv')
+    df.to_csv(path_csv / 'HeatRate_Fuel.csv')
 
 
 def print_generator_files(iplp_path: Path,
@@ -646,6 +648,9 @@ def print_bess_efficiencies(iplp_path: Path,
 
         # Concat both dataframes
         df_aux = pd.concat([df_bess, df_aux])
+
+        # Value in percentage (0-100)
+        df['VALUE'] = df['VALUE'] * 100
 
         # Print to csv
         df_aux.to_csv(path_csv / ('BESS_%s.csv' % col), index=False)

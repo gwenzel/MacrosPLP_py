@@ -105,3 +105,7 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 1.5.0
 
 - Agregar archivos CSV Plexos: BESS_Max_Capacity, BESS_Eff_Charge, BESS_Eff_Disharge, Generator_Heatrate_Fuel
+
+### Versión 1.5.1
+
+- Corrección de magnitudes y nombres de archivos en cambios 1.5.0
