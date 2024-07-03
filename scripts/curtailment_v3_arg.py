@@ -23,7 +23,7 @@ Outputs:
     - curtailment_grouped.csv
     - curtailment_redistrib.csv
     - curtailment_redistrib_grouped.csv
-    - outEnerg_12B_redistrib.csv
+    - outEnerg_B_redistrib.csv
 '''
 
 from argparse import ArgumentParser
@@ -497,11 +497,21 @@ def print_outputs_to_csv(output_folder, df_all,
 
     # Output suffix
     if time_resolution == "Block":
-        suffix = "12B"
+        suffix = "B"
     elif time_resolution == "Hour":
         suffix = "24H"
     else:
         suffix = ""
+
+    # Create Monthly versions for outEnerg and outCurtail
+    df_out_ener_redistrib_monthly = df_out_ener_redistrib.copy()
+    df_out_curtail_redistrib_monthly = df_out_curtail_redistrib.copy()
+    df_out_ener_redistrib_monthly = \
+        df_out_ener_redistrib_monthly.groupby(
+            ['Hyd', 'Year', 'Month']).sum()
+    df_out_curtail_redistrib_monthly = \
+        df_out_curtail_redistrib_monthly.groupby(
+            ['Hyd', 'Year', 'Month']).sum()
 
     # Output Data files
     cur_out_file = Path(
@@ -514,6 +524,10 @@ def print_outputs_to_csv(output_folder, df_all,
         output_folder_aux, 'outEnerg_redistrib_%s.csv' % suffix)
     out_curtail_redistrib_out_file = Path(
         output_folder_aux, 'outCurtail_redistrib_%s.csv' % suffix)
+    out_ener_redistrib_monthly_out_file = Path(
+        output_folder_aux, 'outEnerg_redistrib_monthly_%s.csv' % suffix)
+    out_curtail_redistrib_monthly_out_file = Path(
+        output_folder_aux, 'outCurtail_redistrib_monthly_%s.csv' % suffix)   
 
     df_all.to_csv(cur_out_file, encoding="latin1")
     df_all_redistrib.to_csv(
@@ -524,6 +538,10 @@ def print_outputs_to_csv(output_folder, df_all,
         out_ener_redistrib_out_file, encoding="latin1")
     df_out_curtail_redistrib.to_csv(
         out_curtail_redistrib_out_file, encoding="latin1")
+    df_out_ener_redistrib_monthly.to_csv(
+        out_ener_redistrib_monthly_out_file, encoding="latin1")
+    df_out_curtail_redistrib_monthly.to_csv(
+        out_curtail_redistrib_monthly_out_file, encoding="latin1")
 
     # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
     # to match format
