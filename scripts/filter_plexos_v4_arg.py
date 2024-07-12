@@ -29,15 +29,16 @@ B2H['Hour'] = Hours
 B2H['Block'] = Blocks
 
 
-def return_on_failure(value):
+def return_on_failure(msg):
     def decorate(f):
         def applicator(*args, **kwargs):
             try:
                 return f(*args, **kwargs)
             except Exception as e:
                 logger.error('Error: %s' % e)
+                logger.error(msg)
                 logger.error('Code will continue')
-            return value
+            return msg
         return applicator
     return decorate
 
