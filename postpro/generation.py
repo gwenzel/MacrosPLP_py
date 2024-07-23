@@ -20,7 +20,8 @@ def process_gen_data(path_case, blo_eta, tasa):
     gen_data = (
         gen_data.rename(columns={"Hidro": "Hyd"})
         .assign(
-            Hyd=pd.to_numeric(gen_data["Hidro"]), CenInyE=gen_data["CenInyE"] / 1000
+            Hyd=pd.to_numeric(gen_data["Hidro"]),
+            CenInyE=gen_data["CenInyE"] / 1000
         )
         .sort_values(["Hyd", "Etapa", "CenNom"])
     )
@@ -127,7 +128,8 @@ def write_gen_data_file(gen_param, path_out, item, df, type="B"):
     }
 
     header.iloc[0, 0] = unit[item]
-    header.to_csv(path_out / filename[item], na_rep=0, index=False, header=False)
+    header.to_csv(path_out / filename[item], na_rep=0, index=False,
+                  header=False)
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
@@ -137,7 +139,8 @@ def generation_converter(path_case, path_out, blo_eta, tasa):
     Wrap generation read, process and write
     '''
     # Read data
-    gen_data, gen_data_m, gen_param = process_gen_data(path_case, blo_eta, tasa)
+    gen_data, gen_data_m, gen_param = process_gen_data(
+        path_case, blo_eta, tasa)
     Energ_B, Reven_B, CapPrice_B, Curtail_B = process_gen_data_monthly(
         gen_data, type="B"
     )
@@ -150,11 +153,19 @@ def generation_converter(path_case, path_out, blo_eta, tasa):
     del gen_data_m
 
     # write gen data
-    write_gen_data_file(gen_param, path_out, "Energy", Energ_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Revenue", Reven_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Cap Price", CapPrice_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Curtailment", Curtail_B, type="B")
-    write_gen_data_file(gen_param, path_out, "Energy", Energ_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Revenue", Reven_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Cap Price", CapPrice_M, type="M")
-    write_gen_data_file(gen_param, path_out, "Curtailment", Curtail_M, type="M")
+    write_gen_data_file(
+        gen_param, path_out, "Energy", Energ_B, type="B")
+    write_gen_data_file(
+        gen_param, path_out, "Revenue", Reven_B, type="B")
+    write_gen_data_file(
+        gen_param, path_out, "Cap Price", CapPrice_B, type="B")
+    write_gen_data_file(
+        gen_param, path_out, "Curtailment", Curtail_B, type="B")
+    write_gen_data_file(
+        gen_param, path_out, "Energy", Energ_M, type="M")
+    write_gen_data_file(
+        gen_param, path_out, "Revenue", Reven_M, type="M")
+    write_gen_data_file(
+        gen_param, path_out, "Cap Price", CapPrice_M, type="M")
+    write_gen_data_file(
+        gen_param, path_out, "Curtailment", Curtail_M, type="M")

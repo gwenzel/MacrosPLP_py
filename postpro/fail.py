@@ -16,7 +16,8 @@ def fail_converter(path_case, path_out, blo_eta):
     '''
     fail_data = pd.read_csv(path_case / FAL_NAME, skiprows=0)
     fail_data = fail_data[fail_data["Hidro"] != "MEDIA"]
-    fail_data = fail_data.rename(columns={"Hidro": "Hyd"}).astype({"Hyd": "float64"})
+    fail_data = fail_data.rename(columns={"Hidro": "Hyd"}).astype(
+        {"Hyd": "float64"})
     fail_data = fail_data.sort_values(["Hyd", "Etapa", "BarNom"])
     fail_data = fail_data.merge(blo_eta, on="Etapa")
     fail_data = fail_data[

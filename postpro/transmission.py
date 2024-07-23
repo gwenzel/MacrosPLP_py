@@ -109,7 +109,8 @@ def write_transmission_data(lin_param, path_out, item, df, type="B"):
 
     header.iloc[0, 0] = unit[item]
     header.to_csv(
-        path_out / filename[item], index=False, header=False, na_rep=0, mode="w"
+        path_out / filename[item], index=False, header=False, na_rep=0,
+        mode="w"
     )
     df.to_csv(path_out / filename[item], header=True, na_rep=0, mode="a")
 

@@ -1,6 +1,7 @@
 '''Filtro PLP Windows
 
-Module to turn PLP outputs to Engie Format, to be used in other models and visualizers.
+Module to turn PLP outputs to Engie Format, to be used in other models and
+visualizers.
 
 These modules should be pasted in the project folder before being ran
 '''
@@ -28,7 +29,7 @@ def define_directories():
     '''
     # Directorios y carpetas
     here = os.getcwd()
-    path_dat = Path(here) /  "Dat"
+    path_dat = Path(here) / "Dat"
     path_sal = Path(here) / "Sal"
     sal_folders = os.listdir(path_sal)
     g = here.rsplit(os.path.sep, 1)
@@ -69,7 +70,6 @@ def main():
     # Copiar salidas extras
     shutil.copy(path_case / "plpfal.csv", path_out)
     shutil.copy(path_case / "plpplanos.csv", path_out)
-
 
 
 if __name__ == "__main__":
