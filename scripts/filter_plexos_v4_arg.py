@@ -151,8 +151,8 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
         outData, by=['Year', 'Month', Item_Name], func=Group_By)
     # Print in PLP format
     csv_out = os.path.join(oDir, File_M)
-    print_in_plp_format(
-        outData, ['Year', 'Month', Item_Name], csv_out, PLP_Row)
+    print_in_plp_format(outData, ['Year', 'Month', Item_Name], csv_out,
+                        PLP_Row)
     # Print in long format, using same name but with "_long" suffix
     csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
     outData.to_csv(csv_out_long, index=False)
@@ -190,7 +190,7 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
 
     # Concatenate outData and outPLP
     outPLP = pd.concat([outPLP, outData], ignore_index=True)
-    outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
+    outPLP = outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
     outPLP = outPLP.reset_index()
     outPLP['Hyd'] = pd.to_numeric(outPLP['Hyd'])
     outPLP['Year'] = pd.to_numeric(outPLP['Year'])
@@ -198,8 +198,14 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month'])
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     csv_out = os.path.join(oDir, File_M)
-    print_in_plp_format(
-        outPLP, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
+    # Dataframe already in wide format. Print directly
+    # Drop level, reset index, print and add blank line
+    outPLP.columns = outPLP.columns.droplevel()
+    outPLP = outPLP.reset_index(drop=True)
+    # Rename first 3 columns as Hyd, Year and Month
+    outPLP.columns = ['Hyd', 'Year', 'Month'] + list(outPLP.columns[3:])
+    outPLP.to_csv(csv_out, index=False)
+    add_blank_lines(csv_out, PLP_Row)
     # Print in long format, using same name but with "_long" suffix
     csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
     outPLP.to_csv(csv_out_long, index=False)
