@@ -3,18 +3,16 @@
 Module to store all failure related functions
 '''
 import pandas as pd
-from utils.utils import timeit
 
 
 FAL_NAME = "plpfal.csv"
 
 
-@timeit
 def fail_converter(path_case, path_out, blo_eta):
     '''
     Read, process and write all failure related data
     '''
-    fail_data = pd.read_csv(path_case / FAL_NAME, skiprows=0)
+    fail_data = pd.read_csv(path_case / FAL_NAME, skiprows=0, low_memory=False)
     fail_data = fail_data[fail_data["Hidro"] != "MEDIA"]
     fail_data = fail_data.rename(columns={"Hidro": "Hyd"}).astype(
         {"Hyd": "float64"})

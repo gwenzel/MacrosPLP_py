@@ -4,58 +4,86 @@ Module to store all functions related with marginal costs
 '''
 import sys
 import pandas as pd
-from utils.utils import timeit
 
 
 BAR_NAME = "plpbar.csv"
+CHUNKSIZE = 1000000
 
 
-@timeit
 def process_marginal_costs(path_case, blo_eta):
     '''
     Read an process marginal costs data
     '''
-    bar_data = pd.read_csv(path_case / BAR_NAME, skiprows=0)
-    bar_data = bar_data[bar_data["Hidro"] != "MEDIA"]
-    bar_data = bar_data.rename(columns={"Hidro": "Hyd"}).astype(
-        {"Hyd": "int64"})
-    bar_data = bar_data.sort_values(["Hyd", "Etapa", "BarNom"])
+    dtypes = {
+        "Hidro": "category",
+        "BarNom": "category",
+        "Etapa": "int32",
+        "CMgBar": "float32",
+        "DemBarE": "float32"
+    }
+    bar_data_list = []
 
+    print("Reading marginal costs data, chunksize: %d" % CHUNKSIZE)
+
+    for bar_data_c in pd.read_csv(path_case / BAR_NAME,
+                                  chunksize=CHUNKSIZE,
+                                  low_memory=False,
+                                  dtype=dtypes):
+
+        print("Processing chunk %d" % len(bar_data_list))
+
+        bar_data_c = bar_data_c[bar_data_c["Hidro"] != "MEDIA"]
+        bar_data_c = bar_data_c.rename(columns={"Hidro": "Hyd"})
+
+        # Remove spaces from BarNom
+        bar_data_c["BarNom"] = bar_data_c["BarNom"].str.strip()
+
+        # Merge with blo_eta
+        bar_data_c = pd.merge(bar_data_c, blo_eta, on="Etapa", how="left")
+        bar_data_c = bar_data_c[
+            ["Hyd", "Year", "Month", "Block", "Block_Len", "BarNom", "CMgBar",
+             "DemBarE"]
+        ]
+        bar_data_c["CMgBar"] = bar_data_c["CMgBar"].round(3)
+        bar_data_c["DemBarE"] = bar_data_c["DemBarE"].round(3)
+
+        # Append to list
+        bar_data_list.append(bar_data_c)
+
+    # Concatenate all chunks data
+    bar_data = pd.concat(bar_data_list, axis=0)
+    # Sort
+    bar_data = bar_data.sort_values(["Hyd", "Year", "Month",
+                                     "Block", "BarNom"])
+    # Get bar parameters
     bar_param = bar_data[["BarNom"]].drop_duplicates()
 
-    bar_data = pd.merge(bar_data, blo_eta, on="Etapa", how="left")
-    bar_data = bar_data[
-        ["Hyd", "Year", "Month", "Block", "Block_Len", "BarNom", "CMgBar",
-         "DemBarE"]
-    ]
-    bar_data["CMgBar"] = bar_data["CMgBar"].round(3)
-    bar_data["DemBarE"] = bar_data["DemBarE"].round(3)
     return bar_data, bar_param
 
 
-@timeit
 def bar_process(bar_data, columns, indexes, values):
     '''
     Bar process
     '''
+    bar_data = bar_data.reset_index(drop=False)
     bar_data.index = bar_data.index.astype('int32')
     return bar_data[columns].pivot_table(index=indexes, columns="BarNom",
                                          values=values)
 
 
-@timeit
 def process_marginal_costs_monthly(bar_data):
     '''
     Process monthly costs
     '''
     bar_data_m = bar_data.copy()
-    bar_data_m["CMgBar"] = bar_data_m["Block_Len"] * bar_data_m["CMgBar"]
+    # Multiply by block length and divide by hours in day
+    bar_data_m["CMgBar"] = bar_data_m["Block_Len"] * bar_data_m["CMgBar"] / 24
+    # Group by using sum as aggregation, for CMg and Dem
     bar_data_m = bar_data_m.groupby(["Hyd", "Year", "Month", "BarNom"]).agg(
         CMgBar=("CMgBar", "sum"), DemBarE=("DemBarE", "sum")
     )
     bar_data_m["CMgBar"] = bar_data_m["CMgBar"].round(3)
     bar_data_m["DemBarE"] = bar_data_m["DemBarE"].round(3)
-
     b_columns = ["Hyd", "Year", "Month", "Block", "BarNom"]
     b_indexes = ["Hyd", "Year", "Month", "Block"]
     m_columns = ["Hyd", "Year", "Month", "BarNom"]
@@ -72,7 +100,6 @@ def process_marginal_costs_monthly(bar_data):
     return cmg_b, dem_b, cmg_m, dem_m
 
 
-@timeit
 def write_marginal_costs_file(bar_param, path_out, item, df,
                               type='B'):
     '''
@@ -102,7 +129,6 @@ def write_marginal_costs_file(bar_param, path_out, item, df,
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
-@timeit
 def marginal_costs_converter(path_case, path_out, blo_eta):
     '''
     Wrap marginal costs read, process and write

@@ -4,28 +4,46 @@ Module to store all transmission related functions
 '''
 import sys
 import pandas as pd
-from utils.utils import timeit
 
 
 LIN_NAME = "plplin.csv"
+CHUNKSIZE = 1000000
 
 
-@timeit
 def process_lin_data(path_case, blo_eta):
     '''
     Read and process line data
     '''
-    lin_data = pd.read_csv(path_case / LIN_NAME, skiprows=0)
-    lin_data = lin_data.query('Hidro != "MEDIA"')
-    lin_data = lin_data.rename(columns={"Hidro": "Hyd"})
-    lin_data['Hyd'] = pd.to_numeric(lin_data['Hyd'])
-    lin_data = lin_data.sort_values(by=["Hyd", "Etapa", "LinNom"])
-    lin_param = lin_data[["LinNom"]].drop_duplicates()
+    # Define data types
+    dtypes = {
+        "Hidro": "category",
+        "LinNom": "category",
+        "LinFluP": "float32",
+        "LinUso": "float32",
+    }
+    lin_data_list = []
 
-    lin_data = (
-        pd.merge(lin_data, blo_eta, on="Etapa")
-        .loc[
-            :,
+    print("Reading line data, chunksize: %d" % CHUNKSIZE)
+
+    for lin_data_c in pd.read_csv(
+        path_case / LIN_NAME,
+        chunksize=CHUNKSIZE,
+        low_memory=False,
+        dtype=dtypes,
+    ):
+
+        print("Processing chunk %d" % len(lin_data_list))
+
+        lin_data_c = lin_data_c[lin_data_c["Hidro"] != "MEDIA"]
+        lin_data_c = lin_data_c.rename(columns={"Hidro": "Hyd"})
+        lin_data_c['Hyd'] = pd.to_numeric(lin_data_c['Hyd'])
+
+        # Remove spaces from LinNom
+        lin_data_c["LinNom"] = lin_data_c["LinNom"].str.strip()
+
+        # Merge with blo_eta
+        lin_data_c = pd.merge(lin_data_c, blo_eta, on="Etapa")
+        lin_data_c = lin_data_c[
             [
                 "Hyd",
                 "Year",
@@ -35,13 +53,20 @@ def process_lin_data(path_case, blo_eta):
                 "LinNom",
                 "LinFluP",
                 "LinUso",
-            ],
+            ]
         ]
-        .assign(
-            LinFluP=lambda x: round(x["LinFluP"], 3),
-            LinUso=lambda x: round(x["LinUso"], 3),
-        )
-    )
+        lin_data_c["LinFluP"] = lin_data_c["LinFluP"].round(3)
+        lin_data_c["LinUso"] = lin_data_c["LinUso"].round(3)
+
+        # Append to list
+        lin_data_list.append(lin_data_c)
+
+    # Concatenate all chunks data
+    lin_data = pd.concat(lin_data_list, axis=0)
+    # Sort
+    lin_data = lin_data.sort_values(["Hyd", "Year", "Month", "LinNom"])
+    # Get line parameters
+    lin_param = lin_data[["LinNom"]].drop_duplicates()
 
     # Data mensual
     lin_data_m = (
@@ -60,7 +85,6 @@ def process_lin_data(path_case, blo_eta):
     return lin_data, lin_data_m, lin_param
 
 
-@timeit
 def process_lin_data_monthly(lin_data, type="B"):
     '''
     Process line data to monthly
@@ -82,7 +106,6 @@ def process_lin_data_monthly(lin_data, type="B"):
     return LinFlu, LinUse
 
 
-@timeit
 def write_transmission_data(lin_param, path_out, item, df, type="B"):
     '''
     Write transmission data
@@ -115,7 +138,6 @@ def write_transmission_data(lin_param, path_out, item, df, type="B"):
     df.to_csv(path_out / filename[item], header=True, na_rep=0, mode="a")
 
 
-@timeit
 def transmission_converter(path_case, path_out, blo_eta):
     '''
     Wrap transmission read, process and write
