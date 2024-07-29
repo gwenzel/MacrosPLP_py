@@ -8,6 +8,7 @@ These modules should be pasted in the project folder before being ran
 from argparse import ArgumentParser
 import shutil
 from pathlib import Path
+import time
 import pandas as pd
 from functools import wraps
 import traceback
@@ -17,6 +18,7 @@ from marginal_costs import marginal_costs_converter
 from generation import generation_converter
 from transmission import transmission_converter
 from fail import fail_converter
+import threading
 
 
 # Hidrologías en Hyd med
@@ -48,6 +50,21 @@ BLO2DAY_HOURS = [
     "Hour", "1", "2", "3", "4", "5", "6",
     "7", "8", "9", "10", "11", "12"
 ]
+
+
+def timeit(func):
+    '''
+    Wrapper to measure time
+    '''
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f'Function {func.__name__} Took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
 
 
 def process_etapas_blocks(path_dat: Path, droptasa: bool = True) -> tuple[
@@ -111,6 +128,27 @@ def check_is_path(path: Path):
         print("Path was created: %s" % path)
 
 
+@timeit
+def marginal_costs_converter_timeit(wDir, path_out, blo_eta):
+    marginal_costs_converter(wDir, path_out, blo_eta)
+
+
+@timeit
+def generation_converter_timeit(wDir, path_out, blo_eta):
+    generation_converter(wDir, path_out, blo_eta)
+
+
+@timeit
+def transmission_converter_timeit(wDir, path_out, blo_eta):
+    transmission_converter(wDir, path_out, blo_eta)
+
+
+@timeit
+def fail_converter_timeit(wDir, path_out, blo_eta):
+    fail_converter(wDir, path_out, blo_eta)
+
+
+@timeit
 def main():
     '''
     Main routine
@@ -130,20 +168,42 @@ def main():
         blo_eta, _, _ = process_etapas_blocks(path_dat, droptasa=False)
 
         # Marginales
-        print('Processing Marginal Costs (1/4)')
-        marginal_costs_converter(wDir, path_out, blo_eta)
+        t1 = threading.Thread(
+            target=marginal_costs_converter_timeit,
+            args=(wDir, path_out, blo_eta,)
+            )
 
         # Generation
-        print('Processing Generation (2/4)')
-        generation_converter(wDir, path_out, blo_eta)
+        t2 = threading.Thread(
+            target=generation_converter_timeit,
+            args=(wDir, path_out, blo_eta,)
+        )
 
         # Transmission
-        print('Processing Transmission (3/4)')
-        transmission_converter(wDir, path_out, blo_eta)
+        t3 = threading.Thread(
+            target=transmission_converter_timeit,
+            args=(wDir, path_out, blo_eta)
+            )
 
         # Fallas
+        t4 = threading.Thread(
+            target=fail_converter_timeit,
+            args=(wDir, path_out, blo_eta,)
+        )
+
+        print('Processing Marginal Costs (1/4)')
+        t1.start()
+        print('Processing Generation (2/4)')
+        t2.start()
+        print('Processing Transmission (3/4)')
+        t3.start()
         print('Processing Failures (4/4)')
-        fail_converter(wDir, path_out, blo_eta)
+        t4.start()
+
+        t1.join()
+        t2.join()
+        t3.join()
+        t4.join()
 
         # Copiar salidas extras
         shutil.copy(wDir / "plpfal.csv", path_out)
