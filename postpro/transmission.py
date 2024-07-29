@@ -7,7 +7,7 @@ import pandas as pd
 
 
 LIN_NAME = "plplin.csv"
-CHUNKSIZE = 1000000
+CHUNKSIZE = 100000
 
 
 def process_lin_data(path_case, blo_eta):
@@ -32,7 +32,7 @@ def process_lin_data(path_case, blo_eta):
         dtype=dtypes,
     ):
 
-        print("Processing chunk %d" % len(lin_data_list))
+        # print("Processing chunk %d" % len(lin_data_list))
 
         lin_data_c = lin_data_c[lin_data_c["Hidro"] != "MEDIA"]
         lin_data_c = lin_data_c.rename(columns={"Hidro": "Hyd"})

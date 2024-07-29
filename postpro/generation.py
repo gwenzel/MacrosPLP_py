@@ -7,7 +7,7 @@ import pandas as pd
 
 
 CEN_NAME = "plpcen.csv"
-CHUNKSIZE = 1000000
+CHUNKSIZE = 100000
 
 
 def process_gen_data_optimized(path_case, blo_eta):
@@ -39,7 +39,7 @@ def process_gen_data_optimized(path_case, blo_eta):
                                   dtype=dtypes,
                                   low_memory=False):
 
-        print("Processing chunk %d" % len(gen_data_list))
+        # print("Processing chunk %d" % len(gen_data_list))
 
         # Remove 'MEDIA' rows
         gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
@@ -95,6 +95,19 @@ def process_gen_data_optimized(path_case, blo_eta):
     return gen_data, gen_param
 
 
+def process_gen_data_h(gen_data):
+    # Translate blocks to hours by extending each block into 2 hours
+    # Data for block 1 is divided by 2 and repeated for hour 1 and 2, and so on
+    # This is done to match the number of hours in the block data
+    gen_data_h = gen_data.loc[gen_data.index.repeat(2)]
+    gen_data_h["Hour"] = gen_data_h.groupby(level=0).cumcount() + 1
+    gen_data_h["CenEgen"] = gen_data_h["CenEgen"] / 2
+    gen_data_h["CenInyE"] = gen_data_h["CenInyE"] / 2
+    gen_data_h["CurE"] = gen_data_h["CurE"] / 2
+
+    return gen_data_h
+
+
 def process_gen_data_m(gen_data):
     # Group by and aggregate
     gen_data_m = gen_data.groupby(["Hyd", "Year", "Month", "CenNom"]).agg(
@@ -117,7 +130,7 @@ def process_gen_data_m(gen_data):
 def process_gen_data_monthly(gen_data, type="B"):
     '''
     Optimized function to process generation data to monthly and indexed
-    by blocks
+    by blocks or hours
     '''
     # Define base headers and index based on type
     if type == "B":
@@ -126,8 +139,11 @@ def process_gen_data_monthly(gen_data, type="B"):
     elif type == "M":
         base_headers = ["Hyd", "Year", "Month", "CenNom"]
         index = ["Hyd", "Year", "Month"]
+    elif type == "H":
+        base_headers = ["Hyd", "Year", "Month", "Hour", "CenNom"]
+        index = ["Hyd", "Year", "Month", "Hour"]
     else:
-        raise ValueError("type must be 'B' or 'M'")
+        raise ValueError("type must be 'B', 'H' or 'M'")
 
     # Columns to pivot
     pivot_columns = ["CenEgen", "CenInyE", "CenCMg", "CurE"]
@@ -211,9 +227,11 @@ def generation_converter(path_case, path_out, blo_eta):
     gen_data, gen_param = process_gen_data_optimized(
         path_case, blo_eta)
     gen_data_m = process_gen_data_m(gen_data)
+    gen_data_h = process_gen_data_h(gen_data)
     data_by_type = {
         "B": process_gen_data_monthly(gen_data, type="B"),
-        "M": process_gen_data_monthly(gen_data_m, type="M")
+        "M": process_gen_data_monthly(gen_data_m, type="M"),
+        "H": process_gen_data_monthly(gen_data_h, type="H"),
     }
 
     # Clean up large data frames to free memory

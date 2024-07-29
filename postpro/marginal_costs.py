@@ -2,12 +2,11 @@
 
 Module to store all functions related with marginal costs
 '''
-import sys
 import pandas as pd
 
 
 BAR_NAME = "plpbar.csv"
-CHUNKSIZE = 1000000
+CHUNKSIZE = 100000
 
 
 def process_marginal_costs(path_case, blo_eta):
@@ -30,7 +29,7 @@ def process_marginal_costs(path_case, blo_eta):
                                   low_memory=False,
                                   dtype=dtypes):
 
-        print("Processing chunk %d" % len(bar_data_list))
+        # print("Processing chunk %d" % len(bar_data_list))
 
         bar_data_c = bar_data_c[bar_data_c["Hidro"] != "MEDIA"]
         bar_data_c = bar_data_c.rename(columns={"Hidro": "Hyd"})
@@ -114,7 +113,7 @@ def write_marginal_costs_file(bar_param, path_out, item, df,
         header = pd.concat([head, bar_param]).T
         suffix = ''
     else:
-        sys.exit("type must be B or M")
+        raise ValueError("type must be B or M")
     filename = {
         "CMg": "outBarCMg%s.csv" % suffix,
         "Dem": "outDemEne%s.csv" % suffix,
