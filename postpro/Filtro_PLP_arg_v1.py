@@ -99,7 +99,7 @@ def process_etapas_blocks(path_dat: Path, droptasa: bool = True) -> tuple[
     return blo_eta, tasa, block2day
 
 
-def define_directories(wDir):
+def define_directories(wDir: Path) -> tuple[Path, Path]:
     '''
     Build main folder structure
     '''
@@ -129,22 +129,26 @@ def check_is_path(path: Path):
 
 
 @timeit
-def marginal_costs_converter_timeit(wDir, path_out, blo_eta):
+def marginal_costs_converter_timeit(wDir: Path, path_out: Path,
+                                    blo_eta: pd.DataFrame):
     marginal_costs_converter(wDir, path_out, blo_eta)
 
 
 @timeit
-def generation_converter_timeit(wDir, path_out, blo_eta):
+def generation_converter_timeit(wDir: Path, path_out: Path,
+                                blo_eta: pd.DataFrame):
     generation_converter(wDir, path_out, blo_eta)
 
 
 @timeit
-def transmission_converter_timeit(wDir, path_out, blo_eta):
+def transmission_converter_timeit(wDir: Path, path_out: Path,
+                                  blo_eta: pd.DataFrame):
     transmission_converter(wDir, path_out, blo_eta)
 
 
 @timeit
-def fail_converter_timeit(wDir, path_out, blo_eta):
+def fail_converter_timeit(wDir: Path, path_out: Path,
+                          blo_eta: pd.DataFrame):
     fail_converter(wDir, path_out, blo_eta)
 
 

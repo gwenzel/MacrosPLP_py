@@ -3,13 +3,15 @@
 Module to store all functions related with marginal costs
 '''
 import pandas as pd
+from pathlib import Path
 
 
 BAR_NAME = "plpbar.csv"
 CHUNKSIZE = 100000
 
 
-def process_marginal_costs(path_case, blo_eta):
+def process_marginal_costs(path_case: Path,
+                           blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Read an process marginal costs data
     '''
@@ -60,7 +62,8 @@ def process_marginal_costs(path_case, blo_eta):
     return bar_data, bar_param
 
 
-def bar_process(bar_data, columns, indexes, values):
+def bar_process(bar_data: pd.DataFrame, columns: list, indexes: list,
+                values: str) -> pd.DataFrame:
     '''
     Bar process
     '''
@@ -70,7 +73,7 @@ def bar_process(bar_data, columns, indexes, values):
                                          values=values)
 
 
-def process_marginal_costs_monthly(bar_data):
+def process_marginal_costs_monthly(bar_data: pd.DataFrame) -> pd.DataFrame:
     '''
     Process monthly costs
     '''
@@ -99,8 +102,8 @@ def process_marginal_costs_monthly(bar_data):
     return cmg_b, dem_b, cmg_m, dem_m
 
 
-def write_marginal_costs_file(bar_param, path_out, item, df,
-                              type='B'):
+def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
+                              item: str, df: pd.DataFrame, type: str = 'B'):
     '''
     Write marginal costs data
     '''
@@ -128,7 +131,8 @@ def write_marginal_costs_file(bar_param, path_out, item, df,
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
-def marginal_costs_converter(path_case, path_out, blo_eta):
+def marginal_costs_converter(path_case: Path, path_out: Path,
+                             blo_eta: pd.DataFrame):
     '''
     Wrap marginal costs read, process and write
     '''

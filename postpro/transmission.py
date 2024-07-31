@@ -4,13 +4,14 @@ Module to store all transmission related functions
 '''
 import sys
 import pandas as pd
+from pathlib import Path
 
 
 LIN_NAME = "plplin.csv"
 CHUNKSIZE = 100000
 
 
-def process_lin_data(path_case, blo_eta):
+def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> pd.DataFrame:
     '''
     Read and process line data
     '''
@@ -85,7 +86,7 @@ def process_lin_data(path_case, blo_eta):
     return lin_data, lin_data_m, lin_param
 
 
-def process_lin_data_monthly(lin_data, type="B"):
+def process_lin_data_monthly(lin_data: pd.DataFrame, type: str = "B") -> tuple:
     '''
     Process line data to monthly
     '''
@@ -106,7 +107,8 @@ def process_lin_data_monthly(lin_data, type="B"):
     return LinFlu, LinUse
 
 
-def write_transmission_data(lin_param, path_out, item, df, type="B"):
+def write_transmission_data(lin_param: pd.DataFrame, path_out: Path,
+                            item: str, df: pd.DataFrame, type: str = "B"):
     '''
     Write transmission data
     '''
@@ -138,7 +140,8 @@ def write_transmission_data(lin_param, path_out, item, df, type="B"):
     df.to_csv(path_out / filename[item], header=True, na_rep=0, mode="a")
 
 
-def transmission_converter(path_case, path_out, blo_eta):
+def transmission_converter(path_case: Path, path_out: Path,
+                           blo_eta: pd.DataFrame):
     '''
     Wrap transmission read, process and write
     '''
