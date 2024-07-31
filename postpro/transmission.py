@@ -11,7 +11,8 @@ LIN_NAME = "plplin.csv"
 CHUNKSIZE = 100000
 
 
-def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> pd.DataFrame:
+def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
+                     pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     Read and process line data
     '''
@@ -86,7 +87,8 @@ def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> pd.DataFrame:
     return lin_data, lin_data_m, lin_param
 
 
-def process_lin_data_monthly(lin_data: pd.DataFrame, type: str = "B") -> tuple:
+def process_lin_data_monthly(lin_data: pd.DataFrame, type: str = "B") -> tuple[
+                             pd.DataFrame, pd.DataFrame]:
     '''
     Process line data to monthly
     '''

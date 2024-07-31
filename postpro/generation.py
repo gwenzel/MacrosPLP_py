@@ -11,7 +11,8 @@ CHUNKSIZE = 100000
 
 
 def process_gen_data_optimized(path_case: Path,
-                               blo_eta: pd.DataFrame) -> tuple:
+                               blo_eta: pd.DataFrame) -> tuple[
+                                   pd.DataFrame, pd.DataFrame]:
     '''
     Optimized function to read and process generation data for large files
     '''
@@ -161,7 +162,9 @@ def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
     return gen_data_m
 
 
-def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple:
+def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
+                             pd.DataFrame, pd.DataFrame,
+                             pd.DataFrame, pd.DataFrame]:
     '''
     Optimized function to process generation data to monthly and indexed
     by blocks or hours

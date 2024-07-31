@@ -11,7 +11,8 @@ CHUNKSIZE = 100000
 
 
 def process_marginal_costs(path_case: Path,
-                           blo_eta: pd.DataFrame) -> pd.DataFrame:
+                           blo_eta: pd.DataFrame) -> tuple[
+                               pd.DataFrame, pd.DataFrame]:
     '''
     Read an process marginal costs data
     '''
@@ -73,7 +74,9 @@ def bar_process(bar_data: pd.DataFrame, columns: list, indexes: list,
                                          values=values)
 
 
-def process_marginal_costs_monthly(bar_data: pd.DataFrame) -> pd.DataFrame:
+def process_marginal_costs_monthly(bar_data: pd.DataFrame) -> tuple[
+                                   pd.DataFrame, pd.DataFrame,
+                                   pd.DataFrame, pd.DataFrame]:
     '''
     Process monthly costs
     '''
