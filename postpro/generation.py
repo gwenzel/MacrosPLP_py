@@ -10,7 +10,8 @@ CEN_NAME = "plpcen.csv"
 CHUNKSIZE = 100000
 
 
-def process_gen_data_optimized(path_case, blo_eta):
+def process_gen_data_optimized(path_case: Path,
+                               blo_eta: pd.DataFrame) -> tuple:
     '''
     Optimized function to read and process generation data for large files
     '''
@@ -42,7 +43,10 @@ def process_gen_data_optimized(path_case, blo_eta):
         # print("Processing chunk %d" % len(gen_data_list))
 
         # Remove 'MEDIA' rows
-        gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
+        # gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
+
+        # Choose Hidro 20
+        gen_data_c = gen_data_c[gen_data_c["Hidro"] == "20"]
 
         # Remove spaces from CenNom, BarNom
         gen_data_c["CenNom"] = gen_data_c["CenNom"].str.strip()
@@ -92,23 +96,53 @@ def process_gen_data_optimized(path_case, blo_eta):
     gen_param = gen_data[
         ["CenNom", "BarNom", "CenTip"]].drop_duplicates(subset=["CenNom"])
 
+    # Turn Hyd to numeric
+    gen_data["Hyd"] = pd.to_numeric(gen_data["Hyd"])
+
     return gen_data, gen_param
 
 
-def process_gen_data_h(gen_data):
+def process_gen_data_h(gen_data: pd.DataFrame) -> pd.DataFrame:
     # Translate blocks to hours by extending each block into 2 hours
     # Data for block 1 is divided by 2 and repeated for hour 1 and 2, and so on
     # This is done to match the number of hours in the block data
-    gen_data_h = gen_data.loc[gen_data.index.repeat(2)]
-    gen_data_h["Hour"] = gen_data_h.groupby(level=0).cumcount() + 1
-    gen_data_h["CenEgen"] = gen_data_h["CenEgen"] / 2
+    gen_data_h = gen_data.copy()
+    gen_data_h.set_index(["Hyd", "Year", "Month", "Block", "CenNom"],
+                         inplace=True)
+    # Sort by index
+    gen_data_h.sort_index(inplace=True)
+    # Repeat values for each index
+    gen_data_h = gen_data_h.reindex(gen_data_h.index.repeat(2))
+    # Define hour
+    gen_data_h["Hour"] = gen_data_h.groupby(
+        ["Hyd", "Year", "Month", "CenNom"]).cumcount() + 1
+    # Replace Block index for Hour index
+    gen_data_h.reset_index(inplace=True)
+    gen_data_h.drop(columns=["Block"], inplace=True)
+    gen_data_h.set_index(["Hyd", "Year", "Month", "Hour", "CenNom"],
+                         inplace=True)
+    # Sort again
+    gen_data_h.sort_index(inplace=True)
+    # Fill na with 0
+    gen_data_h.fillna(0, inplace=True)
+    # Divide values by 2
+    gen_data_h["CenEgen"] = gen_data_h["CenEgen"] / 2.
     gen_data_h["CenInyE"] = gen_data_h["CenInyE"] / 2
     gen_data_h["CurE"] = gen_data_h["CurE"] / 2
+    # Round values
+    gen_data_h["CenEgen"] = gen_data_h["CenEgen"].round(3)
+    gen_data_h["CenCMg"] = (
+        1000 * gen_data_h["CenInyE"] / gen_data_h["CenEgen"]
+        ).round(3)
+    gen_data_h["CenInyE"] = gen_data_h["CenInyE"].round(3)
+    gen_data_h["CurE"] = gen_data_h["CurE"].round(3)
+
+    gen_data_h.reset_index(inplace=True)
 
     return gen_data_h
 
 
-def process_gen_data_m(gen_data):
+def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
     # Group by and aggregate
     gen_data_m = gen_data.groupby(["Hyd", "Year", "Month", "CenNom"]).agg(
         CenEgen=("CenEgen", "sum"),
@@ -127,7 +161,7 @@ def process_gen_data_m(gen_data):
     return gen_data_m
 
 
-def process_gen_data_monthly(gen_data, type="B"):
+def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple:
     '''
     Optimized function to process generation data to monthly and indexed
     by blocks or hours
@@ -159,7 +193,8 @@ def process_gen_data_monthly(gen_data, type="B"):
             pivot_tables["CenCMg"], pivot_tables["CurE"])
 
 
-def write_gen_data_file(gen_param, path_out, item, df, type="B"):
+def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
+                        df: pd.DataFrame, type: str = "B"):
     '''
     Optimized function to write generation data
     '''
@@ -182,6 +217,16 @@ def write_gen_data_file(gen_param, path_out, item, df, type="B"):
         )
         header = pd.concat([head, header_data], axis=0).transpose()
         suffix = "_B"
+    elif type == "H":
+        head = pd.DataFrame(
+            {
+                "BarNom": ["", "", "", "Ubic:"],
+                "CenTip": ["", "", "", "Comb:"],
+                "CenNom": ["", "", "", "Firm:"],
+            }
+        )
+        header = pd.concat([head, header_data], axis=0).transpose()
+        suffix = "_H"
     elif type == "M":
         head = pd.DataFrame(
             {
@@ -193,7 +238,7 @@ def write_gen_data_file(gen_param, path_out, item, df, type="B"):
         header = pd.concat([head, header_data], axis=0).transpose()
         suffix = ""
     else:
-        raise ValueError("type must be B or M")
+        raise ValueError("type must be B, H or M")
 
     if item not in ["Energy", "Revenue", "Cap Price", "Curtailment"]:
         raise ValueError("item must be in Energy, Revenue, Cap Price"
@@ -219,7 +264,8 @@ def write_gen_data_file(gen_param, path_out, item, df, type="B"):
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
-def generation_converter(path_case, path_out, blo_eta):
+def generation_converter(path_case: Path, path_out: Path,
+                         blo_eta: pd.DataFrame):
     '''
     Optimized function to wrap generation read, process, and write
     '''
