@@ -10,6 +10,14 @@ import concurrent.futures
 BAR_NAME = "plpbar.csv"
 CHUNKSIZE = 100000
 
+DTYPES = {
+    "Hidro": "category",
+    "BarNom": "category",
+    "Etapa": "int32",
+    "CMgBar": "float32",
+    "DemBarE": "float32"
+}
+
 
 def read_plpbar_file(path_case: Path,
                      blo_eta: pd.DataFrame) -> tuple[
@@ -17,13 +25,7 @@ def read_plpbar_file(path_case: Path,
     '''
     Read and process marginal costs and demand data from plpbar file
     '''
-    dtypes = {
-        "Hidro": "category",
-        "BarNom": "category",
-        "Etapa": "int32",
-        "CMgBar": "float32",
-        "DemBarE": "float32"
-    }
+
     bar_data_list = []
 
     print("Reading marginal costs data, chunksize: %d" % CHUNKSIZE)
@@ -31,7 +33,7 @@ def read_plpbar_file(path_case: Path,
     for bar_data_c in pd.read_csv(path_case / BAR_NAME,
                                   chunksize=CHUNKSIZE,
                                   low_memory=False,
-                                  dtype=dtypes):
+                                  dtype=DTYPES):
 
         # print("Processing chunk %d" % len(bar_data_list))
 

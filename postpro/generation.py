@@ -10,6 +10,30 @@ import concurrent.futures
 CEN_NAME = "plpcen.csv"
 CHUNKSIZE = 100000
 
+item2column_name = {
+    "Energy": "CenEgen",
+    "Revenue": "CenInyE",
+    "Curtailment": "CurE"
+}
+
+item2unit = {
+    "Energy": "[GWh]",
+    "Revenue": "[MUSD]",
+    "Curtailment": "[GWh]",
+}
+
+# Define data types for efficient loading
+DTYPES = {
+    "Hidro": "category",
+    "CenNom": "category",
+    "BarNom": "category",
+    "CenTip": "category",
+    "CenInyE": "float32",
+    "CenEgen": "float32",
+    "CurE": "float32",
+    "Etapa": "int32"
+}
+
 
 def process_gen_data_optimized(path_case: Path,
                                blo_eta: pd.DataFrame) -> tuple[
@@ -17,17 +41,6 @@ def process_gen_data_optimized(path_case: Path,
     '''
     Optimized function to read and process generation data for large files
     '''
-    # Define data types for efficient loading
-    dtypes = {
-        "Hidro": "category",
-        "CenNom": "category",
-        "BarNom": "category",
-        "CenTip": "category",
-        "CenInyE": "float32",
-        "CenEgen": "float32",
-        "CurE": "float32",
-        "Etapa": "int32"
-    }
 
     # Drop 'Block_Len' column from blo_eta
     blo_eta = blo_eta.drop(columns=["Block_Len"])
@@ -39,7 +52,7 @@ def process_gen_data_optimized(path_case: Path,
     # Read CSV with specified data types, by chunks
     for gen_data_c in pd.read_csv(path_case / CEN_NAME,
                                   chunksize=CHUNKSIZE,
-                                  dtype=dtypes,
+                                  dtype=DTYPES,
                                   low_memory=False):
 
         # print("Processing chunk %d" % len(gen_data_list))
@@ -152,10 +165,9 @@ def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
     return gen_data_m
 
 
-def process_gen_data_monthly(gen_data: pd.DataFrame,
-                             resolution: str = "B") -> tuple[
-                             pd.DataFrame, pd.DataFrame,
-                             pd.DataFrame, pd.DataFrame]:
+def process_gen_data(gen_data: pd.DataFrame,
+                     resolution: str = "B",
+                     column_name: str = "CenEgen") -> pd.DataFrame:
     '''
     Optimized function to process generation data to monthly and indexed
     by blocks or hours
@@ -174,19 +186,15 @@ def process_gen_data_monthly(gen_data: pd.DataFrame,
     else:
         raise ValueError("resolution must be 'B', 'H' or 'M'")
 
-    # Columns to pivot
-    pivot_columns = ["CenEgen", "CenInyE", "CurE"]
+    if column_name not in ["CenEgen", "CenInyE", "CurE"]:
+        raise ValueError("column_name must be in 'CenEgen', 'CenInyE', 'CurE'")
 
     # Using dictionary comprehension to create pivot tables for each column
-    pivot_tables = {
-        col: gen_data[base_headers + [col]].pivot_table(
-            index=index, columns="CenNom", values=col
-        ) for col in pivot_columns
-    }
+    pivot_table = \
+        gen_data[base_headers + [column_name]].pivot_table(
+            index=index, columns="CenNom", values=column_name)
 
-    return (pivot_tables["CenEgen"],
-            pivot_tables["CenInyE"],
-            pivot_tables["CurE"])
+    return pivot_table
 
 
 def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
@@ -236,13 +244,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
         "Curtailment": "outCurtail%s.csv" % suffix,
     }
 
-    unit = {
-        "Energy": "[GWh]",
-        "Revenue": "[MUSD]",
-        "Curtailment": "[GWh]",
-    }
-
-    header.iloc[0, 0] = unit[item]
+    header.iloc[0, 0] = item2unit[item]
     header.to_csv(path_out / filename[item], na_rep=0, index=False,
                   header=False)
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
@@ -260,13 +262,13 @@ def process_and_write_wrapper(path_out: Path,
 
     # Process data
     if resolution == "B":
-        df = process_gen_data_monthly(gen_data, resolution="B")
+        df = process_gen_data(gen_data, resolution, item2column_name[item])
     elif resolution == "M":
         gen_data_m = process_gen_data_m(gen_data)
-        df = process_gen_data_monthly(gen_data_m, resolution="M")
+        df = process_gen_data(gen_data_m, resolution, item2column_name[item])
     elif resolution == "H":
         gen_data_h = process_gen_data_h(gen_data)
-        df = process_gen_data_monthly(gen_data_h, resolution="H")
+        df = process_gen_data(gen_data_h, resolution, item2column_name[item])
     else:
         raise ValueError("resolution must be B, M or H")
 

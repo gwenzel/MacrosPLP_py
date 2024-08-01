@@ -10,19 +10,21 @@ import concurrent.futures
 LIN_NAME = "plplin.csv"
 CHUNKSIZE = 100000
 
+# Define data types
+DTYPES = {
+    "Hidro": "category",
+    "LinNom": "category",
+    "LinFluP": "float32",
+    "LinUso": "float32",
+}
+
 
 def read_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
                   pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     Read and process line data
     '''
-    # Define data types
-    dtypes = {
-        "Hidro": "category",
-        "LinNom": "category",
-        "LinFluP": "float32",
-        "LinUso": "float32",
-    }
+
     lin_data_list = []
 
     print("Reading line data, chunksize: %d" % CHUNKSIZE)
@@ -31,7 +33,7 @@ def read_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
         path_case / LIN_NAME,
         chunksize=CHUNKSIZE,
         low_memory=False,
-        dtype=dtypes,
+        dtype=DTYPES,
     ):
 
         # print("Processing chunk %d" % len(lin_data_list))
