@@ -138,8 +138,9 @@ def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
-def process_and_write(bar_data: pd.DataFrame, resolution: str, values: str,
-                      bar_param: pd.DataFrame, path_out: Path, item: str):
+def process_and_write_wrapper(bar_data: pd.DataFrame, resolution: str,
+                              values: str, bar_param: pd.DataFrame,
+                              path_out: Path, item: str):
     '''
     Group both process and write functions to multithread them
     '''
@@ -157,19 +158,19 @@ def marginal_costs_converter(path_case: Path, path_out: Path,
 
     # Write files + multithreading
     t1 = threading.Thread(
-            target=process_and_write,
+            target=process_and_write_wrapper,
             args=(bar_data, 'B', 'CMgBar', bar_param, path_out, 'CMg')
             )
     t2 = threading.Thread(
-            target=process_and_write,
+            target=process_and_write_wrapper,
             args=(bar_data, 'B', 'DemBarE', bar_param, path_out, 'Dem')
             )
     t3 = threading.Thread(
-            target=process_and_write,
+            target=process_and_write_wrapper,
             args=(bar_data, 'M', 'CMgBar', bar_param, path_out, 'CMg')
             )
     t4 = threading.Thread(
-            target=process_and_write,
+            target=process_and_write_wrapper,
             args=(bar_data, 'M', 'DemBarE', bar_param, path_out, 'Dem')
             )
 
