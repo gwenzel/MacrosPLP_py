@@ -24,5 +24,6 @@ def fail_converter(path_case, path_out, blo_eta):
     fail_data["CenPgen"] = fail_data["CenPgen"].round(3)
     fail_data["CenEgen"] = fail_data["CenEgen"].round(3)
     fail_data.to_csv(
-        path_out / "outFailure_B.csv", header=True, na_rep=0, mode="w"
+        path_out / "outFailure_B.csv", header=True, na_rep=0, mode="w",
+        index=False
     )
