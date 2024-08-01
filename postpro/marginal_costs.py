@@ -4,17 +4,18 @@ Module to store all functions related with marginal costs
 '''
 import pandas as pd
 from pathlib import Path
+import threading
 
 
 BAR_NAME = "plpbar.csv"
 CHUNKSIZE = 100000
 
 
-def process_marginal_costs(path_case: Path,
-                           blo_eta: pd.DataFrame) -> tuple[
-                               pd.DataFrame, pd.DataFrame]:
+def read_plpbar_file(path_case: Path,
+                     blo_eta: pd.DataFrame) -> tuple[
+                     pd.DataFrame, pd.DataFrame]:
     '''
-    Read an process marginal costs data
+    Read and process marginal costs and demand data from plpbar file
     '''
     dtypes = {
         "Hidro": "category",
@@ -34,11 +35,15 @@ def process_marginal_costs(path_case: Path,
 
         # print("Processing chunk %d" % len(bar_data_list))
 
-        bar_data_c = bar_data_c[bar_data_c["Hidro"] != "MEDIA"]
-        bar_data_c = bar_data_c.rename(columns={"Hidro": "Hyd"})
-
         # Remove spaces from BarNom
         bar_data_c["BarNom"] = bar_data_c["BarNom"].str.strip()
+
+        # Filter out MEDIA
+        bar_data_c = bar_data_c[bar_data_c["Hidro"] != "MEDIA"]
+        # Hydro to numeric
+        bar_data_c['Hidro'] = pd.to_numeric(bar_data_c['Hidro'])
+        # Rename column
+        bar_data_c = bar_data_c.rename(columns={"Hidro": "Hyd"})
 
         # Merge with blo_eta
         bar_data_c = pd.merge(bar_data_c, blo_eta, on="Etapa", how="left")
@@ -68,41 +73,40 @@ def bar_process(bar_data: pd.DataFrame, columns: list, indexes: list,
     '''
     Bar process
     '''
+    bar_data[values] = bar_data[values].round(3)
     bar_data = bar_data.reset_index(drop=False)
     bar_data.index = bar_data.index.astype('int32')
     return bar_data[columns].pivot_table(index=indexes, columns="BarNom",
                                          values=values)
 
 
-def process_marginal_costs_monthly(bar_data: pd.DataFrame) -> tuple[
-                                   pd.DataFrame, pd.DataFrame,
-                                   pd.DataFrame, pd.DataFrame]:
+def process_cmg_dem(bar_data: pd.DataFrame, resolution: str,
+                    values: str) -> pd.DataFrame:
     '''
-    Process monthly costs
+    Process CMg and Dem
     '''
     bar_data_m = bar_data.copy()
-    # Multiply by block length and divide by hours in day
-    bar_data_m["CMgBar"] = bar_data_m["Block_Len"] * bar_data_m["CMgBar"] / 24
-    # Group by using sum as aggregation, for CMg and Dem
-    bar_data_m = bar_data_m.groupby(["Hyd", "Year", "Month", "BarNom"]).agg(
-        CMgBar=("CMgBar", "sum"), DemBarE=("DemBarE", "sum")
-    )
-    bar_data_m["CMgBar"] = bar_data_m["CMgBar"].round(3)
-    bar_data_m["DemBarE"] = bar_data_m["DemBarE"].round(3)
-    b_columns = ["Hyd", "Year", "Month", "Block", "BarNom"]
-    b_indexes = ["Hyd", "Year", "Month", "Block"]
-    m_columns = ["Hyd", "Year", "Month", "BarNom"]
-    m_indexes = ["Hyd", "Year", "Month"]
 
-    cmg_b = bar_process(bar_data, b_columns + ["CMgBar"], b_indexes,
-                        values="CMgBar")
-    dem_b = bar_process(bar_data, b_columns + ["DemBarE"], b_indexes,
-                        values="DemBarE")
-    cmg_m = bar_process(bar_data_m, m_columns + ["CMgBar"], m_indexes,
-                        values="CMgBar")
-    dem_m = bar_process(bar_data_m, m_columns + ["DemBarE"], m_indexes,
-                        values="DemBarE")
-    return cmg_b, dem_b, cmg_m, dem_m
+    if resolution == 'B':
+        columns = ["Hyd", "Year", "Month", "Block", "BarNom"]
+        indexes = ["Hyd", "Year", "Month", "Block"]
+        return bar_process(bar_data, columns + [values], indexes,
+                           values=values)
+    elif resolution == 'M':
+        # Multiply by block length and divide by hours in day
+        bar_data_m["CMgBar"] = \
+            bar_data_m["Block_Len"] * bar_data_m["CMgBar"] / 24
+        # Group by using sum as aggregation, for CMg and Dem
+        bar_data_m = \
+            bar_data_m.groupby(["Hyd", "Year", "Month", "BarNom"]).agg(
+                CMgBar=("CMgBar", "sum"), DemBarE=("DemBarE", "sum")
+                )
+        columns = ["Hyd", "Year", "Month", "BarNom"]
+        indexes = ["Hyd", "Year", "Month"]
+        return bar_process(bar_data_m, columns + [values], indexes,
+                           values=values)
+    else:
+        raise ValueError("resolution must be B or M")
 
 
 def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
@@ -134,21 +138,47 @@ def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
+def process_and_write(bar_data: pd.DataFrame, resolution: str, values: str,
+                      bar_param: pd.DataFrame, path_out: Path, item: str):
+    '''
+    Group both process and write functions to multithread them
+    '''
+    df = process_cmg_dem(bar_data, resolution, values)
+    write_marginal_costs_file(bar_param, path_out, item, df, resolution)
+
+
 def marginal_costs_converter(path_case: Path, path_out: Path,
                              blo_eta: pd.DataFrame):
     '''
     Wrap marginal costs read, process and write
     '''
     # Read and process data
-    bar_data, bar_param = process_marginal_costs(path_case, blo_eta)
-    cmg_b, dem_b, cmg_m, dem_m = process_marginal_costs_monthly(bar_data)
+    bar_data, bar_param = read_plpbar_file(path_case, blo_eta)
 
-    # Write files
-    write_marginal_costs_file(bar_param, path_out, 'CMg', cmg_b,
-                              type='B')
-    write_marginal_costs_file(bar_param, path_out, 'CMg', cmg_m,
-                              type='M')
-    write_marginal_costs_file(bar_param, path_out, 'Dem', dem_b,
-                              type='B')
-    write_marginal_costs_file(bar_param, path_out, 'Dem', dem_m,
-                              type='M')
+    # Write files + multithreading
+    t1 = threading.Thread(
+            target=process_and_write,
+            args=(bar_data, 'B', 'CMgBar', bar_param, path_out, 'CMg')
+            )
+    t2 = threading.Thread(
+            target=process_and_write,
+            args=(bar_data, 'B', 'DemBarE', bar_param, path_out, 'Dem')
+            )
+    t3 = threading.Thread(
+            target=process_and_write,
+            args=(bar_data, 'M', 'CMgBar', bar_param, path_out, 'CMg')
+            )
+    t4 = threading.Thread(
+            target=process_and_write,
+            args=(bar_data, 'M', 'DemBarE', bar_param, path_out, 'Dem')
+            )
+
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+
+    t1.join()
+    t2.join()
+    t3.join()
+    t4.join()
