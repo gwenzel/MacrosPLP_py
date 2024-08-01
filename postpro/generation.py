@@ -60,9 +60,6 @@ def process_gen_data_optimized(path_case: Path,
         # Remove 'MEDIA' rows
         gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
 
-        # Choose Hidro 20
-        gen_data_c = gen_data_c[gen_data_c["Hidro"] == "20"]
-
         # Rename 'Hidro' column to 'Hyd'
         gen_data_c = gen_data_c.rename(columns={"Hidro": "Hyd"})
 
@@ -116,6 +113,9 @@ def process_gen_data_h(gen_data: pd.DataFrame) -> pd.DataFrame:
     # Data for block 1 is divided by 2 and repeated for hour 1 and 2, and so on
     # This is done to match the number of hours in the block data
     gen_data_h = gen_data.copy()
+    # Filter Hyd 20
+    gen_data_h = gen_data_h[gen_data_h["Hyd"] == 20]
+    # Set index
     gen_data_h.set_index(["Hyd", "Year", "Month", "Block", "CenNom"],
                          inplace=True)
     # Sort by index
@@ -233,10 +233,6 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
         suffix = ""
     else:
         raise ValueError("resolution must be B, H or M")
-
-    if item not in ["Energy", "Revenue", "Curtailment"]:
-        raise ValueError("item must be in Energy, Revenue,"
-                         " or Curtailment")
 
     filename = {
         "Energy": "outEnerg%s.csv" % suffix,
