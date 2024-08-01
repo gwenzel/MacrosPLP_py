@@ -18,7 +18,7 @@ from marginal_costs import marginal_costs_converter
 from generation import generation_converter
 from transmission import transmission_converter
 from fail import fail_converter
-import threading
+import concurrent.futures
 
 
 # Hidrologías en Hyd med
@@ -171,43 +171,19 @@ def main():
         print('Processing Blocks and Stages (0/4)')
         blo_eta, _, _ = process_etapas_blocks(path_dat, droptasa=False)
 
-        # Marginales
-        t1 = threading.Thread(
-            target=marginal_costs_converter_timeit,
-            args=(wDir, path_out, blo_eta,)
-            )
-
-        # Generation
-        t2 = threading.Thread(
-            target=generation_converter_timeit,
-            args=(wDir, path_out, blo_eta,)
-        )
-
-        # Transmission
-        t3 = threading.Thread(
-            target=transmission_converter_timeit,
-            args=(wDir, path_out, blo_eta)
-            )
-
-        # Fallas
-        t4 = threading.Thread(
-            target=fail_converter_timeit,
-            args=(wDir, path_out, blo_eta,)
-        )
-
-        print('Processing Marginal Costs (1/4)')
-        t1.start()
-        print('Processing Generation (2/4)')
-        t2.start()
-        print('Processing Transmission (3/4)')
-        t3.start()
-        print('Processing Failures (4/4)')
-        t4.start()
-
-        t1.join()
-        t2.join()
-        t3.join()
-        t4.join()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            print('Processing Marginal Costs (1/4)')
+            executor.submit(marginal_costs_converter_timeit,
+                            wDir, path_out, blo_eta)
+            print('Processing Generation (2/4)')
+            executor.submit(generation_converter_timeit,
+                            wDir, path_out, blo_eta)
+            print('Processing Transmission (3/4)')
+            executor.submit(transmission_converter_timeit,
+                            wDir, path_out, blo_eta)
+            print('Processing Failures (4/4)')
+            executor.submit(fail_converter_timeit,
+                            wDir, path_out, blo_eta)
 
         # Copiar salidas extras
         shutil.copy(wDir / "plpfal.csv", path_out)
