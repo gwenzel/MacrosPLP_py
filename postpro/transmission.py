@@ -93,19 +93,19 @@ def group_lin_data_monthly(lin_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def process_lin_data_monthly(lin_data: pd.DataFrame, item: str,
-                             type: str = "B") -> pd.DataFrame:
+                             resolution: str = "B") -> pd.DataFrame:
     '''
     Process line data to monthly
     '''
-    if type == "B":
+    if resolution == "B":
         base_headers = ["Hyd", "Year", "Month", "Block", "LinNom"]
         index = ["Hyd", "Year", "Month", "Block"]
-    elif type == "M":
+    elif resolution == "M":
         base_headers = ["Hyd", "Year", "Month", "LinNom"]
         index = ["Hyd", "Year", "Month"]
         lin_data = group_lin_data_monthly(lin_data)
     else:
-        raise ValueError("type must be B or M")
+        raise ValueError("resolution must be B or M")
 
     if item == "LinFlu":
         return lin_data[base_headers + ["LinFluP"]].pivot(
@@ -118,23 +118,24 @@ def process_lin_data_monthly(lin_data: pd.DataFrame, item: str,
 
 
 def write_transmission_data(lin_param: pd.DataFrame, path_out: Path,
-                            item: str, df: pd.DataFrame, type: str = "B"):
+                            item: str, df: pd.DataFrame,
+                            resolution: str = "B"):
     '''
     Write transmission data
     '''
     # headers
     header_data = lin_param
 
-    if type == "B":
+    if resolution == "B":
         head = pd.DataFrame({"LinNom": ["", "", "", "Ubic:"]})
         header = pd.concat([head, header_data]).T
         suffix = "_B"
-    elif type == "M":
+    elif resolution == "M":
         head = pd.DataFrame({"LinNom": ["", "", "Ubic:"]})
         header = pd.concat([head, header_data]).T
         suffix = ""
     else:
-        raise ValueError("type must be B or M")
+        raise ValueError("resolution must be B or M")
 
     filename = {
         "LinFlu": "outLinFlu%s.csv" % suffix,
@@ -154,16 +155,16 @@ def process_and_write_wrapper(lin_data: pd.DataFrame,
                               lin_param: pd.DataFrame,
                               path_out: Path,
                               item: str,
-                              type: str):
+                              resolution: str):
     '''
     Wrap transmission process and write
     '''
     # Process data
-    df = process_lin_data_monthly(lin_data, item, type)
+    df = process_lin_data_monthly(lin_data, item, resolution)
     # Write Transmission data
-    write_transmission_data(lin_param, path_out, item, df, type)
+    write_transmission_data(lin_param, path_out, item, df, resolution)
 
-    print("Transmission data written for %s %s" % (item, type))
+    print("Transmission data written for %s, %s" % (item, resolution))
 
 
 def transmission_converter(path_case: Path, path_out: Path,
@@ -183,6 +184,6 @@ def transmission_converter(path_case: Path, path_out: Path,
 
     # Write Transmission data with multithreading
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for item, type in list_of_args:
+        for item, resolution in list_of_args:
             executor.submit(process_and_write_wrapper, lin_data, lin_param,
-                            path_out, item, type)
+                            path_out, item, resolution)

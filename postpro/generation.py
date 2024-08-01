@@ -152,7 +152,8 @@ def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
     return gen_data_m
 
 
-def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
+def process_gen_data_monthly(gen_data: pd.DataFrame,
+                             resolution: str = "B") -> tuple[
                              pd.DataFrame, pd.DataFrame,
                              pd.DataFrame, pd.DataFrame]:
     '''
@@ -160,18 +161,18 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
     by blocks or hours
     '''
     gen_data = gen_data.copy()
-    # Define base headers and index based on type
-    if type == "B":
+    # Define base headers and index based on resolution
+    if resolution == "B":
         base_headers = ["Hyd", "Year", "Month", "Block", "CenNom"]
         index = ["Hyd", "Year", "Month", "Block"]
-    elif type == "M":
+    elif resolution == "M":
         base_headers = ["Hyd", "Year", "Month", "CenNom"]
         index = ["Hyd", "Year", "Month"]
-    elif type == "H":
+    elif resolution == "H":
         base_headers = ["Hyd", "Year", "Month", "Hour", "CenNom"]
         index = ["Hyd", "Year", "Month", "Hour"]
     else:
-        raise ValueError("type must be 'B', 'H' or 'M'")
+        raise ValueError("resolution must be 'B', 'H' or 'M'")
 
     # Columns to pivot
     pivot_columns = ["CenEgen", "CenInyE", "CurE"]
@@ -189,7 +190,7 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
 
 
 def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
-                        df: pd.DataFrame, type: str = "B"):
+                        df: pd.DataFrame, resolution: str = "B"):
     '''
     Optimized function to write generation data
     '''
@@ -202,7 +203,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
     # in the code
     header_data = gen_param[["BarNom", "CenTip", "CenNom"]]
 
-    if ((type == "B") or (type == "H")):
+    if ((resolution == "B") or (resolution == "H")):
         head = pd.DataFrame(
             {
                 "BarNom": ["", "", "", "Ubic:"],
@@ -211,8 +212,8 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
             }
         )
         header = pd.concat([head, header_data], axis=0).transpose()
-        suffix = "_%s" % type
-    elif type == "M":
+        suffix = "_%s" % resolution
+    elif resolution == "M":
         head = pd.DataFrame(
             {
                 "BarNom": ["", "", "Ubic:"],
@@ -223,7 +224,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
         header = pd.concat([head, header_data], axis=0).transpose()
         suffix = ""
     else:
-        raise ValueError("type must be B, H or M")
+        raise ValueError("resolution must be B, H or M")
 
     if item not in ["Energy", "Revenue", "Curtailment"]:
         raise ValueError("item must be in Energy, Revenue,"
@@ -250,7 +251,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
 def process_and_write_wrapper(path_out: Path,
                               gen_data: pd.DataFrame,
                               gen_param: pd.DataFrame,
-                              item: str, type: str):
+                              item: str, resolution: str):
     '''
     Wrap generation, process and write
     '''
@@ -258,21 +259,21 @@ def process_and_write_wrapper(path_out: Path,
         raise ValueError("item must be Energy, Revenue, or Curtailment")
 
     # Process data
-    if type == "B":
-        df = process_gen_data_monthly(gen_data, type="B")
-    elif type == "M":
+    if resolution == "B":
+        df = process_gen_data_monthly(gen_data, resolution="B")
+    elif resolution == "M":
         gen_data_m = process_gen_data_m(gen_data)
-        df = process_gen_data_monthly(gen_data_m, type="M")
-    elif type == "H":
+        df = process_gen_data_monthly(gen_data_m, resolution="M")
+    elif resolution == "H":
         gen_data_h = process_gen_data_h(gen_data)
-        df = process_gen_data_monthly(gen_data_h, type="H")
+        df = process_gen_data_monthly(gen_data_h, resolution="H")
     else:
-        raise ValueError("type must be B, M or H")
+        raise ValueError("resolution must be B, M or H")
 
     # Write generation data
-    write_gen_data_file(gen_param, path_out, item, df, type)
+    write_gen_data_file(gen_param, path_out, item, df, resolution)
 
-    print("Generation data written for %s, %s" % (item, type))
+    print("Generation data written for %s, %s" % (item, resolution))
 
 
 def generation_converter(path_case: Path, path_out: Path,
@@ -296,6 +297,6 @@ def generation_converter(path_case: Path, path_out: Path,
                     ("Curtailment", "H")]
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for item, type in list_of_args:
+        for item, resolution in list_of_args:
             executor.submit(process_and_write_wrapper, path_out, gen_data,
-                            gen_param, item, type)
+                            gen_param, item, resolution)
