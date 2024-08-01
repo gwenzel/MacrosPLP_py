@@ -55,7 +55,6 @@ def process_gen_data_optimized(path_case: Path,
         # Turn Hyd to numeric
         gen_data_c["Hyd"] = pd.to_numeric(gen_data_c["Hyd"])
 
-
         # Remove spaces from CenNom, BarNom
         gen_data_c["CenNom"] = gen_data_c["CenNom"].str.strip()
         gen_data_c["BarNom"] = gen_data_c["BarNom"].str.strip()
@@ -73,12 +72,6 @@ def process_gen_data_optimized(path_case: Path,
 
         # Calculate and round columns
         gen_data_c["CenEgen"] = gen_data_c["CenEgen"].round(3)
-
-        gen_data_c["CenCMg"] = (
-            1000 * gen_data_c["CenInyE"] *
-            gen_data_c['Tasa'] /
-            gen_data_c["CenEgen"]
-            ).round(3)
         gen_data_c["CenInyE"] = (
             gen_data_c["CenInyE"] *
             gen_data_c['Tasa']
@@ -133,9 +126,6 @@ def process_gen_data_h(gen_data: pd.DataFrame) -> pd.DataFrame:
     gen_data_h["CurE"] = gen_data_h["CurE"] / 2
     # Round values
     gen_data_h["CenEgen"] = gen_data_h["CenEgen"].round(3)
-    gen_data_h["CenCMg"] = (
-        1000 * gen_data_h["CenInyE"] / gen_data_h["CenEgen"]
-        ).round(3)
     gen_data_h["CenInyE"] = gen_data_h["CenInyE"].round(3)
     gen_data_h["CurE"] = gen_data_h["CurE"].round(3)
 
@@ -154,9 +144,6 @@ def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
 
     # Round aggregated results
     gen_data_m["CenEgen"] = gen_data_m["CenEgen"].round(3)
-    gen_data_m["CenCMg"] = (
-        1000 * gen_data_m["CenInyE"] / gen_data_m["CenEgen"]
-        ).round(3)
     gen_data_m["CenInyE"] = gen_data_m["CenInyE"].round(3)
     gen_data_m["CurE"] = gen_data_m["CurE"].round(3)
 
@@ -184,7 +171,7 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
         raise ValueError("type must be 'B', 'H' or 'M'")
 
     # Columns to pivot
-    pivot_columns = ["CenEgen", "CenInyE", "CenCMg", "CurE"]
+    pivot_columns = ["CenEgen", "CenInyE", "CurE"]
 
     # Using dictionary comprehension to create pivot tables for each column
     pivot_tables = {
@@ -194,7 +181,7 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
     }
 
     return (pivot_tables["CenEgen"], pivot_tables["CenInyE"],
-            pivot_tables["CenCMg"], pivot_tables["CurE"])
+            pivot_tables["CurE"])
 
 
 def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
@@ -203,8 +190,8 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
     Optimized function to write generation data
     '''
     # Validate inputs
-    if item not in ["Energy", "Revenue", "Cap Price", "Curtailment"]:
-        raise ValueError("item must be in 'Energy', 'Revenue', 'Cap Price', "
+    if item not in ["Energy", "Revenue", "Curtailment"]:
+        raise ValueError("item must be in 'Energy', 'Revenue', "
                          "or 'Curtailment'")
 
     # Assuming gen_param is a DataFrame that has been defined earlier
@@ -244,21 +231,19 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
     else:
         raise ValueError("type must be B, H or M")
 
-    if item not in ["Energy", "Revenue", "Cap Price", "Curtailment"]:
-        raise ValueError("item must be in Energy, Revenue, Cap Price"
+    if item not in ["Energy", "Revenue", "Curtailment"]:
+        raise ValueError("item must be in Energy, Revenue,"
                          " or Curtailment")
 
     filename = {
         "Energy": "outEnerg%s.csv" % suffix,
         "Revenue": "outReven%s.csv" % suffix,
-        "Cap Price": "outCapPrice%s.csv" % suffix,
         "Curtailment": "outCurtail%s.csv" % suffix,
     }
 
     unit = {
         "Energy": "[GWh]",
         "Revenue": "[MUSD]",
-        "Cap Price": "[USD/MWh]",
         "Curtailment": "[GWh]",
     }
 
@@ -288,7 +273,7 @@ def generation_converter(path_case: Path, path_out: Path,
     del gen_data, gen_data_m
 
     # Define items to be processed
-    items = ["Energy", "Revenue", "Cap Price", "Curtailment"]
+    items = ["Energy", "Revenue", "Curtailment"]
 
     # Write generation data for both types and all items
     for type_key, data_tuple in data_by_type.items():
