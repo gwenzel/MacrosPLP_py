@@ -163,6 +163,8 @@ def process_and_write_wrapper(lin_data: pd.DataFrame,
     # Write Transmission data
     write_transmission_data(lin_param, path_out, item, df, type)
 
+    print("Transmission data written for %s %s" % (item, type))
+
 
 def transmission_converter(path_case: Path, path_out: Path,
                            blo_eta: pd.DataFrame):

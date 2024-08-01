@@ -269,6 +269,8 @@ def process_and_write_wrapper(path_out: Path,
     # Write generation data
     write_gen_data_file(gen_param, path_out, item, df, type)
 
+    print("Generation data written for %s, %s" % (item, type))
+
 
 def generation_converter(path_case: Path, path_out: Path,
                          blo_eta: pd.DataFrame):
