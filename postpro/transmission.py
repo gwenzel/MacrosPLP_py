@@ -4,7 +4,7 @@ Module to store all transmission related functions
 '''
 import pandas as pd
 from pathlib import Path
-import threading
+import concurrent.futures
 
 
 LIN_NAME = "plplin.csv"
@@ -171,28 +171,16 @@ def transmission_converter(path_case: Path, path_out: Path,
     '''
     lin_data, lin_param = read_lin_data(path_case, blo_eta)
 
+    # Define arg pairs
+    list_of_args = [
+        ("LinFlu", "B"),
+        ("LinFlu", "M"),
+        ("LinUse", "B"),
+        ("LinUse", "M"),
+    ]
+
     # Write Transmission data with multithreading
-    t1 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(lin_data, lin_param, path_out, "LinFlu", "B")
-    )
-    t2 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(lin_data, lin_param, path_out, "LinFlu", "M")
-    )
-    t3 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(lin_data, lin_param, path_out, "LinUse", "B")
-    )
-    t4 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(lin_data, lin_param, path_out, "LinUse", "M")
-    )
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for item, type in list_of_args:
+            executor.submit(process_and_write_wrapper, lin_data, lin_param,
+                            path_out, item, type)

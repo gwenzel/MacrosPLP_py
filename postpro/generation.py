@@ -4,7 +4,7 @@ Module to store all processing and writing functions related to Generation data
 '''
 from pathlib import Path
 import pandas as pd
-import threading
+import concurrent.futures
 
 
 CEN_NAME = "plpcen.csv"
@@ -279,60 +279,18 @@ def generation_converter(path_case: Path, path_out: Path,
     gen_data, gen_param = process_gen_data_optimized(
         path_case, blo_eta)
 
-    # Process and write with threads
-    t1 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Energy", "B")
-    )
-    t2 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Energy", "M")
-    )
-    t3 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Energy", "H")
-    )
-    t4 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Revenue", "B")
-    )
-    t5 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Revenue", "M")
-    )
-    t6 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Revenue", "H")
-    )
-    t7 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Curtailment", "B")
-    )
-    t8 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Curtailment", "M")
-    )
-    t9 = threading.Thread(
-        target=process_and_write_wrapper,
-        args=(path_out, gen_data, gen_param, "Curtailment", "H")
-    )
+    # Write data with multithreading
+    list_of_args = [("Energy", "B"),
+                    ("Energy", "M"),
+                    ("Energy", "H"),
+                    ("Revenue", "B"),
+                    ("Revenue", "M"),
+                    ("Revenue", "H"),
+                    ("Curtailment", "B"),
+                    ("Curtailment", "M"),
+                    ("Curtailment", "H")]
 
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
-    t5.start()
-    t6.start()
-    t7.start()
-    t8.start()
-    t9.start()
-
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
-    t5.join()
-    t6.join()
-    t7.join()
-    t8.join()
-    t9.join()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for item, type in list_of_args:
+            executor.submit(process_and_write_wrapper, path_out, gen_data,
+                            gen_param, item, type)

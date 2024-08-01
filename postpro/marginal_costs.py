@@ -4,7 +4,7 @@ Module to store all functions related with marginal costs
 '''
 import pandas as pd
 from pathlib import Path
-import threading
+import concurrent.futures
 
 
 BAR_NAME = "plpbar.csv"
@@ -157,29 +157,14 @@ def marginal_costs_converter(path_case: Path, path_out: Path,
     bar_data, bar_param = read_plpbar_file(path_case, blo_eta)
 
     # Write files + multithreading
-    t1 = threading.Thread(
-            target=process_and_write_wrapper,
-            args=(bar_data, 'B', 'CMgBar', bar_param, path_out, 'CMg')
-            )
-    t2 = threading.Thread(
-            target=process_and_write_wrapper,
-            args=(bar_data, 'B', 'DemBarE', bar_param, path_out, 'Dem')
-            )
-    t3 = threading.Thread(
-            target=process_and_write_wrapper,
-            args=(bar_data, 'M', 'CMgBar', bar_param, path_out, 'CMg')
-            )
-    t4 = threading.Thread(
-            target=process_and_write_wrapper,
-            args=(bar_data, 'M', 'DemBarE', bar_param, path_out, 'Dem')
-            )
+    list_of_args = [
+        ('B', 'CMgBar', 'CMg'),
+        ('B', 'DemBarE', 'Dem'),
+        ('M', 'CMgBar', 'CMg'),
+        ('M', 'DemBarE', 'Dem')
+    ]
 
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
-
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for resolution, values, item in list_of_args:
+            executor.submit(process_and_write_wrapper, bar_data, resolution,
+                            values, bar_param, path_out, item)
