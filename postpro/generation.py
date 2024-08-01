@@ -44,10 +44,17 @@ def process_gen_data_optimized(path_case: Path,
         # print("Processing chunk %d" % len(gen_data_list))
 
         # Remove 'MEDIA' rows
-        # gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
+        gen_data_c = gen_data_c[gen_data_c["Hidro"] != "MEDIA"]
 
         # Choose Hidro 20
         gen_data_c = gen_data_c[gen_data_c["Hidro"] == "20"]
+
+        # Rename 'Hidro' column to 'Hyd'
+        gen_data_c = gen_data_c.rename(columns={"Hidro": "Hyd"})
+
+        # Turn Hyd to numeric
+        gen_data_c["Hyd"] = pd.to_numeric(gen_data_c["Hyd"])
+
 
         # Remove spaces from CenNom, BarNom
         gen_data_c["CenNom"] = gen_data_c["CenNom"].str.strip()
@@ -55,11 +62,8 @@ def process_gen_data_optimized(path_case: Path,
 
         # Keep only required columns
         gen_data_c = gen_data_c[
-            ["Hidro", "CenNom", "BarNom", "CenTip", "CenInyE",
+            ["Hyd", "CenNom", "BarNom", "CenTip", "CenInyE",
              "CenEgen", "CurE", "Etapa"]]
-
-        # Rename 'Hidro' column to 'Hyd'
-        gen_data_c = gen_data_c.rename(columns={"Hidro": "Hyd"})
 
         # Convert and calculate necessary columns
         gen_data_c["CenInyE"] /= 1000
@@ -96,9 +100,6 @@ def process_gen_data_optimized(path_case: Path,
     # Drop duplicates based on 'CenNom'
     gen_param = gen_data[
         ["CenNom", "BarNom", "CenTip"]].drop_duplicates(subset=["CenNom"])
-
-    # Turn Hyd to numeric
-    gen_data["Hyd"] = pd.to_numeric(gen_data["Hyd"])
 
     return gen_data, gen_param
 
