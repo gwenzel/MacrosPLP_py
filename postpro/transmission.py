@@ -156,7 +156,7 @@ def process_and_write_wrapper(lin_data: pd.DataFrame,
                               item: str,
                               type: str):
     '''
-    Wrap transmission read, process and write
+    Wrap transmission process and write
     '''
     # Process data
     df = process_lin_data_monthly(lin_data, item, type)

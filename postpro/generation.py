@@ -4,6 +4,7 @@ Module to store all processing and writing functions related to Generation data
 '''
 from pathlib import Path
 import pandas as pd
+import threading
 
 
 CEN_NAME = "plpcen.csv"
@@ -198,7 +199,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
     # in the code
     header_data = gen_param[["BarNom", "CenTip", "CenNom"]]
 
-    if type == "B":
+    if ((type == "B") or (type == "H")):
         head = pd.DataFrame(
             {
                 "BarNom": ["", "", "", "Ubic:"],
@@ -207,17 +208,7 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
             }
         )
         header = pd.concat([head, header_data], axis=0).transpose()
-        suffix = "_B"
-    elif type == "H":
-        head = pd.DataFrame(
-            {
-                "BarNom": ["", "", "", "Ubic:"],
-                "CenTip": ["", "", "", "Comb:"],
-                "CenNom": ["", "", "", "Firm:"],
-            }
-        )
-        header = pd.concat([head, header_data], axis=0).transpose()
-        suffix = "_H"
+        suffix = "_%s" % type
     elif type == "M":
         head = pd.DataFrame(
             {
@@ -253,6 +244,32 @@ def write_gen_data_file(gen_param: pd.DataFrame, path_out: Path, item: str,
     df.to_csv(path_out / filename[item], na_rep=0, header=True, mode="a")
 
 
+def process_and_write_wrapper(path_out: Path,
+                              gen_data: pd.DataFrame,
+                              gen_param: pd.DataFrame,
+                              item: str, type: str):
+    '''
+    Wrap generation, process and write
+    '''
+    if item not in ["Energy", "Revenue", "Curtailment"]:
+        raise ValueError("item must be Energy, Revenue, or Curtailment")
+
+    # Process data
+    if type == "B":
+        df = process_gen_data_monthly(gen_data, type="B")
+    elif type == "M":
+        gen_data_m = process_gen_data_m(gen_data)
+        df = process_gen_data_monthly(gen_data_m, type="M")
+    elif type == "H":
+        gen_data_h = process_gen_data_h(gen_data)
+        df = process_gen_data_monthly(gen_data_h, type="H")
+    else:
+        raise ValueError("type must be B, M or H")
+
+    # Write generation data
+    write_gen_data_file(gen_param, path_out, item, df, type)
+
+
 def generation_converter(path_case: Path, path_out: Path,
                          blo_eta: pd.DataFrame):
     '''
@@ -261,22 +278,61 @@ def generation_converter(path_case: Path, path_out: Path,
     # Read data
     gen_data, gen_param = process_gen_data_optimized(
         path_case, blo_eta)
-    gen_data_m = process_gen_data_m(gen_data)
-    gen_data_h = process_gen_data_h(gen_data)
-    data_by_type = {
-        "B": process_gen_data_monthly(gen_data, type="B"),
-        "M": process_gen_data_monthly(gen_data_m, type="M"),
-        "H": process_gen_data_monthly(gen_data_h, type="H"),
-    }
 
-    # Clean up large data frames to free memory
-    del gen_data, gen_data_m
+    # Process and write with threads
+    t1 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Energy", "B")
+    )
+    t2 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Energy", "M")
+    )
+    t3 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Energy", "H")
+    )
+    t4 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Revenue", "B")
+    )
+    t5 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Revenue", "M")
+    )
+    t6 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Revenue", "H")
+    )
+    t7 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Curtailment", "B")
+    )
+    t8 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Curtailment", "M")
+    )
+    t9 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(path_out, gen_data, gen_param, "Curtailment", "H")
+    )
 
-    # Define items to be processed
-    items = ["Energy", "Revenue", "Curtailment"]
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+    t5.start()
+    t6.start()
+    t7.start()
+    t8.start()
+    t9.start()
 
-    # Write generation data for both types and all items
-    for type_key, data_tuple in data_by_type.items():
-        for item, data in zip(items, data_tuple):
-            write_gen_data_file(
-                gen_param, path_out, item, data, type=type_key)
+    t1.join()
+    t2.join()
+    t3.join()
+    t4.join()
+    t5.join()
+    t6.join()
+    t7.join()
+    t8.join()
+    t9.join()
