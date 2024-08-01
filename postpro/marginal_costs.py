@@ -149,7 +149,7 @@ def process_and_write_wrapper(bar_data: pd.DataFrame, resolution: str,
     df = process_cmg_dem(bar_data, resolution, values)
     write_marginal_costs_file(bar_param, path_out, item, df, resolution)
 
-    print("Marginal costs written for %s, %s, %s" % (resolution, values, item))
+    print("Marginal costs written for %s, %s, %s" % (item, values, resolution))
 
 
 def marginal_costs_converter(path_case: Path, path_out: Path,
