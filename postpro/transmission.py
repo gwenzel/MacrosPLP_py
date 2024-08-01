@@ -2,17 +2,17 @@
 
 Module to store all transmission related functions
 '''
-import sys
 import pandas as pd
 from pathlib import Path
+import threading
 
 
 LIN_NAME = "plplin.csv"
 CHUNKSIZE = 100000
 
 
-def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
-                     pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def read_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
+                  pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     Read and process line data
     '''
@@ -51,7 +51,6 @@ def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
                 "Year",
                 "Month",
                 "Block",
-                "Block_Len",
                 "LinNom",
                 "LinFluP",
                 "LinUso",
@@ -70,25 +69,31 @@ def process_lin_data(path_case: Path, blo_eta: pd.DataFrame) -> tuple[
     # Get line parameters
     lin_param = lin_data[["LinNom"]].drop_duplicates()
 
-    # Data mensual
+    # Round and reset index
+    lin_data = (
+            lin_data
+            .assign(
+                LinFluP=lambda x: round(x["LinFluP"], 3),
+                LinUso=lambda x: round(x["LinUso"], 3),
+            )
+            .reset_index()
+        )
+    return lin_data, lin_param
+
+
+def group_lin_data_monthly(lin_data: pd.DataFrame) -> pd.DataFrame:
+    # Data monthly - mean
     lin_data_m = (
-        lin_data.assign(
-            LinFluP=lambda x: x["Block_Len"] * x["LinFluP"],
-            LinUso=lambda x: x["Block_Len"] * x["LinUso"],
-        )
+        lin_data
         .groupby(["Hyd", "Year", "Month", "LinNom"])
-        .agg(LinFluP=("LinFluP", "sum"), LinUso=("LinUso", "sum"))
-        .assign(
-            LinFluP=lambda x: round(x["LinFluP"], 3),
-            LinUso=lambda x: round(x["LinUso"], 3),
-        )
+        .agg(LinFluP=("LinFluP", "mean"), LinUso=("LinUso", "mean"))
         .reset_index()
     )
-    return lin_data, lin_data_m, lin_param
+    return lin_data_m
 
 
-def process_lin_data_monthly(lin_data: pd.DataFrame, type: str = "B") -> tuple[
-                             pd.DataFrame, pd.DataFrame]:
+def process_lin_data_monthly(lin_data: pd.DataFrame, item: str,
+                             type: str = "B") -> pd.DataFrame:
     '''
     Process line data to monthly
     '''
@@ -98,15 +103,18 @@ def process_lin_data_monthly(lin_data: pd.DataFrame, type: str = "B") -> tuple[
     elif type == "M":
         base_headers = ["Hyd", "Year", "Month", "LinNom"]
         index = ["Hyd", "Year", "Month"]
+        lin_data = group_lin_data_monthly(lin_data)
     else:
-        sys.exit("type must be B or M")
-    LinFlu = lin_data[base_headers + ["LinFluP"]].pivot(
-        index=index, columns="LinNom", values="LinFluP"
-    )
-    LinUse = lin_data[base_headers + ["LinUso"]].pivot(
-        index=index, columns="LinNom", values="LinUso"
-    )
-    return LinFlu, LinUse
+        raise ValueError("type must be B or M")
+
+    if item == "LinFlu":
+        return lin_data[base_headers + ["LinFluP"]].pivot(
+            index=index, columns="LinNom", values="LinFluP")
+    elif item == "LinUse":
+        return lin_data[base_headers + ["LinUso"]].pivot(
+            index=index, columns="LinNom", values="LinUso")
+    else:
+        raise ValueError("item must be LinFlu or LinUse")
 
 
 def write_transmission_data(lin_param: pd.DataFrame, path_out: Path,
@@ -126,7 +134,7 @@ def write_transmission_data(lin_param: pd.DataFrame, path_out: Path,
         header = pd.concat([head, header_data]).T
         suffix = ""
     else:
-        sys.exit("type must be B or M")
+        raise ValueError("type must be B or M")
 
     filename = {
         "LinFlu": "outLinFlu%s.csv" % suffix,
@@ -142,19 +150,49 @@ def write_transmission_data(lin_param: pd.DataFrame, path_out: Path,
     df.to_csv(path_out / filename[item], header=True, na_rep=0, mode="a")
 
 
+def process_and_write_wrapper(lin_data: pd.DataFrame,
+                              lin_param: pd.DataFrame,
+                              path_out: Path,
+                              item: str,
+                              type: str):
+    '''
+    Wrap transmission read, process and write
+    '''
+    # Process data
+    df = process_lin_data_monthly(lin_data, item, type)
+    # Write Transmission data
+    write_transmission_data(lin_param, path_out, item, df, type)
+
+
 def transmission_converter(path_case: Path, path_out: Path,
                            blo_eta: pd.DataFrame):
     '''
     Wrap transmission read, process and write
     '''
-    lin_data, lin_data_m, lin_param = process_lin_data(path_case, blo_eta)
+    lin_data, lin_param = read_lin_data(path_case, blo_eta)
 
-    LinFlu_B, LinUse_B = process_lin_data_monthly(lin_data, type="B")
-    LinFlu_M, LinUse_M = process_lin_data_monthly(lin_data_m, type="M")
-
-    # Write Transmission data
-
-    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_B, type="B")
-    write_transmission_data(lin_param, path_out, "LinFlu", LinFlu_M, type="M")
-    write_transmission_data(lin_param, path_out, "LinUse", LinUse_B, type="B")
-    write_transmission_data(lin_param, path_out, "LinUse", LinUse_M, type="M")
+    # Write Transmission data with multithreading
+    t1 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(lin_data, lin_param, path_out, "LinFlu", "B")
+    )
+    t2 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(lin_data, lin_param, path_out, "LinFlu", "M")
+    )
+    t3 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(lin_data, lin_param, path_out, "LinUse", "B")
+    )
+    t4 = threading.Thread(
+        target=process_and_write_wrapper,
+        args=(lin_data, lin_param, path_out, "LinUse", "M")
+    )
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+    t1.join()
+    t2.join()
+    t3.join()
+    t4.join()
