@@ -85,14 +85,14 @@ def process_cmg_dem(bar_data: pd.DataFrame, resolution: str,
     '''
     Process CMg and Dem
     '''
-    bar_data_m = bar_data.copy()
-
     if resolution == 'B':
+        bar_data = bar_data.copy()
         columns = ["Hyd", "Year", "Month", "Block", "BarNom"]
         indexes = ["Hyd", "Year", "Month", "Block"]
         return bar_process(bar_data, columns + [values], indexes,
                            values=values)
     elif resolution == 'M':
+        bar_data_m = bar_data.copy()
         # Multiply by block length and divide by hours in day
         bar_data_m["CMgBar"] = \
             bar_data_m["Block_Len"] * bar_data_m["CMgBar"] / 24

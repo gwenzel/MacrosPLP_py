@@ -136,8 +136,9 @@ def process_gen_data_h(gen_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def process_gen_data_m(gen_data: pd.DataFrame) -> pd.DataFrame:
+    gen_data_m = gen_data.copy()
     # Group by and aggregate
-    gen_data_m = gen_data.groupby(["Hyd", "Year", "Month", "CenNom"]).agg(
+    gen_data_m = gen_data_m.groupby(["Hyd", "Year", "Month", "CenNom"]).agg(
         CenEgen=("CenEgen", "sum"),
         CenInyE=("CenInyE", "sum"),
         CurE=("CurE", "sum")
@@ -158,6 +159,7 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
     Optimized function to process generation data to monthly and indexed
     by blocks or hours
     '''
+    gen_data = gen_data.copy()
     # Define base headers and index based on type
     if type == "B":
         base_headers = ["Hyd", "Year", "Month", "Block", "CenNom"]
@@ -181,7 +183,8 @@ def process_gen_data_monthly(gen_data: pd.DataFrame, type: str = "B") -> tuple[
         ) for col in pivot_columns
     }
 
-    return (pivot_tables["CenEgen"], pivot_tables["CenInyE"],
+    return (pivot_tables["CenEgen"],
+            pivot_tables["CenInyE"],
             pivot_tables["CurE"])
 
 
