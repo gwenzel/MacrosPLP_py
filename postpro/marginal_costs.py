@@ -88,27 +88,60 @@ def process_cmg_dem(bar_data: pd.DataFrame, resolution: str,
     Process CMg and Dem
     '''
     if resolution == 'B':
-        bar_data = bar_data.copy()
+        bar_data_b = bar_data.copy()
         columns = ["Hyd", "Year", "Month", "Block", "BarNom"]
         indexes = ["Hyd", "Year", "Month", "Block"]
-        return bar_process(bar_data, columns + [values], indexes,
+        return bar_process(bar_data_b, columns + [values], indexes,
+                           values=values)
+    elif resolution == 'H':
+        bar_data_h = bar_data.copy()
+        # Translate blocks to hours by extending each block into 2 hours
+        # CMg data for block 1 is repeated for hour 1 and 2, and so on
+        # Dem data for block 1 is divided by 2 and repeated for hour 1 and 2
+        # This is done to match the number of hours in the block data
+        # Filter Hyd 20
+        bar_data_h = bar_data_h[bar_data_h["Hyd"] == 20]
+        # Set index
+        bar_data_h.set_index(["Hyd", "Year", "Month", "Block", "BarNom"],
+                             inplace=True)
+        # Sort by index
+        bar_data_h.sort_index(inplace=True)
+        # Repeat values for each index
+        bar_data_h = bar_data_h.reindex(bar_data_h.index.repeat(2))
+        # Define hour
+        bar_data_h["Hour"] = bar_data_h.groupby(
+            ["Hyd", "Year", "Month", "BarNom"]).cumcount() + 1
+        # Replace Block index for Hour index
+        bar_data_h.reset_index(inplace=True)
+        bar_data_h.drop(columns=["Block"], inplace=True)
+        bar_data_h.set_index(["Hyd", "Year", "Month", "Hour", "BarNom"],
+                             inplace=True)
+        # Sort again
+        bar_data_h.sort_index(inplace=True)
+        # Fill na with 0
+        bar_data_h.fillna(0, inplace=True)
+        # Reset index
+        bar_data_h.reset_index(inplace=True)
+        # Divide dem data, cmg data is the same
+        bar_data_h["DemBarE"] = bar_data_h["DemBarE"] / 2
+        # Select columns and indexes for bar_process
+        columns = ["Hyd", "Year", "Month", "Hour", "BarNom"]
+        indexes = ["Hyd", "Year", "Month", "Hour"]
+        return bar_process(bar_data_h, columns + [values], indexes,
                            values=values)
     elif resolution == 'M':
         bar_data_m = bar_data.copy()
-        # Multiply by block length and divide by hours in day
-        bar_data_m["CMgBar"] = \
-            bar_data_m["Block_Len"] * bar_data_m["CMgBar"] / 24
         # Group by using sum as aggregation, for CMg and Dem
         bar_data_m = \
             bar_data_m.groupby(["Hyd", "Year", "Month", "BarNom"]).agg(
-                CMgBar=("CMgBar", "sum"), DemBarE=("DemBarE", "sum")
+                CMgBar=("CMgBar", "mean"), DemBarE=("DemBarE", "sum")
                 )
         columns = ["Hyd", "Year", "Month", "BarNom"]
         indexes = ["Hyd", "Year", "Month"]
         return bar_process(bar_data_m, columns + [values], indexes,
                            values=values)
     else:
-        raise ValueError("resolution must be B or M")
+        raise ValueError("resolution must be B, H or M")
 
 
 def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
@@ -120,12 +153,16 @@ def write_marginal_costs_file(bar_param: pd.DataFrame, path_out: Path,
         head = pd.DataFrame({"BarNom": ["", "", "", "Ubic:"]})
         header = pd.concat([head, bar_param]).T
         suffix = '_B'
+    elif type == "H":
+        head = pd.DataFrame({"BarNom": ["", "", "", "Ubic:"]})
+        header = pd.concat([head, bar_param]).T
+        suffix = '_H'
     elif type == "M":
         head = pd.DataFrame({"BarNom": ["", "", "Ubic:"]})
         header = pd.concat([head, bar_param]).T
         suffix = ''
     else:
-        raise ValueError("type must be B or M")
+        raise ValueError("type must be B, H or M")
     filename = {
         "CMg": "outBarCMg%s.csv" % suffix,
         "Dem": "outDemEne%s.csv" % suffix,
@@ -164,6 +201,8 @@ def marginal_costs_converter(path_case: Path, path_out: Path,
     list_of_args = [
         ('B', 'CMgBar', 'CMg'),
         ('B', 'DemBarE', 'Dem'),
+        ('H', 'CMgBar', 'CMg'),
+        ('H', 'DemBarE', 'Dem'),
         ('M', 'CMgBar', 'CMg'),
         ('M', 'DemBarE', 'Dem')
     ]
