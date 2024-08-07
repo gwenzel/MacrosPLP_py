@@ -16,7 +16,7 @@ from logger import create_logger, add_file_handler
 logger = create_logger('filter_plexos')
 
 # Define global variables
-Hydro = 20
+HYD20 = 20
 
 
 Hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -139,7 +139,7 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     csv_in = os.path.join(pDir, File_M)
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
     # Filtrar por Hyd
-    outPLP = outPLP.loc[outPLP['Hyd'] == Hydro]
+    outPLP = outPLP.loc[outPLP['Hyd'] == HYD20]
 
     outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
                      var_name=Item_Name, value_name=Value_Name)
@@ -156,7 +156,7 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     # Drop columns that are not in the range of interest
     outPLP = outPLP.drop(['DateTime'], axis=1)
     # Add Hydro index
-    outData.insert(0, "Hyd", Hydro)
+    outData.insert(0, "Hyd", HYD20)
     # Adjust magnitude of values
     outData[Value_Name] = outData[Value_Name].transform(
         lambda x: x / PLP_Div)

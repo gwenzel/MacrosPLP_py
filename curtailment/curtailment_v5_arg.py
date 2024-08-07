@@ -49,7 +49,7 @@ INPUT_FILES = {
 }
 
 # Hydrology to filter
-Hyd = 20
+HYD20 = 20
 
 logger = create_logger('curtailment')
 
@@ -75,14 +75,14 @@ def load_data(time_resolution, inputs_path):
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
     if "Hyd" in df_cur.columns:
-        df_cur = df_cur[df_cur["Hyd"] == Hyd]
+        df_cur = df_cur[df_cur["Hyd"] == HYD20]
         df_cur = df_cur.drop(columns=["Hyd"])
     df_cur = df_cur.set_index(["Year", "Month", time_resolution])
 
     df_ener = pd.read_csv(ener_file, encoding="latin1",
                           skiprows=3, low_memory=False)
     if "Hyd" in df_ener.columns:
-        df_ener = df_ener[df_ener["Hyd"] == Hyd]
+        df_ener = df_ener[df_ener["Hyd"] == HYD20]
         df_ener = df_ener.drop(columns=["Hyd"])
     df_ener = df_ener.set_index(["Year", "Month", time_resolution])
 
