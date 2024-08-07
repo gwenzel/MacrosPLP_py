@@ -5,7 +5,6 @@ Filter Plexos
 Take plexos outputs and print equivalent PLP outputs,
 to be used by the Curtailment Model
 '''
-import os
 import pandas as pd
 import datetime
 from pathlib import Path
@@ -16,7 +15,7 @@ from logger import create_logger, add_file_handler
 logger = create_logger('filter_plexos')
 
 # Define global variables
-Hydro = 20
+HYD20 = 20
 
 
 Hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -84,89 +83,99 @@ def add_blank_lines(out_file, lines):
 
 def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
     logger.info("---Defining outData: %s" % f)
-    outData = pd.read_csv(os.path.join(wDir, RPaths[0, 0], "Interval", f))
+    outData = pd.read_csv(Path(wDir, RPaths[0, 0], "Interval", f))
     for i in range(NPaths - 1):
-        csv_path = os.path.join(wDir, RPaths[i + 1, 0], "Interval", f)
+        csv_path = Path(wDir, RPaths[i + 1, 0], "Interval", f)
         df = pd.read_csv(csv_path)
         outData = pd.concat([outData, df], ignore_index=True)
     outData = outData.copy().fillna(0)
     outData["DATETIME"] = pd.to_datetime(
         outData["DATETIME"], format='mixed')
-    outData.insert(1, "Year", outData["DATETIME"].dt.year)
-    outData.insert(2, "Month", outData["DATETIME"].dt.month)
-    outData.insert(3, "Day", outData["DATETIME"].dt.day)
-    outData.insert(4, "Hour", outData["DATETIME"].dt.hour)
-    outData.to_csv(os.path.join(oDir, f), index=False)
+    outData.insert(1, "Hyd", HYD20)
+    outData.insert(2, "Year", outData["DATETIME"].dt.year)
+    outData.insert(3, "Month", outData["DATETIME"].dt.month)
+    outData.insert(4, "Day", outData["DATETIME"].dt.day)
+    outData.insert(5, "Hour", outData["DATETIME"].dt.hour)
+    outData.to_csv(Path(oDir, f), index=False)
     return outData
 
 
 @return_on_failure("Print File_12B failed")
 def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
-                      PLP_Row, oDir):
+                      PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData 12B: %s" % File_12B)
     outData_12B = outData.copy()
     outData_12B = pd.merge(outData_12B, B2H, on='Hour', how='right')
     outData_12B = outData_12B.drop(['DATETIME', 'Day', 'Hour'], axis=1)
-    outData_12B = pd.melt(outData_12B, id_vars=['Year', 'Month', 'Block'],
-                          var_name=Item_Name, value_name=Value_Name)
+    outData_12B = pd.melt(outData_12B,
+                          id_vars=['Hyd', 'Year', 'Month', 'Block'],
+                          var_name=Item_Name,
+                          value_name=Value_Name)
     outData_12B = groupby_func(
-        outData_12B, by=['Year', 'Month', 'Block', Item_Name], func=Group_By)
+        outData_12B,
+        by=['Hyd', 'Year', 'Month', 'Block', Item_Name],
+        func=Group_By)
+    outData_12B = outData_12B.round(3)
     # Format as in PLP
-    csv_out = os.path.join(oDir, File_12B)
+    csv_out = Path(oDir, File_12B)
     print_in_plp_format(
-        outData_12B, ['Year', 'Month', 'Block', Item_Name], csv_out,
+        outData_12B, ['Hyd', 'Year', 'Month', 'Block', Item_Name], csv_out,
         PLP_Row)
-    # Print in long format, using same name but with "_long" suffix
-    csv_out_long = os.path.join(oDir, File_12B.replace(".csv", "_long.csv"))
-    outData_12B.to_csv(csv_out_long, index=False)
+    # Print in long format
+    outData_12B.to_csv(Path(oDir_long, File_12B), index=False)
 
 
 @return_on_failure("Print File_24H failed")
 def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
-                      PLP_Row, oDir):
+                      PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData 24H: %s" % File_24H)
     outData_24H = outData.copy()
     outData_24H = outData_24H.drop(['DATETIME', 'Day'], axis=1)
-    outData_24H = pd.melt(outData_24H, id_vars=['Year', 'Month', 'Hour'],
-                          var_name=Item_Name, value_name=Value_Name)
+    outData_24H = pd.melt(outData_24H,
+                          id_vars=['Hyd', 'Year', 'Month', 'Hour'],
+                          var_name=Item_Name,
+                          value_name=Value_Name)
     outData_24H = groupby_func(
-        outData_24H, by=['Year', 'Month', 'Hour', Item_Name], func=Group_By)
-    csv_out = os.path.join(oDir, File_24H)
+        outData_24H, by=['Hyd', 'Year', 'Month', 'Hour', Item_Name],
+        func=Group_By)
+    outData_24H = outData_24H.round(3)
+    csv_out = Path(oDir, File_24H)
     print_in_plp_format(
-        outData_24H, ['Year', 'Month', 'Hour', Item_Name], csv_out,
+        outData_24H, ['Hyd', 'Year', 'Month', 'Hour', Item_Name], csv_out,
         PLP_Row)
-    # Print in long format, using same name but with "_long" suffix
-    csv_out_long = os.path.join(oDir, File_24H.replace(".csv", "_long.csv"))
-    outData_24H.to_csv(csv_out_long, index=False)
+    # Print in long format
+    outData_24H.to_csv(Path(oDir_long, File_24H), index=False)
 
 
 @return_on_failure("Print File_M failed")
 def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
-                  oDir):
+                  oDir, oDir_long):
     logger.info("---Printing outData: %s" % File_M)
     outData = outData.drop(['DATETIME', 'Day', 'Hour'], axis=1)
-    outData = pd.melt(outData, id_vars=['Year', 'Month'], var_name=Item_Name,
+    outData = pd.melt(outData,
+                      id_vars=['Hyd', 'Year', 'Month'],
+                      var_name=Item_Name,
                       value_name=Value_Name)
     outData = groupby_func(
-        outData, by=['Year', 'Month', Item_Name], func=Group_By)
+        outData, by=['Hyd', 'Year', 'Month', Item_Name], func=Group_By)
+    outData = outData.round(3)
     # Print in PLP format
-    csv_out = os.path.join(oDir, File_M)
-    print_in_plp_format(outData, ['Year', 'Month', Item_Name], csv_out,
+    csv_out = Path(oDir, File_M)
+    print_in_plp_format(outData, ['Hyd', 'Year', 'Month', Item_Name], csv_out,
                         PLP_Row)
-    # Print in long format, using same name but with "_long" suffix
-    csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
-    outData.to_csv(csv_out_long, index=False)
+    # Print in long format
+    outData.to_csv(Path(oDir_long, File_M), index=False)
     return outData
 
 
 @return_on_failure("Print File_PLP failed")
 def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
-                  Yini, Mini, Yend, Mend, oDir, pDir):
+                  Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
     logger.info("---Printing outPLP: %s" % File_M)
-    csv_in = os.path.join(pDir, File_M)
+    csv_in = Path(pDir, File_M)
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
     # Filtrar por Hyd
-    outPLP = outPLP.loc[outPLP['Hyd'] == Hydro]
+    outPLP = outPLP.loc[outPLP['Hyd'] == HYD20]
 
     outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
                      var_name=Item_Name, value_name=Value_Name)
@@ -182,8 +191,6 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
 
     # Drop columns that are not in the range of interest
     outPLP = outPLP.drop(['DateTime'], axis=1)
-    # Add Hydro index
-    outData.insert(0, "Hyd", Hydro)
     # Adjust magnitude of values
     outData[Value_Name] = outData[Value_Name].transform(
         lambda x: x / PLP_Div)
@@ -197,7 +204,7 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     outPLP['Month'] = pd.to_numeric(outPLP['Month'])
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month'])
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
-    csv_out = os.path.join(oDir, File_M)
+    csv_out = Path(oDir, File_M)
     # Dataframe already in wide format. Print directly
     # Drop level, reset index, print and add blank line
     outPLP.columns = outPLP.columns.droplevel()
@@ -206,9 +213,8 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     outPLP.columns = ['Hyd', 'Year', 'Month'] + list(outPLP.columns[3:])
     outPLP.to_csv(csv_out, index=False)
     add_blank_lines(csv_out, PLP_Row)
-    # Print in long format, using same name but with "_long" suffix
-    csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
-    outPLP.to_csv(csv_out_long, index=False)
+    # Print in long format
+    outPLP.to_csv(Path(oDir_long, File_M), index=False)
 
 
 def define_arg_parser() -> ArgumentParser:
@@ -234,7 +240,7 @@ def define_arg_parser() -> ArgumentParser:
 
 
 def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
-    if not os.path.exists(arg):
+    if not Path(arg).exists():
         parser.error("The file or path %s does not exist!" % arg)
     else:
         return Path(arg)
@@ -253,6 +259,8 @@ def main():
         check_is_path(pDir)
         oDir = Path(args.oDir)
         check_is_path(oDir)
+        oDir_long = oDir / 'long_format'
+        check_is_path(oDir_long)
         folder_paths_file = args.folder_paths_file
         check_is_file(folder_paths_file)
         config_file = args.config_file
@@ -303,23 +311,23 @@ def main():
             # Print outdata 12B
             print_outdata_12B(
                 outData, Item_Name, Value_Name, Group_By, File_12B, PLP_Row,
-                oDir)
+                oDir, oDir_long)
 
             # Print outdata 24H
             print_outdata_24H(
                 outData, Item_Name, Value_Name, Group_By, File_24H, PLP_Row,
-                oDir)
+                oDir, oDir_long)
 
             # Print outData
             outData = print_outdata(
                 outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
-                oDir)
+                oDir, oDir_long)
 
             # Print plp files
             if row['PLP_Bool']:
                 print_out_plp(
                     outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
-                    Yini, Mini, Yend, Mend, oDir, pDir)
+                    Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
 
     except Exception as e:
         logger.error(e, exc_info=True)
