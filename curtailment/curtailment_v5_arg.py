@@ -72,21 +72,47 @@ def load_data(time_resolution, inputs_path):
     logger.info(f'--CUR: {cur_file}')
     logger.info(f'--ENER: {ener_file}')
 
+    # Read curtailment skipping first 3 rows
     df_cur = pd.read_csv(cur_file, encoding="latin1",
                          skiprows=3, low_memory=False)
+    # If Hyd column exists, filter by HYD20 and drop column
     if "Hyd" in df_cur.columns:
         df_cur = df_cur[df_cur["Hyd"] == HYD20]
         df_cur = df_cur.drop(columns=["Hyd"])
     df_cur = df_cur.set_index(["Year", "Month", time_resolution])
 
+    # Read energy skipping first 3 rows
     df_ener = pd.read_csv(ener_file, encoding="latin1",
                           skiprows=3, low_memory=False)
+    # If Hyd column exists, filter by HYD20 and drop column
     if "Hyd" in df_ener.columns:
         df_ener = df_ener[df_ener["Hyd"] == HYD20]
         df_ener = df_ener.drop(columns=["Hyd"])
     df_ener = df_ener.set_index(["Year", "Month", time_resolution])
 
     return df_cur, df_ener
+
+
+def load_headers(time_resolution, inputs_path):
+    """
+    Load the headers required for outputs
+
+    Returns:
+    - df_cur: DataFrame containing CUR data filtered by Hyd
+    - df_ener: DataFrame containing ENER data filtered by Hyd
+    """
+    # Define input file paths
+    cur_file = Path(
+        inputs_path, INPUT_FILES[time_resolution]["cur_file_name"])
+    ener_file = Path(
+        inputs_path, INPUT_FILES[time_resolution]["ener_file_name"])
+
+    df_cur_header = pd.read_csv(cur_file, encoding="latin1",
+                                nrows=3, header=None)
+    df_ener_header = pd.read_csv(ener_file, encoding="latin1",
+                                 nrows=3, header=None)
+
+    return df_cur_header, df_ener_header
 
 
 def load_dicts(zonas_file, df_centrales_file, tec2enable_file):
@@ -463,7 +489,7 @@ def process_redistributed_out(df_all_redistrib, time_resolution="Block",
     value_header = f"Redistributed {value}"  # Energy or Curtailment
     df_out_redistrib = df_all_redistrib.copy()
     # Add Hyd column
-    df_out_redistrib['Hyd'] = Hyd
+    df_out_redistrib['Hyd'] = HYD20
     # Keep only Hyd, Year, Month, Block, Gen, Redistributed Value
     df_out_redistrib = df_out_redistrib.reset_index()
     new_indexes = ['Hyd', 'Year', 'Month', time_resolution, 'Gen',
@@ -477,18 +503,10 @@ def process_redistributed_out(df_all_redistrib, time_resolution="Block",
     return df_out_redistrib
 
 
-def add_blank_lines(out_file, lines):
-    with open(out_file, 'r') as original:
-        data = original.read()
-    with open(out_file, 'w') as modified:
-        for i in range(lines):
-            modified.write('\n')
-        modified.write(data)
-
-
 def print_outputs_to_csv(output_folder, df_all,
                          df_all_redistrib, df_all_redistrib_grouped,
                          df_out_ener_redistrib, df_out_curtail_redistrib,
+                         df_cur_header, df_ener_header,
                          time_resolution="Block"):
 
     # Create output folder per time resolution
@@ -543,12 +561,51 @@ def print_outputs_to_csv(output_folder, df_all,
     df_out_curtail_redistrib_monthly.to_csv(
         out_curtail_redistrib_monthly_out_file, encoding="latin1")
 
-    # Add 2 blank lines at the beginning of all energy files
-    # to match format
-    add_blank_lines(out_ener_redistrib_out_file, 3)
-    add_blank_lines(out_ener_redistrib_monthly_out_file, 3)
-    add_blank_lines(out_curtail_redistrib_out_file, 3)
-    add_blank_lines(out_curtail_redistrib_monthly_out_file, 3)
+    # Use df_cur_header and df_ener_header to add lines at the beginning
+    # of the files
+
+    indexes_long = ['Hyd', 'Year', 'Month', time_resolution]
+    indexes_short = ['Hyd', 'Year', 'Month']
+
+    add_headers_to_csv(
+        out_ener_redistrib_out_file, df_ener_header, indexes_long)
+    add_headers_to_csv(
+        out_curtail_redistrib_out_file, df_cur_header, indexes_long)
+    add_headers_to_csv(
+        out_ener_redistrib_monthly_out_file, df_ener_header, indexes_short)
+    add_headers_to_csv(
+        out_curtail_redistrib_monthly_out_file, df_cur_header, indexes_short)
+
+
+def add_headers_to_csv(out_file, df_header, indexes):
+    # First, read out file as df
+    df_out = pd.read_csv(out_file, encoding="latin1")
+    # Define third row of df_header as header
+    df_header.columns = df_header.iloc[2]
+
+    # Get generator columns in order
+    gen_columns = df_out.columns.tolist()
+    for item in indexes:
+        gen_columns.remove(item)
+
+    # Get 3 or 4 columns of df_header
+    if len(indexes) == 4:
+        df_header_ini = df_header.iloc[:, :4]
+    else:
+        df_header_ini = df_header.iloc[:, 1:4]
+
+    # Then, reorder df_header based on df_out columns
+    df_header_ordered = df_header.reindex(columns=gen_columns)
+
+    # Concatenate df_header_ini and df_header_ordered
+    df_header = pd.concat([df_header_ini, df_header_ordered], axis=1)
+
+    # Finally, write to out_file
+    with open(out_file, 'r') as original:
+        data = original.read()
+    with open(out_file, 'w', newline='') as modified:
+        df_header.to_csv(modified, header=False, index=False)
+        modified.write(data)
 
 
 def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
@@ -622,8 +679,13 @@ def main():
         # Load Data
         logger.info('--Loading data')
         df_cur, df_ener = load_data(time_resolution, inputs_path)
+
         dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
             load_dicts(zonas_file, df_centrales_file, tec2enable_file)
+
+        df_cur_header, df_ener_header = load_headers(
+            time_resolution, inputs_path)
+
         df_pmax_per_month = load_gen2pmax_per_month(
             df_ener, dict_gen2pmax, dict_gen2enable, rating_factor_file,
             output_folder)
@@ -638,6 +700,7 @@ def main():
         df_all = process_inputs(df_cur, df_ener,
                                 dict_node2zone, dict_gen2node,
                                 time_resolution)
+
         # Get generator data
         df_gen_data = get_gen_data(
             dict_gen2node, dict_node2zone, dict_gen2enable)
@@ -660,6 +723,7 @@ def main():
         print_outputs_to_csv(output_folder, df_all,
                              df_all_redistrib, df_all_redistrib_grouped,
                              df_out_ener_redistrib, df_out_curtail_redistrib,
+                             df_cur_header, df_ener_header,
                              time_resolution)
     except Exception as e:
         logger.error(e, exc_info=True)

@@ -98,8 +98,9 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
         outData_12B, by=['Year', 'Month', 'Block', Item_Name], func=Group_By)
     # Format as in PLP
     csv_out = os.path.join(oDir, File_12B)
+    outData_12B['Hyd'] = HYD20
     print_in_plp_format(
-        outData_12B, ['Year', 'Month', 'Block', Item_Name], csv_out,
+        outData_12B, ['Hyd', 'Year', 'Month', 'Block', Item_Name], csv_out,
         PLP_Row)
 
 
@@ -113,8 +114,9 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
     outData_24H = groupby_func(
         outData_24H, by=['Year', 'Month', 'Hour', Item_Name], func=Group_By)
     csv_out = os.path.join(oDir, File_24H)
+    outData_24H['Hyd'] = HYD20
     print_in_plp_format(
-        outData_24H, ['Year', 'Month', 'Hour', Item_Name], csv_out,
+        outData_24H, ['Hyd', 'Year', 'Month', 'Hour', Item_Name], csv_out,
         PLP_Row)
 
 
@@ -128,8 +130,9 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
         outData, by=['Year', 'Month', Item_Name], func=Group_By)
     # Print in PLP format
     csv_out = os.path.join(oDir, File_M)
+    outData['Hyd'] = HYD20
     print_in_plp_format(
-        outData, ['Year', 'Month', Item_Name], csv_out, PLP_Row)
+        outData, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
     return outData
 
 
