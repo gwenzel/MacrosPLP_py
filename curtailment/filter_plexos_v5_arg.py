@@ -16,7 +16,7 @@ from logger import create_logger, add_file_handler
 logger = create_logger('filter_plexos')
 
 # Define global variables
-HYD20 = 20
+Hydro = 20
 
 
 Hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -27,6 +27,20 @@ Blocks = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
 B2H = pd.DataFrame()
 B2H['Hour'] = Hours
 B2H['Block'] = Blocks
+
+
+def return_on_failure(msg):
+    def decorate(f):
+        def applicator(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except Exception as e:
+                logger.error('Error: %s' % e)
+                logger.error(msg)
+                logger.error('Code will continue')
+            return msg
+        return applicator
+    return decorate
 
 
 def check_is_file(path: Path):
@@ -86,6 +100,7 @@ def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
     return outData
 
 
+@return_on_failure("Print File_12B failed")
 def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
                       PLP_Row, oDir):
     logger.info("---Printing outData 12B: %s" % File_12B)
@@ -98,12 +113,15 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
         outData_12B, by=['Year', 'Month', 'Block', Item_Name], func=Group_By)
     # Format as in PLP
     csv_out = os.path.join(oDir, File_12B)
-    outData_12B['Hyd'] = HYD20
     print_in_plp_format(
-        outData_12B, ['Hyd', 'Year', 'Month', 'Block', Item_Name], csv_out,
+        outData_12B, ['Year', 'Month', 'Block', Item_Name], csv_out,
         PLP_Row)
+    # Print in long format, using same name but with "_long" suffix
+    csv_out_long = os.path.join(oDir, File_12B.replace(".csv", "_long.csv"))
+    outData_12B.to_csv(csv_out_long, index=False)
 
 
+@return_on_failure("Print File_24H failed")
 def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
                       PLP_Row, oDir):
     logger.info("---Printing outData 24H: %s" % File_24H)
@@ -114,12 +132,15 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
     outData_24H = groupby_func(
         outData_24H, by=['Year', 'Month', 'Hour', Item_Name], func=Group_By)
     csv_out = os.path.join(oDir, File_24H)
-    outData_24H['Hyd'] = HYD20
     print_in_plp_format(
-        outData_24H, ['Hyd', 'Year', 'Month', 'Hour', Item_Name], csv_out,
+        outData_24H, ['Year', 'Month', 'Hour', Item_Name], csv_out,
         PLP_Row)
+    # Print in long format, using same name but with "_long" suffix
+    csv_out_long = os.path.join(oDir, File_24H.replace(".csv", "_long.csv"))
+    outData_24H.to_csv(csv_out_long, index=False)
 
 
+@return_on_failure("Print File_M failed")
 def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
                   oDir):
     logger.info("---Printing outData: %s" % File_M)
@@ -130,19 +151,22 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
         outData, by=['Year', 'Month', Item_Name], func=Group_By)
     # Print in PLP format
     csv_out = os.path.join(oDir, File_M)
-    outData['Hyd'] = HYD20
-    print_in_plp_format(
-        outData, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
+    print_in_plp_format(outData, ['Year', 'Month', Item_Name], csv_out,
+                        PLP_Row)
+    # Print in long format, using same name but with "_long" suffix
+    csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
+    outData.to_csv(csv_out_long, index=False)
     return outData
 
 
+@return_on_failure("Print File_PLP failed")
 def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
                   Yini, Mini, Yend, Mend, oDir, pDir):
     logger.info("---Printing outPLP: %s" % File_M)
     csv_in = os.path.join(pDir, File_M)
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
     # Filtrar por Hyd
-    outPLP = outPLP.loc[outPLP['Hyd'] == HYD20]
+    outPLP = outPLP.loc[outPLP['Hyd'] == Hydro]
 
     outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
                      var_name=Item_Name, value_name=Value_Name)
@@ -159,14 +183,14 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     # Drop columns that are not in the range of interest
     outPLP = outPLP.drop(['DateTime'], axis=1)
     # Add Hydro index
-    outData.insert(0, "Hyd", HYD20)
+    outData.insert(0, "Hyd", Hydro)
     # Adjust magnitude of values
     outData[Value_Name] = outData[Value_Name].transform(
         lambda x: x / PLP_Div)
 
     # Concatenate outData and outPLP
     outPLP = pd.concat([outPLP, outData], ignore_index=True)
-    outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
+    outPLP = outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
     outPLP = outPLP.reset_index()
     outPLP['Hyd'] = pd.to_numeric(outPLP['Hyd'])
     outPLP['Year'] = pd.to_numeric(outPLP['Year'])
@@ -174,8 +198,17 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month'])
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     csv_out = os.path.join(oDir, File_M)
-    print_in_plp_format(
-        outPLP, ['Hyd', 'Year', 'Month', Item_Name], csv_out, PLP_Row)
+    # Dataframe already in wide format. Print directly
+    # Drop level, reset index, print and add blank line
+    outPLP.columns = outPLP.columns.droplevel()
+    outPLP = outPLP.reset_index(drop=True)
+    # Rename first 3 columns as Hyd, Year and Month
+    outPLP.columns = ['Hyd', 'Year', 'Month'] + list(outPLP.columns[3:])
+    outPLP.to_csv(csv_out, index=False)
+    add_blank_lines(csv_out, PLP_Row)
+    # Print in long format, using same name but with "_long" suffix
+    csv_out_long = os.path.join(oDir, File_M.replace(".csv", "_long.csv"))
+    outPLP.to_csv(csv_out_long, index=False)
 
 
 def define_arg_parser() -> ArgumentParser:
@@ -226,7 +259,7 @@ def main():
         check_is_file(config_file)
 
         # Add destination folder to logger
-        add_file_handler(logger, 'log_filter_plexos',
+        add_file_handler(logger, 'filter_plexos',
                          Path(oDir))
 
         logger.info("--Start script Filter Plexos")
