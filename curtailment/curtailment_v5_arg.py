@@ -580,31 +580,48 @@ def print_outputs_to_csv(output_folder, df_all,
 def add_headers_to_csv(out_file, df_header, indexes):
     # First, read out file as df
     df_out = pd.read_csv(out_file, encoding="latin1")
-    # Define third row of df_header as header
-    df_header.columns = df_header.iloc[2]
 
-    # Get generator columns in order
-    gen_columns = df_out.columns.tolist()
-    for item in indexes:
-        gen_columns.remove(item)
+    # If df_header's first column is Hyd,
+    # it means that there were no headers in the file,
+    # so we need to skip the rest and add the 3 blank lines
 
-    # Get 3 or 4 columns of df_header
-    if len(indexes) == 4:
-        df_header_ini = df_header.iloc[:, :4]
+    if df_header.iloc[0, 0] == 'Hyd':
+        add_blank_lines(out_file, 3)
     else:
-        df_header_ini = df_header.iloc[:, 1:4]
+        # Define third row of df_header as header
+        df_header.columns = df_header.iloc[2]
 
-    # Then, reorder df_header based on df_out columns
-    df_header_ordered = df_header.reindex(columns=gen_columns)
+        # Get generator columns in order
+        gen_columns = df_out.columns.tolist()
+        for item in indexes:
+            gen_columns.remove(item)
 
-    # Concatenate df_header_ini and df_header_ordered
-    df_header = pd.concat([df_header_ini, df_header_ordered], axis=1)
+        # Get 3 or 4 columns of df_header
+        if len(indexes) == 4:
+            df_header_ini = df_header.iloc[:, :4]
+        else:
+            df_header_ini = df_header.iloc[:, 1:4]
 
-    # Finally, write to out_file
+        # Then, reorder df_header based on df_out columns
+        df_header_ordered = df_header.reindex(columns=gen_columns)
+
+        # Concatenate df_header_ini and df_header_ordered
+        df_header = pd.concat([df_header_ini, df_header_ordered], axis=1)
+
+        # Finally, write to out_file
+        with open(out_file, 'r') as original:
+            data = original.read()
+        with open(out_file, 'w', newline='') as modified:
+            df_header.to_csv(modified, header=False, index=False)
+            modified.write(data)
+
+
+def add_blank_lines(out_file, lines):
     with open(out_file, 'r') as original:
         data = original.read()
-    with open(out_file, 'w', newline='') as modified:
-        df_header.to_csv(modified, header=False, index=False)
+    with open(out_file, 'w') as modified:
+        for i in range(lines):
+            modified.write('\n')
         modified.write(data)
 
 
