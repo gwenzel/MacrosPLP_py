@@ -543,9 +543,12 @@ def print_outputs_to_csv(output_folder, df_all,
     df_out_curtail_redistrib_monthly.to_csv(
         out_curtail_redistrib_monthly_out_file, encoding="latin1")
 
-    # Add 2 blank lines at the beginning of outEnerg_B_redistrib.csv
+    # Add 2 blank lines at the beginning of all energy files
     # to match format
     add_blank_lines(out_ener_redistrib_out_file, 3)
+    add_blank_lines(out_ener_redistrib_monthly_out_file, 3)
+    add_blank_lines(out_curtail_redistrib_out_file, 3)
+    add_blank_lines(out_curtail_redistrib_monthly_out_file, 3)
 
 
 def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
