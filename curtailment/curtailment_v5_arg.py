@@ -589,7 +589,7 @@ def add_headers_to_csv(out_file, df_header, indexes):
         add_blank_lines(out_file, 3)
     else:
         # Define third row of df_header as header
-        df_header.columns = df_header.iloc[2]
+        df_header.columns = df_header.iloc[-1]
 
         # Get generator columns in order
         gen_columns = df_out.columns.tolist()
