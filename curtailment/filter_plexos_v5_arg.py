@@ -111,7 +111,7 @@ def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
 
 @return_on_failure("Print File_12B failed")
 def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
-                      PLP_Row, oDir, oDir_long):
+                      PLP_Div, PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData 12B: %s" % File_12B)
     outData_12B = outData.copy()
     outData_12B = pd.merge(outData_12B, B2H, on='Hour', how='right')
@@ -125,6 +125,9 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
         by=['Hyd', 'Year', 'Month', 'Block', Item_Name],
         func=Group_By)
     outData_12B = outData_12B.round(3)
+    # Adjust magnitude of values
+    outData_12B[Value_Name] = outData_12B[Value_Name].transform(
+        lambda x: x / PLP_Div)
     # Format as in PLP
     csv_out = Path(oDir, File_12B)
     print_in_plp_format(
@@ -136,7 +139,7 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
 
 @return_on_failure("Print File_24H failed")
 def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
-                      PLP_Row, oDir, oDir_long):
+                      PLP_Div, PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData 24H: %s" % File_24H)
     outData_24H = outData.copy()
     outData_24H = outData_24H.drop(['DATETIME', 'Day'], axis=1)
@@ -148,6 +151,9 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
         outData_24H, by=['Hyd', 'Year', 'Month', 'Hour', Item_Name],
         func=Group_By)
     outData_24H = outData_24H.round(3)
+    # Adjust magnitude of values
+    outData_24H[Value_Name] = outData_24H[Value_Name].transform(
+        lambda x: x / PLP_Div)
     csv_out = Path(oDir, File_24H)
     print_in_plp_format(
         outData_24H, ['Hyd', 'Year', 'Month', 'Hour', Item_Name], csv_out,
@@ -158,7 +164,7 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
 
 @return_on_failure("Print File_M failed")
 def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
-                  PLP_Row, oDir, oDir_long):
+                  PLP_Div, PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData: %s" % File_M)
     outData = outData.drop(['DATETIME', 'Day', 'Hour'], axis=1)
     outData = pd.melt(outData,
@@ -168,6 +174,9 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
     outData = groupby_func(
         outData, by=['Hyd', 'Year', 'Month', Item_Name], func=Group_By)
     outData = outData.round(3)
+    # Adjust magnitude of values
+    outData[Value_Name] = outData[Value_Name].transform(
+        lambda x: x / PLP_Div)
     # Print in PLP format
     csv_out = Path(oDir, File_M)
     print_in_plp_format(outData, ['Hyd', 'Year', 'Month', Item_Name], csv_out,
@@ -179,7 +188,7 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
 
 @return_on_failure("Print File_PLP failed")
 def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
-                  PLP_Div, Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
+                  Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
     logger.info("---Printing outPLP: %s" % File_M)
 
     csv_in = Path(pDir, File_M)
@@ -203,21 +212,18 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
 
     # Drop columns that are not in the range of interest
     outPLP = outPLP.drop(['DateTime'], axis=1)
-    # Adjust magnitude of values
-    outData[Value_Name] = outData[Value_Name].transform(
-        lambda x: x / PLP_Div)
 
     # Concatenate outData and outPLP
     outPLP = pd.concat([outPLP, outData], ignore_index=True)
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month', Item_Name])
 
     # Print in long format
-    outData.to_csv(Path(oDir_long, File_M), index=False)
+    outPLP.to_csv(Path(oDir_long, File_M), index=False)
 
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     # But don't skip lines
     csv_out = Path(oDir, File_M)
-    print_in_plp_format(outData, ['Hyd', 'Year', 'Month', Item_Name],
+    print_in_plp_format(outPLP, ['Hyd', 'Year', 'Month', Item_Name],
                         csv_out, PLP_Row)
 
 
@@ -365,23 +371,23 @@ def main():
             # Print outdata 12B
             print_outdata_12B(
                 outData, Item_Name, Value_Name, Group_By, File_12B,
-                PLP_Row, oDir, oDir_long)
+                PLP_Div, PLP_Row, oDir, oDir_long)
 
             # Print outdata 24H
             print_outdata_24H(
                 outData, Item_Name, Value_Name, Group_By, File_24H,
-                PLP_Row, oDir, oDir_long)
+                PLP_Div, PLP_Row, oDir, oDir_long)
 
             # Print outData
             outData = print_outdata(
                 outData, Item_Name, Value_Name, Group_By, File_M,
-                PLP_Row, oDir, oDir_long)
+                PLP_Div, PLP_Row, oDir, oDir_long)
 
             if row['PLP_Bool']:
                 # Print plp files
                 print_out_plp(
                     outData, Item_Name, Value_Name, File_M, PLP_Row,
-                    PLP_Div, Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
+                    Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
                 # Replace headers in File_12B, File_24H, File_M
                 replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
                                     PLP_Row)
