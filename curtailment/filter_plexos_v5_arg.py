@@ -6,6 +6,7 @@ Take plexos outputs and print equivalent PLP outputs,
 to be used by the Curtailment Model
 '''
 import pandas as pd
+import numpy as np
 import datetime
 from pathlib import Path
 from argparse import ArgumentParser
@@ -54,7 +55,8 @@ def check_is_path(path: Path):
         logger.info("Path was created: %s" % path)
 
 
-def print_in_plp_format(df, new_indexes, csv_out, rows_to_skip):
+def print_in_plp_format(df: pd.DataFrame, new_indexes: list,
+                        csv_out: str, PLP_Row: int):
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     df = df.set_index(new_indexes)
     df = df.unstack()
@@ -62,17 +64,17 @@ def print_in_plp_format(df, new_indexes, csv_out, rows_to_skip):
     df.columns = df.columns.droplevel()
     df = df.reset_index()
     df.to_csv(csv_out, index=False)
-    add_blank_lines(csv_out, rows_to_skip)
+    add_blank_lines(csv_out, PLP_Row)
 
 
-def groupby_func(df, by, func):
+def groupby_func(df: pd.DataFrame, by: list, func: str) -> pd.DataFrame:
     if func == "avg":
         return df.groupby(by=by, as_index=False).mean()
     elif func == "sum":
         return df.groupby(by=by, as_index=False).sum()
 
 
-def add_blank_lines(out_file, lines):
+def add_blank_lines(out_file: Path, lines: int):
     with open(out_file, 'r') as original:
         data = original.read()
     with open(out_file, 'w') as modified:
@@ -97,6 +99,13 @@ def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
     outData.insert(4, "Day", outData["DATETIME"].dt.day)
     outData.insert(5, "Hour", outData["DATETIME"].dt.hour)
     outData.to_csv(Path(oDir, f), index=False)
+
+    # Filter out columns SING_Cero and SIC_Cero, if present
+    if 'SING_Cero' in outData.columns:
+        outData = outData.drop(['SING_Cero'], axis=1)
+    if 'SIC_Cero' in outData.columns:
+        outData = outData.drop(['SIC_Cero'], axis=1)
+
     return outData
 
 
@@ -148,8 +157,8 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
 
 
 @return_on_failure("Print File_M failed")
-def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
-                  oDir, oDir_long):
+def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
+                  PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData: %s" % File_M)
     outData = outData.drop(['DATETIME', 'Day', 'Hour'], axis=1)
     outData = pd.melt(outData,
@@ -169,11 +178,14 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
 
 
 @return_on_failure("Print File_PLP failed")
-def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
-                  Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
+def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
+                  PLP_Div, Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
     logger.info("---Printing outPLP: %s" % File_M)
+
     csv_in = Path(pDir, File_M)
+    # Leer datos y headers separados
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
+
     # Filtrar por Hyd
     outPLP = outPLP.loc[outPLP['Hyd'] == HYD20]
 
@@ -197,24 +209,66 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
 
     # Concatenate outData and outPLP
     outPLP = pd.concat([outPLP, outData], ignore_index=True)
-    outPLP = outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name]).unstack()
-    outPLP = outPLP.reset_index()
-    outPLP['Hyd'] = pd.to_numeric(outPLP['Hyd'])
-    outPLP['Year'] = pd.to_numeric(outPLP['Year'])
-    outPLP['Month'] = pd.to_numeric(outPLP['Month'])
-    outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month'])
-    # Format as in PLP (set index, unstack, reset_index, add blank lines)
-    csv_out = Path(oDir, File_M)
-    # Dataframe already in wide format. Print directly
-    # Drop level, reset index, print and add blank line
-    outPLP.columns = outPLP.columns.droplevel()
-    outPLP = outPLP.reset_index(drop=True)
-    # Rename first 3 columns as Hyd, Year and Month
-    outPLP.columns = ['Hyd', 'Year', 'Month'] + list(outPLP.columns[3:])
-    outPLP.to_csv(csv_out, index=False)
-    add_blank_lines(csv_out, PLP_Row)
+    outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month', Item_Name])
+
     # Print in long format
-    outPLP.to_csv(Path(oDir_long, File_M), index=False)
+    outData.to_csv(Path(oDir_long, File_M), index=False)
+
+    # Format as in PLP (set index, unstack, reset_index, add blank lines)
+    # But don't skip lines
+    csv_out = Path(oDir, File_M)
+    print_in_plp_format(outData, ['Hyd', 'Year', 'Month', Item_Name],
+                        csv_out, PLP_Row)
+
+
+def add_headers_to_csv(out_file, df_header, indexes):
+    # First, read out file as df
+    df_out = pd.read_csv(out_file, encoding="latin1",
+                         skip_blank_lines=True)
+
+    # If df_header's first column is Hyd,
+    # it means that there were no headers in the file,
+    # so we need to skip the rest and add the 3 blank lines
+
+    if df_header.iloc[0, 0] == 'Hyd':
+        add_blank_lines(out_file, 3)
+    else:
+        # Define last row of df_header as header
+        df_header.columns = df_header.iloc[-1]
+
+        # Get generator columns in order
+        gen_columns = df_out.columns.tolist()
+        for item in indexes:
+            gen_columns.remove(item)
+
+        # Get 3 cols of header
+        df_header_ini = df_header.iloc[:, :3]
+        # add nan column at the beginning if there are 4 columns
+        if len(indexes) == 4:
+            df_header_ini.insert(0, 'nan', np.nan)
+
+        # Then, reorder df_header based on df_out columns
+        df_header_ordered = df_header.reindex(columns=gen_columns)
+
+        # Concatenate df_header_ini and df_header_ordered
+        df_header = pd.concat([df_header_ini, df_header_ordered], axis=1)
+
+        # Finally, write to out_file
+        with open(out_file, 'w', newline='') as modified:
+            df_header.to_csv(modified, header=False, index=False)
+            df_out.to_csv(modified, index=False)
+
+
+def replace_all_headers(pDir, oDir, File_12B, File_24H, File_M, PLP_Row):
+    # Replace headers in File_12B, File_24H, File_M
+    df_header = pd.read_csv(Path(pDir, File_M), nrows=PLP_Row,
+                            header=None)
+    add_headers_to_csv(Path(oDir, File_M), df_header,
+                       indexes=['Hyd', 'Year', 'Month'])
+    add_headers_to_csv(Path(oDir, File_12B), df_header,
+                       indexes=['Hyd', 'Year', 'Month', 'Block'])
+    add_headers_to_csv(Path(oDir, File_24H), df_header,
+                       indexes=['Hyd', 'Year', 'Month', 'Hour'])
 
 
 def define_arg_parser() -> ArgumentParser:
@@ -310,24 +364,27 @@ def main():
 
             # Print outdata 12B
             print_outdata_12B(
-                outData, Item_Name, Value_Name, Group_By, File_12B, PLP_Row,
-                oDir, oDir_long)
+                outData, Item_Name, Value_Name, Group_By, File_12B,
+                PLP_Row, oDir, oDir_long)
 
             # Print outdata 24H
             print_outdata_24H(
-                outData, Item_Name, Value_Name, Group_By, File_24H, PLP_Row,
-                oDir, oDir_long)
+                outData, Item_Name, Value_Name, Group_By, File_24H,
+                PLP_Row, oDir, oDir_long)
 
             # Print outData
             outData = print_outdata(
-                outData, Item_Name, Value_Name, Group_By, File_M, PLP_Row,
-                oDir, oDir_long)
+                outData, Item_Name, Value_Name, Group_By, File_M,
+                PLP_Row, oDir, oDir_long)
 
-            # Print plp files
             if row['PLP_Bool']:
+                # Print plp files
                 print_out_plp(
-                    outData, Item_Name, Value_Name, File_M, PLP_Row, PLP_Div,
-                    Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
+                    outData, Item_Name, Value_Name, File_M, PLP_Row,
+                    PLP_Div, Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
+                # Replace headers in File_12B, File_24H, File_M
+                replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
+                                    PLP_Row)
 
     except Exception as e:
         logger.error(e, exc_info=True)
