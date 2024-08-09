@@ -587,6 +587,8 @@ def add_headers_to_csv(out_file, df_header, indexes):
 
         # Then, reorder df_header based on df_out columns
         df_header_ordered = df_header.reindex(columns=gen_columns)
+        # Fill nan with NA
+        df_header_ordered = df_header_ordered.fillna('NA')
 
         # Concatenate df_header_ini and df_header_ordered
         df_header = pd.concat([df_header_ini, df_header_ordered], axis=1)
