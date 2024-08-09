@@ -531,50 +531,33 @@ def print_outputs_to_csv(output_folder, df_all,
         df_out_curtail_redistrib_monthly.groupby(
             ['Hyd', 'Year', 'Month']).sum()
 
-    # Output Data files
-    cur_out_file = Path(
-        output_folder_aux, 'curtailment_%s.csv' % suffix)
-    cur_redistrib_out_file = Path(
-        output_folder_aux, 'curtailment_redistrib_%s.csv' % suffix)
-    cur_redistrib_grouped_out_file = Path(
-        output_folder_aux, 'curtailment_redistrib_grouped_%s.csv' % suffix)
-    out_ener_redistrib_out_file = Path(
-        output_folder_aux, 'outEnerg_redistrib_%s.csv' % suffix)
-    out_curtail_redistrib_out_file = Path(
-        output_folder_aux, 'outCurtail_redistrib_%s.csv' % suffix)
-    out_ener_redistrib_monthly_out_file = Path(
-        output_folder_aux, 'outEnerg_redistrib_monthly_%s.csv' % suffix)
-    out_curtail_redistrib_monthly_out_file = Path(
-        output_folder_aux, 'outCurtail_redistrib_monthly_%s.csv' % suffix)
-
-    df_all.to_csv(cur_out_file, encoding="latin1")
-    df_all_redistrib.to_csv(
-        cur_redistrib_out_file, encoding="latin1")
-    df_all_redistrib_grouped.to_csv(
-        cur_redistrib_grouped_out_file, encoding="latin1")
-    df_out_ener_redistrib.to_csv(
-        out_ener_redistrib_out_file, encoding="latin1")
-    df_out_curtail_redistrib.to_csv(
-        out_curtail_redistrib_out_file, encoding="latin1")
-    df_out_ener_redistrib_monthly.to_csv(
-        out_ener_redistrib_monthly_out_file, encoding="latin1")
-    df_out_curtail_redistrib_monthly.to_csv(
-        out_curtail_redistrib_monthly_out_file, encoding="latin1")
-
-    # Use df_cur_header and df_ener_header to add lines at the beginning
-    # of the files
-
+    # Define utput Data files
     indexes_long = ['Hyd', 'Year', 'Month', time_resolution]
     indexes_short = ['Hyd', 'Year', 'Month']
 
-    add_headers_to_csv(
-        out_ener_redistrib_out_file, df_ener_header, indexes_long)
-    add_headers_to_csv(
-        out_curtail_redistrib_out_file, df_cur_header, indexes_long)
-    add_headers_to_csv(
-        out_ener_redistrib_monthly_out_file, df_ener_header, indexes_short)
-    add_headers_to_csv(
-        out_curtail_redistrib_monthly_out_file, df_cur_header, indexes_short)
+    output_tuples = [
+        (df_all, 'curtailment_%s.csv' % suffix,
+         None, None),
+        (df_all_redistrib, 'curtailment_redistrib_%s.csv' % suffix,
+         None, None),
+        (df_all_redistrib_grouped,
+         'curtailment_redistrib_grouped_%s.csv' % suffix,
+         None, None),
+        (df_out_ener_redistrib, 'outEnerg_%s.csv' % suffix,
+         df_ener_header, indexes_long),
+        (df_out_curtail_redistrib, 'outCurtail_%s.csv' % suffix,
+         df_cur_header, indexes_long),
+        (df_out_ener_redistrib_monthly, 'outEnerg.csv',
+         df_ener_header, indexes_short),
+        (df_out_curtail_redistrib_monthly, 'outCurtail.csv',
+         df_cur_header, indexes_short)
+    ]
+
+    for df, filename, df_header, indexes in output_tuples:
+        df.to_csv(Path(output_folder_aux, filename), encoding="latin1")
+        if df_header is not None:
+            add_headers_to_csv(Path(output_folder_aux, filename),
+                               df_header, indexes)
 
 
 def add_headers_to_csv(out_file, df_header, indexes):
