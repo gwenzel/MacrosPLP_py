@@ -63,6 +63,8 @@ def print_in_plp_format(df: pd.DataFrame, new_indexes: list,
     # Drop level
     df.columns = df.columns.droplevel()
     df = df.reset_index()
+    # Fill nan with 0
+    df.fillna(0, inplace=True)
     df.to_csv(csv_out, index=False)
     add_blank_lines(csv_out, PLP_Row)
 
@@ -188,7 +190,7 @@ def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
 
 @return_on_failure("Print File_PLP failed")
 def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
-                  Yini, Mini, Yend, Mend, oDir, pDir, oDir_long):
+                  oDir, pDir, oDir_long):
     logger.info("---Printing outPLP: %s" % File_M)
 
     csv_in = Path(pDir, File_M)
@@ -201,20 +203,17 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
     outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
                      var_name=Item_Name, value_name=Value_Name)
 
-    # Drop rows that are not in the range of interest
-    outPLP['Year'] = pd.to_numeric(outPLP['Year'])
-    outPLP['Month'] = pd.to_numeric(outPLP['Month'])
-    outPLP['DateTime'] = pd.to_datetime(
-        outPLP[['Year', 'Month']].assign(DAY=1), format="mixed")
-    mask_ini = (outPLP.DateTime < datetime.datetime(Yini, Mini, 1))
-    mask_end = (outPLP.DateTime > datetime.datetime(Yend, Mend, 1))
-    outPLP = outPLP.loc[mask_ini | mask_end]
+    # Set indexes
+    outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name], inplace=True)
+    outData.set_index(['Hyd', 'Year', 'Month', Item_Name], inplace=True)
 
-    # Drop columns that are not in the range of interest
-    outPLP = outPLP.drop(['DateTime'], axis=1)
+    # Update outPLP with data from outData
+    outPLP.update(outData)
 
-    # Concatenate outData and outPLP
-    outPLP = pd.concat([outPLP, outData], ignore_index=True)
+    # Reset index in outPLP
+    outPLP.reset_index(inplace=True)
+
+    # Sort values
     outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month', Item_Name])
 
     # Print in long format
@@ -343,10 +342,6 @@ def main():
         fp = pd.read_csv(folder_paths_file)
         NPaths = len(fp)
         RPaths = fp.to_numpy()
-        Yini = RPaths[0, 1]
-        Mini = RPaths[0, 2]
-        Yend = RPaths[NPaths - 1, 3]
-        Mend = RPaths[NPaths - 1, 4]
 
         logger.info("---Number of paths: %s" % NPaths)
 
@@ -389,7 +384,7 @@ def main():
                 # Print plp files
                 print_out_plp(
                     outData, Item_Name, Value_Name, File_M, PLP_Row,
-                    Yini, Mini, Yend, Mend, oDir, pDir, oDir_long)
+                    oDir, pDir, oDir_long)
                 # Replace headers in File_12B, File_24H, File_M
                 replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
                                     PLP_Row)
