@@ -7,6 +7,7 @@ to be used by the Curtailment Model
 '''
 import pandas as pd
 import numpy as np
+import datetime
 from pathlib import Path
 from argparse import ArgumentParser
 from logger import create_logger, add_file_handler
@@ -84,28 +85,59 @@ def add_blank_lines(out_file: Path, lines: int):
         modified.write(data)
 
 
-def define_outdata(f, wDir, RPaths, NPaths, oDir) -> pd.DataFrame:
+def last_day_of_month(any_day):
+    # The day 28 exists in every month. 4 days later, it's always next month
+    next_month = any_day.replace(day=28) + datetime.timedelta(days=4)
+    # subtracting the number of the current day brings us back one month
+    return next_month - datetime.timedelta(days=next_month.day)
+
+
+def define_outdata(f, wDir, fp, oDir) -> pd.DataFrame:
+    '''
+    Read data from Plexos outputs specified in folder_paths file,
+    and define outData based on a concatenation of all data
+    '''
     logger.info("---Defining outData: %s" % f)
-    outData = pd.read_csv(Path(wDir, RPaths[0, 0], "Interval", f))
-    for i in range(NPaths - 1):
-        csv_path = Path(wDir, RPaths[i + 1, 0], "Interval", f)
+    logger.info("---Reading data from Plexos outputs specified in "
+                "folder paths file")
+
+    logger.info("---Number of paths: %s" % len(fp))
+
+    list_of_df = []
+    for _, row in fp.iterrows():
+        # logger.info("---Reading data from %s" % row['Path'])
+        csv_path = Path(wDir, row['Folder'], "Interval", f)
         df = pd.read_csv(csv_path)
-        outData = pd.concat([outData, df], ignore_index=True)
+        # Turn DATETIME to datetime
+        df["DATETIME"] = pd.to_datetime(df["DATETIME"], format='mixed')
+        # Define date_ini and date_fin based on row['Year_Ini'] and
+        #  row['Year_End']
+        date_ini = datetime.datetime(row['Year_Ini'], row['Month_Ini'], 1)
+        date_end = datetime.datetime(row['Year_End'], row['Month_End'], 1)
+        date_end = last_day_of_month(date_end)
+        # Filter data based on date_ini and date_end
+        df = df[(df["DATETIME"] >= date_ini) & (df["DATETIME"] <= date_end)]
+        list_of_df.append(df)
+
+    # Overwrite data sequentially
+    outData = pd.concat(list_of_df, ignore_index=True)
     outData = outData.copy().fillna(0)
-    outData["DATETIME"] = pd.to_datetime(
-        outData["DATETIME"], format='mixed')
+
+    # Insert columns
     outData.insert(1, "Hyd", HYD20)
     outData.insert(2, "Year", outData["DATETIME"].dt.year)
     outData.insert(3, "Month", outData["DATETIME"].dt.month)
     outData.insert(4, "Day", outData["DATETIME"].dt.day)
     outData.insert(5, "Hour", outData["DATETIME"].dt.hour)
-    outData.to_csv(Path(oDir, f), index=False)
 
     # Filter out columns SING_Cero and SIC_Cero, if present
     if 'SING_Cero' in outData.columns:
         outData = outData.drop(['SING_Cero'], axis=1)
     if 'SIC_Cero' in outData.columns:
         outData = outData.drop(['SIC_Cero'], axis=1)
+
+    # Write data
+    outData.to_csv(Path(oDir, f), index=False)
 
     return outData
 
@@ -361,10 +393,6 @@ def main():
 
         # Read folder paths file with paths to Plexos results
         fp = pd.read_csv(folder_paths_file)
-        NPaths = len(fp)
-        RPaths = fp.to_numpy()
-
-        logger.info("---Number of paths: %s" % NPaths)
 
         # Read configuration from filter_plexos_config.json
         filter_config = pd.read_csv(config_file)
@@ -384,7 +412,7 @@ def main():
             PLP_Div = row['PLP_Div']
 
             # Define outdata
-            outData = define_outdata(f, wDir, RPaths, NPaths, oDir)
+            outData = define_outdata(f, wDir, fp, oDir)
 
             # Print outdata 12B
             outData_12B = print_outdata_12B(
