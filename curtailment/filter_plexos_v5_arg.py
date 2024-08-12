@@ -137,6 +137,7 @@ def print_outdata_12B(outData, Item_Name, Value_Name, Group_By, File_12B,
         PLP_Row)
     # Print in long format
     outData_12B.to_csv(Path(oDir_long, File_12B), index=False)
+    return outData_12B
 
 
 @return_on_failure("Print File_24H failed")
@@ -162,6 +163,7 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
         PLP_Row)
     # Print in long format
     outData_24H.to_csv(Path(oDir_long, File_24H), index=False)
+    return outData_24H
 
 
 @return_on_failure("Print File_M failed")
@@ -366,12 +368,12 @@ def main():
             outData = define_outdata(f, wDir, RPaths, NPaths, oDir)
 
             # Print outdata 12B
-            print_outdata_12B(
+            outData_12B = print_outdata_12B(
                 outData, Item_Name, Value_Name, Group_By, File_12B,
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
             # Print outdata 24H
-            print_outdata_24H(
+            outdata_24H = print_outdata_24H(
                 outData, Item_Name, Value_Name, Group_By, File_24H,
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
