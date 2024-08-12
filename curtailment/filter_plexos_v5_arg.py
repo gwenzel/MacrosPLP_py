@@ -167,47 +167,65 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
 
 
 @return_on_failure("Print File_M failed")
-def print_outdata(outData, Item_Name, Value_Name, Group_By, File_M,
-                  PLP_Div, PLP_Row, oDir, oDir_long):
+def print_outdata_M(outData, Item_Name, Value_Name, Group_By, File_M,
+                    PLP_Div, PLP_Row, oDir, oDir_long):
     logger.info("---Printing outData: %s" % File_M)
-    outData = outData.drop(['DATETIME', 'Day', 'Hour'], axis=1)
-    outData = pd.melt(outData,
-                      id_vars=['Hyd', 'Year', 'Month'],
-                      var_name=Item_Name,
-                      value_name=Value_Name)
-    outData = groupby_func(
-        outData, by=['Hyd', 'Year', 'Month', Item_Name], func=Group_By)
-    outData = outData.round(3)
+    outData_M = outData.copy()
+    outData_M = outData_M.drop(['DATETIME', 'Day', 'Hour'], axis=1)
+    outData_M = pd.melt(outData_M,
+                        id_vars=['Hyd', 'Year', 'Month'],
+                        var_name=Item_Name,
+                        value_name=Value_Name)
+    outData_M = groupby_func(
+        outData_M, by=['Hyd', 'Year', 'Month', Item_Name], func=Group_By)
+    outData_M = outData_M.round(3)
     # Adjust magnitude of values
-    outData[Value_Name] = outData[Value_Name].transform(
+    outData_M[Value_Name] = outData_M[Value_Name].transform(
         lambda x: x / PLP_Div)
     # Print in PLP format
     csv_out = Path(oDir, File_M)
-    print_in_plp_format(outData, ['Hyd', 'Year', 'Month', Item_Name], csv_out,
-                        PLP_Row)
+    print_in_plp_format(outData_M, ['Hyd', 'Year', 'Month', Item_Name],
+                        csv_out, PLP_Row)
     # Print in long format
-    outData.to_csv(Path(oDir_long, File_M), index=False)
-    return outData
+    outData_M.to_csv(Path(oDir_long, File_M), index=False)
+    return outData_M
 
 
 @return_on_failure("Print File_PLP failed")
-def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
-                  oDir, pDir, oDir_long):
-    logger.info("---Printing outPLP: %s" % File_M)
+def print_out_plp(outData, Item_Name, Value_Name, File_Name, PLP_Row,
+                  oDir, pDir, oDir_long, time_resolution='M'):
+    logger.info("---Printing outPLP: %s, %s" % (File_Name, time_resolution))
 
-    csv_in = Path(pDir, File_M)
+    csv_in = Path(pDir, File_Name)
+    # Revisar si el archivo existe
+    if not csv_in.exists():
+        raise FileNotFoundError("File %s does not exist" % csv_in)
     # Leer datos y headers separados
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
+
+    # Definir headers según time_resolution
+    if time_resolution == 'M':
+        id_vars = ['Hyd', 'Year', 'Month']
+        new_indexes = ['Hyd', 'Year', 'Month', Item_Name]
+    elif time_resolution == 'H':
+        id_vars = ['Hyd', 'Year', 'Month', 'Hour']
+        new_indexes = ['Hyd', 'Year', 'Month', 'Hour', Item_Name]
+    elif time_resolution == 'B':
+        id_vars = ['Hyd', 'Year', 'Month', 'Block']
+        new_indexes = ['Hyd', 'Year', 'Month', 'Block', Item_Name]
+    else:
+        raise ValueError("time_resolution must be 'M', 'H' or 'B'")
 
     # Filtrar por Hyd
     outPLP = outPLP.loc[outPLP['Hyd'] == HYD20]
 
-    outPLP = pd.melt(outPLP, id_vars=['Hyd', 'Year', 'Month'],
+    # Melt para pasar datos PLP a formato largo
+    outPLP = pd.melt(outPLP, id_vars=id_vars,
                      var_name=Item_Name, value_name=Value_Name)
 
     # Set indexes
-    outPLP.set_index(['Hyd', 'Year', 'Month', Item_Name], inplace=True)
-    outData.set_index(['Hyd', 'Year', 'Month', Item_Name], inplace=True)
+    outPLP.set_index(new_indexes, inplace=True)
+    outData.set_index(new_indexes, inplace=True)
 
     # Update outPLP with data from outData
     outPLP.update(outData)
@@ -216,16 +234,15 @@ def print_out_plp(outData, Item_Name, Value_Name, File_M, PLP_Row,
     outPLP.reset_index(inplace=True)
 
     # Sort values
-    outPLP = outPLP.sort_values(['Hyd', 'Year', 'Month', Item_Name])
+    outPLP = outPLP.sort_values(new_indexes)
 
     # Print in long format
-    outPLP.to_csv(Path(oDir_long, File_M), index=False)
+    outPLP.to_csv(Path(oDir_long, File_Name), index=False)
 
     # Format as in PLP (set index, unstack, reset_index, add blank lines)
     # But don't skip lines
-    csv_out = Path(oDir, File_M)
-    print_in_plp_format(outPLP, ['Hyd', 'Year', 'Month', Item_Name],
-                        csv_out, PLP_Row)
+    csv_out = Path(oDir, File_Name)
+    print_in_plp_format(outPLP, new_indexes, csv_out, PLP_Row)
 
 
 def add_headers_to_csv(out_file, df_header, indexes):
@@ -373,20 +390,27 @@ def main():
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
             # Print outdata 24H
-            outdata_24H = print_outdata_24H(
+            outData_24H = print_outdata_24H(
                 outData, Item_Name, Value_Name, Group_By, File_24H,
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
             # Print outData
-            outData = print_outdata(
+            outData_M = print_outdata_M(
                 outData, Item_Name, Value_Name, Group_By, File_M,
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
             if row['PLP_Bool']:
                 # Print plp files
                 print_out_plp(
-                    outData, Item_Name, Value_Name, File_M, PLP_Row,
-                    oDir, pDir, oDir_long)
+                    outData_M, Item_Name, Value_Name, File_M, PLP_Row,
+                    oDir, pDir, oDir_long, time_resolution='M')
+                print_out_plp(
+                    outData_24H, Item_Name, Value_Name, File_24H, PLP_Row,
+                    oDir, pDir, oDir_long, time_resolution='H')
+                print_out_plp(
+                    outData_12B, Item_Name, Value_Name, File_12B, PLP_Row,
+                    oDir, pDir, oDir_long, time_resolution='B')
+
                 # Replace headers in File_12B, File_24H, File_M
                 replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
                                     PLP_Row)
