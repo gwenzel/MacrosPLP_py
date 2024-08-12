@@ -7,7 +7,6 @@ to be used by the Curtailment Model
 '''
 import pandas as pd
 import numpy as np
-import datetime
 from pathlib import Path
 from argparse import ArgumentParser
 from logger import create_logger, add_file_handler
@@ -169,7 +168,7 @@ def print_outdata_24H(outData, Item_Name, Value_Name, Group_By, File_24H,
 @return_on_failure("Print File_M failed")
 def print_outdata_M(outData, Item_Name, Value_Name, Group_By, File_M,
                     PLP_Div, PLP_Row, oDir, oDir_long):
-    logger.info("---Printing outData: %s" % File_M)
+    logger.info("---Printing outData M: %s" % File_M)
     outData_M = outData.copy()
     outData_M = outData_M.drop(['DATETIME', 'Day', 'Hour'], axis=1)
     outData_M = pd.melt(outData_M,
@@ -191,10 +190,11 @@ def print_outdata_M(outData, Item_Name, Value_Name, Group_By, File_M,
     return outData_M
 
 
-@return_on_failure("Print File_PLP failed")
+@return_on_failure("Could not overwrite Plexos data on PLP data")
 def print_out_plp(outData, Item_Name, Value_Name, File_Name, PLP_Row,
                   oDir, pDir, oDir_long, time_resolution='M'):
-    logger.info("---Printing outPLP: %s, %s" % (File_Name, time_resolution))
+    logger.info("---Overwriting Plexos data on PLP data: %s" % (
+        File_Name))
 
     csv_in = Path(pDir, File_Name)
     # Revisar si el archivo existe
@@ -286,6 +286,8 @@ def add_headers_to_csv(out_file, df_header, indexes):
 
 
 def replace_all_headers(pDir, oDir, File_12B, File_24H, File_M, PLP_Row):
+    logger.info(
+        "---Replacing headers in %s, %s, %s" % (File_12B, File_24H, File_M))
     # Replace headers in File_12B, File_24H, File_M
     df_header = pd.read_csv(Path(pDir, File_M), nrows=PLP_Row,
                             header=None)
