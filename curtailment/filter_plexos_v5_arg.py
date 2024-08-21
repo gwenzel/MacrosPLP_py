@@ -290,17 +290,17 @@ def print_out_plp(outData, Item_Name, Value_Name, File_Name, PLP_Row,
     print_in_plp_format(outPLP, new_indexes, csv_out, PLP_Row)
 
 
-def add_headers_to_csv(out_file, df_header, indexes):
+def add_headers_to_csv(out_file, df_header, PLP_Row, indexes):
     # First, read out file as df
     df_out = pd.read_csv(out_file, encoding="latin1",
                          skip_blank_lines=True)
 
     # If df_header's first column is Hyd,
     # it means that there were no headers in the file,
-    # so we need to skip the rest and repeat the header 3 times
+    # so we need to skip the rest and repeat the header PLP_Row times
 
     if df_header.iloc[0, 0] == 'Hyd':
-        repeat_header(out_file, 3)
+        repeat_header(out_file, PLP_Row)
     else:
         # Define last row of df_header as header
         df_header.columns = df_header.iloc[-1]
@@ -336,11 +336,11 @@ def replace_all_headers(pDir, oDir, File_12B, File_24H, File_M, PLP_Row):
     # Replace headers in File_12B, File_24H, File_M
     df_header = pd.read_csv(Path(pDir, File_M), nrows=PLP_Row,
                             header=None)
-    add_headers_to_csv(Path(oDir, File_M), df_header,
+    add_headers_to_csv(Path(oDir, File_M), df_header, PLP_Row,
                        indexes=['Hyd', 'Year', 'Month'])
-    add_headers_to_csv(Path(oDir, File_12B), df_header,
+    add_headers_to_csv(Path(oDir, File_12B), df_header, PLP_Row,
                        indexes=['Hyd', 'Year', 'Month', 'Block'])
-    add_headers_to_csv(Path(oDir, File_24H), df_header,
+    add_headers_to_csv(Path(oDir, File_24H), df_header, PLP_Row,
                        indexes=['Hyd', 'Year', 'Month', 'Hour'])
 
 
@@ -460,10 +460,10 @@ def main():
                                     PLP_Row)
             else:
                 logger.info("PLP_Bool is False, so no PLP files were printed")
-                logger.info("Headers in PLP files were are repeated 3 times")
-                repeat_header(Path(oDir, File_12B), 3)
-                repeat_header(Path(oDir, File_24H), 3)
-                repeat_header(Path(oDir, File_M), 3)
+                logger.info("Headers in PLP files were are repeated")
+                repeat_header(Path(oDir, File_12B), PLP_Row)
+                repeat_header(Path(oDir, File_24H), PLP_Row)
+                repeat_header(Path(oDir, File_M), PLP_Row)
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
