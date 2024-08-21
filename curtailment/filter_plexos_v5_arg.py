@@ -66,7 +66,7 @@ def print_in_plp_format(df: pd.DataFrame, new_indexes: list,
     # Fill nan with 0
     df.fillna(0, inplace=True)
     df.to_csv(csv_out, index=False)
-    add_blank_lines(csv_out, PLP_Row)
+    # add_blank_lines(csv_out, PLP_Row)
 
 
 def groupby_func(df: pd.DataFrame, by: list, func: str) -> pd.DataFrame:
@@ -82,6 +82,19 @@ def add_blank_lines(out_file: Path, lines: int):
     with open(out_file, 'w') as modified:
         for i in range(lines):
             modified.write('\n')
+        modified.write(data)
+
+
+def repeat_header(out_file: Path, lines: int):
+    with open(out_file, 'r') as original:
+        first_line = original.readline()
+        data = original.read()
+    with open(out_file, 'w') as modified:
+        # Lines times header
+        for i in range(lines):
+            modified.write(first_line)
+        # Header and data
+        modified.write(first_line)
         modified.write(data)
 
 
@@ -284,10 +297,10 @@ def add_headers_to_csv(out_file, df_header, indexes):
 
     # If df_header's first column is Hyd,
     # it means that there were no headers in the file,
-    # so we need to skip the rest and add the 3 blank lines
+    # so we need to skip the rest and repeat the header 3 times
 
     if df_header.iloc[0, 0] == 'Hyd':
-        add_blank_lines(out_file, 3)
+        repeat_header(out_file, 3)
     else:
         # Define last row of df_header as header
         df_header.columns = df_header.iloc[-1]
@@ -430,6 +443,7 @@ def main():
                 PLP_Div, PLP_Row, oDir, oDir_long)
 
             if row['PLP_Bool']:
+                logger.info("PLP_Bool is True, so PLP files will be printed")
                 # Print plp files
                 print_out_plp(
                     outData_M, Item_Name, Value_Name, File_M, PLP_Row,
@@ -444,7 +458,12 @@ def main():
                 # Replace headers in File_12B, File_24H, File_M
                 replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
                                     PLP_Row)
-
+            else:
+                logger.info("PLP_Bool is False, so no PLP files were printed")
+                logger.info("Headers in PLP files were are repeated 3 times")
+                repeat_header(Path(oDir, File_12B), 3)
+                repeat_header(Path(oDir, File_24H), 3)
+                repeat_header(Path(oDir, File_M), 3)
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
