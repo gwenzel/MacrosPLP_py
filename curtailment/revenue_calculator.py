@@ -11,6 +11,27 @@ from logger import create_logger, add_file_handler
 
 logger = create_logger('revenue_calculator')
 
+trf_to_bar = {
+    "Trf_SnIsidro1": "San_Luis_220",
+    "Trf_SnIsidro2": "San_Luis_220",
+    "Trf_Nehuenco1": "San_Luis_220",
+    "Trf_Nehuenco2": "San_Luis_220",
+    "Trf_NRenca": "Renca_110",
+    "Trf_U16": "Tocopilla_220",
+    "Trf_CTM3": "TEN_GIS_220",
+    "Trf_TG3": "Tocopilla_220",
+    "Trf_Kelar": "Kelar_220",
+    "Trf_Quintero1A": "San_Luis_220",
+    "Trf_Quintero1B": "San_Luis_220",
+    "Trf_QuinteroCC": "San_Luis_220",
+    "Trf_Candelaria1": "Candelaria_220",
+    "Trf_Candelaria2": "Candelaria_220",
+    "Trf_CandelariaCC": "Candelaria_220",
+    "Trf_Taltal1": "Paposo_220",
+    "Trf_Taltal2": "Paposo_220",
+    "Trf_IEM": "TEN_GIS_220"
+}
+
 
 def define_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Get Revenue Calculator inputs")
@@ -55,6 +76,8 @@ def read_input_map_gen2bar(energy_file: Path) -> pd.DataFrame:
     df = df.set_index('gen')
     # Turn df into dictionary
     dict_gen2bar = df.to_dict()['bar']
+    # If any bar contains Trf, replace with corresponding bar
+    dict_gen2bar = {k: trf_to_bar.get(v, v) for k, v in dict_gen2bar.items()}
     return dict_gen2bar
 
 
@@ -130,11 +153,11 @@ def main():
         # Read input files
         df_price, df_energy = read_input_files(price_file, energy_file)
         dict_gen2bar = read_input_map_gen2bar(energy_file)
-
         # Process data
         df_revenue = process_data(df_price, df_energy, dict_gen2bar)
 
         # Write output data
+        logger.info(f"Writing output data to {output_folder}/new_revenue.csv")
         df_revenue.to_csv(output_folder / 'new_revenue.csv')
 
     except Exception as e:
