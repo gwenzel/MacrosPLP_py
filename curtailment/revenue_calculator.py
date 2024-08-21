@@ -32,6 +32,13 @@ trf_to_bar = {
     "Trf_IEM": "TEN_GIS_220"
 }
 
+virtual_gen = [
+    'Filt_Colb', 'Filt_Inv', 'Filt_Laja', 'LMauleExt',
+    'RieCMNA',	'RieCMNB',	'RieMaitenes',	'RieMauleSur',
+    'RieMelado', 'RieMolinos', 'RieSaltos',	'RieSur123SCDZ',
+    'RieTucapel',	'RieZaCo'
+    ]
+
 
 def define_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Get Revenue Calculator inputs")
@@ -123,14 +130,18 @@ def process_data(df_price: pd.DataFrame, df_energy: pd.DataFrame,
     df_revenue = pd.DataFrame(columns=df_energy.columns, index=df_energy.index)
     for gen in df_energy.columns:
         if gen not in dict_gen2bar.keys():
-            logger.warning(f"Generator {gen} not found in energy file")
+            if (df_energy[gen].sum() != 0) and (gen not in virtual_gen):
+                logger.warning(f"Generator {gen} has no bar assigned, so"
+                               " it will be omitted from the revenue file.")
+                logger.warning(f"Fix it by adding valid bar name in header.")
         elif dict_gen2bar[gen] not in df_price.columns:
             logger.warning(f"Bar {dict_gen2bar[gen]} not found in price file")
         else:
             bar = dict_gen2bar[gen]
             df_revenue[gen] = df_energy[gen] * df_price[bar]
-    # Fill remaining NaN with 0
-    df_revenue.fillna(0, inplace=True)
+    # Fill remaining NaN with 0 (extra line to avoid future warning)
+    pd.set_option('future.no_silent_downcasting', True)
+    df_revenue = df_revenue.fillna(0)
     return df_revenue
 
 
