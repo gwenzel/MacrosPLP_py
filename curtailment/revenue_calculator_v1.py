@@ -133,7 +133,7 @@ def process_data(df_price: pd.DataFrame, df_energy: pd.DataFrame,
             if (df_energy[gen].sum() != 0) and (gen not in virtual_gen):
                 logger.warning(f"Generator {gen} has no bar assigned, so"
                                " it will be omitted from the revenue file.")
-                logger.warning(f"Fix it by adding valid bar name in header.")
+                logger.warning("Fix it by adding valid bar name in header.")
         elif dict_gen2bar[gen] not in df_price.columns:
             logger.warning(f"Bar {dict_gen2bar[gen]} not found in price file")
         else:
