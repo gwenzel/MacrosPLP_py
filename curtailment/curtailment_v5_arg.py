@@ -115,7 +115,8 @@ def load_headers(time_resolution, inputs_path):
     return df_cur_header, df_ener_header
 
 
-def load_dicts(zonas_file, df_centrales_file, tec2enable_file):
+def load_dicts(zonas_file, df_centrales_file, tec2enable_file,
+               exclude_file=None):
     """
     Load the data required for analysis.
 
@@ -131,6 +132,11 @@ def load_dicts(zonas_file, df_centrales_file, tec2enable_file):
     # with no participation in the dispatch
     df_centrales = pd.read_csv(df_centrales_file, encoding="latin1",
                                low_memory=False)
+
+    # If present, read exclude file
+    if exclude_file is not None:
+        df_exclude = pd.read_csv(exclude_file, encoding="latin1",
+                                 low_memory=False)
 
     # Define dict from Gen to Node in df_centrales
     dict_gen2node = dict(zip(df_centrales["Nombre"],
@@ -148,6 +154,18 @@ def load_dicts(zonas_file, df_centrales_file, tec2enable_file):
         dict_tec2enable)
     dict_gen2enable = dict(zip(df_centrales["Nombre"],
                                df_centrales["Enable Curtailment"]))
+    # Disable generators from exclude_file
+    if exclude_file is not None:
+        for name in df_exclude.iloc[:, 0]:
+            if name in dict_gen2enable.keys():
+                dict_gen2enable[name] = 0
+                logger.info(f"--Excluding {name} from curtailment")
+            else:
+                logger.warning(f"Exclude failed for {name}, it not found in"
+                               " list of generators")
+    else:
+        logger.info("--No exclude file provided")
+
     return dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable
 
 
@@ -627,6 +645,10 @@ def define_arg_parser() -> ArgumentParser:
                         help='BarsZones file path',
                         metavar="BARS_ZONES",
                         type=lambda x: is_valid_file(parser, x))
+    parser.add_argument('-x', dest='exclude_file', required=False,
+                        help='Exclude file path',
+                        metavar="EXCLUDE",
+                        type=lambda x: is_valid_file(parser, x))
     parser.add_argument('-c', dest='df_centrales_file', required=True,
                         help='df_centrales file path',
                         metavar="DF_CENTRALES",
@@ -660,6 +682,7 @@ def main():
         # Inputs from dictionaries
         zonas_file = args.zonas_file
         tec2enable_file = args.tec2enable_file
+        exclude_file = args.exclude_file
         # Inputs from IPLP df
         df_centrales_file = args.df_centrales_file
         rating_factor_file = args.rating_factor_file
@@ -683,7 +706,8 @@ def main():
         df_cur, df_ener = load_data(time_resolution, inputs_path)
 
         dict_node2zone, dict_gen2node, dict_gen2pmax, dict_gen2enable = \
-            load_dicts(zonas_file, df_centrales_file, tec2enable_file)
+            load_dicts(zonas_file, df_centrales_file, tec2enable_file,
+                       exclude_file)
 
         df_cur_header, df_ener_header = load_headers(
             time_resolution, inputs_path)
