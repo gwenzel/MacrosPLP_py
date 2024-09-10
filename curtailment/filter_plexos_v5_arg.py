@@ -463,10 +463,15 @@ def main():
                                     PLP_Row)
             else:
                 logger.info("PLP_Bool is False, so no PLP files were printed")
-                logger.info("Headers in PLP files were repeated")
-                repeat_header(Path(oDir, File_12B), PLP_Row)
-                repeat_header(Path(oDir, File_24H), PLP_Row)
-                repeat_header(Path(oDir, File_M), PLP_Row)
+                logger.info("Headers in PLP files will be repeated")
+                try:
+                    # Repeat headers in File_12B, File_24H, File_M
+                    for file in [File_12B, File_24H, File_M]:
+                        outfile = Path(oDir, file)
+                        if outfile.exists():
+                            repeat_header(outfile, PLP_Row)
+                except Exception:
+                    logger.warning('Could not repeat headers in output file')
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
