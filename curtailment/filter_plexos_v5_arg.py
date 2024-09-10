@@ -85,6 +85,7 @@ def add_blank_lines(out_file: Path, lines: int):
         modified.write(data)
 
 
+@return_on_failure("Repeat header failed")
 def repeat_header(out_file: Path, lines: int):
     with open(out_file, 'r') as original:
         first_line = original.readline()
@@ -331,6 +332,7 @@ def add_headers_to_csv(out_file, df_header, PLP_Row, indexes):
             df_out.to_csv(modified, index=False)
 
 
+@return_on_failure("Failed replacing headers")
 def replace_all_headers(pDir, oDir, File_12B, File_24H, File_M, PLP_Row):
     logger.info(
         "---Replacing headers in %s, %s, %s" % (File_12B, File_24H, File_M))
@@ -461,7 +463,7 @@ def main():
                                     PLP_Row)
             else:
                 logger.info("PLP_Bool is False, so no PLP files were printed")
-                logger.info("Headers in PLP files were are repeated")
+                logger.info("Headers in PLP files were repeated")
                 repeat_header(Path(oDir, File_12B), PLP_Row)
                 repeat_header(Path(oDir, File_24H), PLP_Row)
                 repeat_header(Path(oDir, File_M), PLP_Row)
