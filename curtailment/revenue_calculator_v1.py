@@ -100,10 +100,14 @@ def read_input_files(price_file: Path, energy_file: Path) -> tuple[
         raise FileNotFoundError("Energy file does not exist")
 
     # Check if ending of both file names ir _B or _H
-    if ((energy_file.name[-6:] == '_B.csv') and (
+    if (((energy_file.name[-6:] == '_B.csv') and (
             price_file.name[-6:] == '_B.csv')) or (
+        (energy_file.name[-8:] == '_12B.csv') and (
+            price_file.name[-8:] == '_12B.csv')) or (
         (energy_file.name[-6:] == '_H.csv') and (
-                price_file.name[-6:] == '_H.csv')):
+            price_file.name[-6:] == '_H.csv')) or (
+        (energy_file.name[-8:] == '_24H.csv') and (
+            price_file.name[-8:] == '_24H.csv'))):
         pass
     else:
         raise ValueError("Price and Energy filenames must end with"
