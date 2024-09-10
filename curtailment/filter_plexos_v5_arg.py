@@ -290,6 +290,7 @@ def print_out_plp(outData, Item_Name, Value_Name, File_Name, PLP_Row,
     print_in_plp_format(outPLP, new_indexes, csv_out, PLP_Row)
 
 
+@return_on_failure("Failed adding headers")
 def add_headers_to_csv(out_file, df_header, PLP_Row, indexes):
     # First, read out file as df
     df_out = pd.read_csv(out_file, encoding="latin1",
