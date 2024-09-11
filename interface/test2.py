@@ -52,7 +52,7 @@ def fetch_results():
 def check_disk_space(server_ip):
     log_message("Checking disk space on remote server...")
     # Use df command to check disk space
-    command = "df -H"
+    command = "df -h /dev/sda2"
     host = server_ip
     username = "comer"
     password = "12345"
