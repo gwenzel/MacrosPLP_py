@@ -1,9 +1,12 @@
 import tkinter as tk
 from tkinter import filedialog, scrolledtext
 import tkinter.ttk as ttk
+import paramiko
+
 
 # Dummy server data
-servers = ["Server 1", "Server 2", "Server 3"]
+servers = {"Server 1 (Santiago)": "10.18.243.215",
+           "Server 2 (Antofagasta)": "192.168.74.250"}
 
 # Inputs that can be generated (Checkbox lists for A and B)
 input_options_A = ["Input A1", "Input A2", "Input A3"]
@@ -46,14 +49,28 @@ def fetch_results():
     # Logic to fetch results
 
 
-def check_disk_space():
+def check_disk_space(server_ip):
     log_message("Checking disk space on remote server...")
-    # Logic to check disk space
+    # Use df command to check disk space
+    command = "df -H"
+    host = server_ip
+    username = "comer"
+    password = "12345"
+    if host != "":
+        # Use paramiko to connect to remote server
+        client = paramiko.client.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(host, username=username, password=password)
+        _stdin, _stdout,_stderr = client.exec_command(command)
+        log_message(_stdout.read().decode())
+        client.close()
+    else:
+        log_message("Please select a server first.")
 
 
 def browse_file():
     filename = filedialog.askopenfilename(
-        filetypes=[("Excel files", "*.xlsx")])
+        filetypes=[("Excel files", "*.xlsb *.xlsx *.xlsm *.xls")])
     if filename:
         file_path.set(filename)
         log_message(f"File selected: {filename}")
@@ -123,7 +140,7 @@ if __name__ == "__main__":
     file_frame.grid(row=0, column=0, padx=10, pady=10, columnspan=2)
 
     file_path = tk.StringVar()
-    file_entry = tk.Entry(file_frame, textvariable=file_path, width=50)
+    file_entry = tk.Entry(file_frame, textvariable=file_path, width=100)
     file_entry.grid(row=0, column=0, padx=5, pady=5)
 
     browse_button = tk.Button(file_frame, text="Browse", command=browse_file)
@@ -217,9 +234,17 @@ if __name__ == "__main__":
     server_label = tk.Label(operations_frame, text="Select server:")
     server_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
-    server_selector = ttk.Combobox(operations_frame, values=servers)
+    server_selector = ttk.Combobox(operations_frame, values=list(servers.keys()))
     server_selector.grid(row=0, column=1, padx=5, pady=5)
-    server_selector.set(servers[0])  # Default selection
+
+    # Display value chosen in separate box
+    server_ip = tk.StringVar("")
+    server_ip_label = tk.Label(operations_frame, textvariable=server_ip)
+    server_ip_label.grid(row=0, column=2, padx=5, pady=5)
+
+    def update_server_ip(event):
+        server_ip.set(servers[server_selector.get()])
+    server_selector.bind("<<ComboboxSelected>>", update_server_ip)
 
     # Arrange buttons horizontally
     create_folder_button = tk.Button(
@@ -239,7 +264,7 @@ if __name__ == "__main__":
     fetch_button.grid(row=1, column=3, padx=5, pady=5)
 
     check_disk_space_button = tk.Button(
-        operations_frame, text="Check disk space", command=check_disk_space)
+        operations_frame, text="Check disk space", command=lambda: check_disk_space(server_ip.get()))
     check_disk_space_button.grid(row=1, column=4, padx=5, pady=5)
 
     # Ensure the buttons and combobox expand with the frame
@@ -253,7 +278,7 @@ if __name__ == "__main__":
     log_frame = tk.LabelFrame(root, text="Log", padx=10, pady=10)
     log_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
-    log_box = scrolledtext.ScrolledText(log_frame, width=60, height=10)
+    log_box = scrolledtext.ScrolledText(log_frame, width=90, height=10)
     log_box.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
 
     # Ensure the log box expands with the window
