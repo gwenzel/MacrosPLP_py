@@ -18,8 +18,8 @@ servers = [
     {"name": "Server 2 (Antofagasta)", "ip": "192.168.74.250"}
 ]
 
-logger = create_logger('interface')
-add_file_handler(logger, 'interface', Path(__file__).parent)
+logger = create_logger('PLPtron 9000')
+add_file_handler(logger, 'PLPtron 9000', Path(__file__).parent)
 
 plp_commands = [
     {'description': 'Command 1',
