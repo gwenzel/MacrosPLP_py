@@ -18,10 +18,6 @@ servers = [
     {"name": "Server 2 (Antofagasta)", "ip": "192.168.74.250"}
 ]
 
-# Inputs that can be generated (Checkbox lists for A and B)
-input_options_A = ["Input A1", "Input A2", "Input A3"]
-input_options_B = ["Input B1", "Input B2", "Input B3"]
-
 logger = create_logger('interface')
 add_file_handler(logger, 'interface', Path(__file__).parent)
 
