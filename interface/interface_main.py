@@ -27,20 +27,26 @@ add_file_handler(logger, 'interface', Path(__file__).parent)
 
 plp_commands = [
     {'description': 'Command 1',
-     'command': 'echo Command 1 executed'},
+     'command': 'echo Command 1 executed',
+     'parallel': True},
     {'description': 'Command 2',
-     'command': 'echo Command 2 executed'},
+     'command': 'echo Command 2 executed',
+     'parallel': False},
     {'description': 'Command 3',
-     'command': 'echo Command 3 executed'}
+     'command': 'echo Command 3 executed',
+     'parallel': False}
 ]
 
 plexos_commands = [
     {'description': 'Command 1',
-     'command': 'echo Command 1 executed'},
+     'command': 'echo Command 1 executed',
+     'parallel': True},
     {'description': 'Command 2',
-     'command': 'echo Command 2 executed'},
+     'command': 'echo Command 2 executed',
+     'parallel': False},
     {'description': 'Command 3',
-     'command': 'echo Command 3 executed'}
+     'command': 'echo Command 3 executed',
+     }
 ]
 
 
@@ -54,11 +60,14 @@ def generate_inputs_PLP():
         plp_commands[i]['description']: var.get()
         for i, var in enumerate(input_vars_A)
         }
+    parallel_dict = {
+        plp_commands[i]['description']: plp_commands[i]['parallel']
+    }
     command_dict = {
         plp_commands[i]['description']: plp_commands[i]['command']
         for i, var in enumerate(input_vars_A)
         }
-    execute_commands(bool_dict, command_dict)
+    execute_commands(bool_dict, parallel_dict, command_dict)
     if any(bool_dict.values()):
         log_message("Inputs PLP generated.")
     else:
@@ -74,11 +83,14 @@ def generate_inputs_Plexos():
         plexos_commands[i]['description']: var.get()
         for i, var in enumerate(input_vars_B)
         }
+    parallel_dict = {
+        plexos_commands[i]['description']: plexos_commands[i]['parallel']
+    }
     command_dict = {
         plexos_commands[i]['description']: plexos_commands[i]['command']
         for i, var in enumerate(input_vars_B)
         }
-    execute_commands(bool_dict, command_dict)
+    execute_commands(bool_dict, parallel_dict, command_dict)
     if any(bool_dict.values()):
         log_message("Inputs Plexos generated.")
     else:
