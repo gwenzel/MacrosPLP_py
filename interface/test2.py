@@ -4,6 +4,9 @@ import tkinter.ttk as ttk
 import paramiko
 
 
+USERNAME = "comer"
+PASSWORD = "12345"
+
 # Dummy server data
 servers = {"Server 1 (Santiago)": "10.18.243.215",
            "Server 2 (Antofagasta)": "192.168.74.250"}
@@ -54,14 +57,12 @@ def check_disk_space(server_ip):
     # Use df command to check disk space
     command = "df -h /dev/sda2"
     host = server_ip
-    username = "comer"
-    password = "12345"
     if host != "":
         # Use paramiko to connect to remote server
         client = paramiko.client.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=username, password=password)
-        _stdin, _stdout,_stderr = client.exec_command(command)
+        client.connect(host, username=USERNAME, password=PASSWORD)
+        _, _stdout, _ = client.exec_command(command)
         log_message(_stdout.read().decode())
         client.close()
     else:
