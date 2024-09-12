@@ -7,9 +7,13 @@ import paramiko
 USERNAME = "comer"
 PASSWORD = "12345"
 
+# TODO PLP MACROS VERSION + INSTALL BUTTON
+
 # Dummy server data
-servers = {"Server 1 (Santiago)": "10.18.243.215",
-           "Server 2 (Antofagasta)": "192.168.74.250"}
+servers = [
+    {"name": "Server 1 (Santiago)", "ip": "10.18.243.215"},
+    {"name": "Server 2 (Antofagasta)", "ip": "192.168.74.250"}
+]
 
 # Inputs that can be generated (Checkbox lists for A and B)
 input_options_A = ["Input A1", "Input A2", "Input A3"]
@@ -147,8 +151,7 @@ if __name__ == "__main__":
     browse_button = tk.Button(file_frame, text="Browse", command=browse_file)
     browse_button.grid(row=0, column=1, padx=5, pady=5)
 
-    # Left side frame for Inputs PLP, Right side frame for Inputs Plexos
-
+    # Left side frame------------------------------------------------------------
     # Left side: Inputs PLP
     left_frame = tk.LabelFrame(input_frame, text="PLP Inputs",
                                padx=10, pady=10)
@@ -187,6 +190,7 @@ if __name__ == "__main__":
     checkbox_frame_A.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
     checkbox_frame_A.grid_remove()
 
+    # Right side frame------------------------------------------------------------
     # Right side: Inputs Plexos
     right_frame = tk.LabelFrame(
         input_frame, text="Plexos Inputs", padx=10, pady=10)
@@ -235,7 +239,8 @@ if __name__ == "__main__":
     server_label = tk.Label(operations_frame, text="Select server:")
     server_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
-    server_selector = ttk.Combobox(operations_frame, values=list(servers.keys()))
+    server_selector = ttk.Combobox(
+        operations_frame, values=[server["name"] for server in servers])
     server_selector.grid(row=0, column=1, padx=5, pady=5)
 
     # Display value chosen in separate box
@@ -244,7 +249,7 @@ if __name__ == "__main__":
     server_ip_label.grid(row=0, column=2, padx=5, pady=5)
 
     def update_server_ip(event):
-        server_ip.set(servers[server_selector.get()])
+        server_ip.set(servers[server_selector.current()]["ip"])
     server_selector.bind("<<ComboboxSelected>>", update_server_ip)
 
     # Arrange buttons horizontally
@@ -265,7 +270,8 @@ if __name__ == "__main__":
     fetch_button.grid(row=1, column=3, padx=5, pady=5)
 
     check_disk_space_button = tk.Button(
-        operations_frame, text="Check disk space", command=lambda: check_disk_space(server_ip.get()))
+        operations_frame, text="Check disk space",
+        command=lambda: check_disk_space(server_ip.get()))
     check_disk_space_button.grid(row=1, column=4, padx=5, pady=5)
 
     # Ensure the buttons and combobox expand with the frame
