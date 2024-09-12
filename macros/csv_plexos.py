@@ -12,8 +12,7 @@ from macros.manli import (add_manli_data_row_by_row,
 from macros.manlix import get_df_manlix
 from macros.ernc import get_input_names
 from utils.logger import add_file_handler, create_logger
-from utils.utils import (timeit,
-                         define_arg_parser,
+from utils.utils import (define_arg_parser,
                          get_iplp_input_path,
                          check_is_path,
                          get_daily_indexed_df,
@@ -571,7 +570,7 @@ def print_bess_max_capacity(iplp_path: Path,
     ordered_cols = ['NAME', 'BAND', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']
     df = df[ordered_cols]
 
-    # From df_bess, take initial values, format as the other file for 
+    # From df_bess, take initial values, format as the other file for
     # the initial date, and concat
     df_bess = df_bess.rename(columns={'Name': 'NAME', 'CapMax MWh': 'VALUE'})
     df_bess['DateFrom'] = ini_date
@@ -635,7 +634,7 @@ def print_bess_efficiencies(iplp_path: Path,
 
         df_aux = df_aux[ordered_cols]
 
-        # From df_bess, take initial values, format as the other file for 
+        # From df_bess, take initial values, format as the other file for
         # the initial date, and concat
         df_bess = df_bess.rename(columns={'Name': 'NAME', col: 'VALUE'})
         df_bess['DateFrom'] = ini_date
