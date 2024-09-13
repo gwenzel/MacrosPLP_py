@@ -1,8 +1,12 @@
 import tkinter as tk
 from tkinter import filedialog, scrolledtext
 import tkinter.ttk as ttk
+
 import paramiko
+import time
+
 from pathlib import Path
+from functools import wraps
 
 from macros_runner import execute_commands
 from logger import create_logger, add_file_handler
@@ -18,19 +22,51 @@ servers = [
     {"name": "Server 2 (Antofagasta)", "ip": "192.168.74.250"}
 ]
 
+ANACONDA = "conda activate plp_v1.5.1 & "
+
 logger = create_logger('PLPtron_9000')
 add_file_handler(logger, 'PLPtron_9000', Path(__file__).parent)
 
 plp_commands = [
-    {'description': 'Command 1',
-     'command': 'echo Command 1 executed',
-     'parallel': True},
-    {'description': 'Command 2',
-     'command': 'echo Command 2 executed',
+    {'description': 'Dat Files + Etapa2Dates',
+     'command': '%s filt' % ANACONDA,
      'parallel': False},
-    {'description': 'Command 3',
-     'command': 'echo Command 3 executed',
-     'parallel': False}
+    {'description': 'Demand',
+     'command': '%s dda' % ANACONDA,
+     'parallel': True},
+    {'description': 'Inflow',
+     'command': '%s afl --plp' % ANACONDA,
+     'parallel': True},
+    {'description': 'Variable Cost',
+     'command': '%s cvar' % ANACONDA,
+     'parallel': True},
+    {'description': 'Buses',
+     'command': '%s bar' % ANACONDA,
+     'parallel': False},
+    {'description': 'Blocks',
+     'command': '%s blo' % ANACONDA,
+     'parallel': False},
+    {'description': 'Lines',
+     'command': '%s lin' % ANACONDA,
+     'parallel': False},
+    {'description': 'Lines Maintenance (In/Out)',
+     'command': '%s manli' % ANACONDA,
+     'parallel': False},
+    {'description': 'Lines Maintenance (Exp)',
+     'command': '%s manlix' % ANACONDA,
+     'parallel': False},
+    {'description': 'Generators',
+     'command': '%s cen' % ANACONDA,
+     'parallel': False},
+    {'description': 'Generators Maintenance',
+     'command': '%s mantcen' % ANACONDA,
+     'parallel': False},
+    {'description': 'Generators ERNC',
+     'command': '%s ernc' % ANACONDA,
+     'parallel': False},
+    {'description': 'Mat',
+     'command': '%s mat' % ANACONDA,
+     'parallel': False},
 ]
 
 plexos_commands = [
@@ -46,8 +82,30 @@ plexos_commands = [
 ]
 
 
+def timeit(func):
+    '''
+    Wrapper to measure time
+    '''
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        log_message(f'Function {func.__name__} took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
+
+
 # Functions to interact with remote server
+@timeit
 def generate_inputs_PLP():
+    # Check if file_path is valid file
+    if (not Path(file_path.get()).exists()) or (
+            not Path(file_path.get()).is_file()):
+        log_message("Please select a valid file.")
+        return
+    # Select inputs if any
     selected_inputs = [plp_commands[i]['description']
                        for i, var in enumerate(input_vars_A) if var.get()]
     log_message(f"Generating Inputs PLP: {', '.join(selected_inputs)}")
@@ -60,14 +118,16 @@ def generate_inputs_PLP():
         plp_commands[i]['description']: plp_commands[i]['parallel']
     }
     command_dict = {
-        plp_commands[i]['description']: plp_commands[i]['command']
+        plp_commands[i]['description']: (
+            plp_commands[i]['command'] + ' -f "' + file_path.get() + '"')
         for i, var in enumerate(input_vars_A)
         }
-    execute_commands(bool_dict, parallel_dict, command_dict)
     if any(bool_dict.values()):
-        log_message("Inputs PLP generated.")
+        log_message("Inputs PLP running.")
+        execute_commands(bool_dict, parallel_dict, command_dict, logger)
     else:
         log_message("No inputs selected.")
+    log_message("Inputs PLP generated. Please validate files.")
 
 
 def generate_inputs_Plexos():
@@ -86,7 +146,7 @@ def generate_inputs_Plexos():
         plexos_commands[i]['description']: plexos_commands[i]['command']
         for i, var in enumerate(input_vars_B)
         }
-    execute_commands(bool_dict, parallel_dict, command_dict)
+    execute_commands(bool_dict, parallel_dict, command_dict, logger)
     if any(bool_dict.values()):
         log_message("Inputs Plexos generated.")
     else:
@@ -145,20 +205,20 @@ def browse_file():
 def toggle_checkboxes_PLP():
     if checkbox_frame_A.winfo_viewable():
         checkbox_frame_A.grid_remove()
-        toggle_button_A.config(text="Show Inputs")
+        toggle_button_A.config(text="Show")
     else:
         checkbox_frame_A.grid()
-        toggle_button_A.config(text="Hide Inputs")
+        toggle_button_A.config(text="Hide")
 
 
 # Toggle visibility of input checkboxes for B
 def toggle_checkboxes_Plexos():
     if checkbox_frame_B.winfo_viewable():
         checkbox_frame_B.grid_remove()
-        toggle_button_B.config(text="Show Inputs")
+        toggle_button_B.config(text="Show")
     else:
         checkbox_frame_B.grid()
-        toggle_button_B.config(text="Hide Inputs")
+        toggle_button_B.config(text="Hide")
 
 
 # Select or deselect all checkboxes for Inputs PLP
@@ -185,8 +245,10 @@ def deselect_all_Plexos():
 
 # Logger for the text box
 def log_message(message):
-    log_box.insert(tk.END, message + '\n')
-    log_box.see(tk.END)
+    log_box1.insert(tk.END, message + '\n')
+    log_box1.see(tk.END)
+    log_box2.insert(tk.END, message + '\n')
+    log_box2.see(tk.END)
     logger.info(message)
 
 
@@ -195,8 +257,16 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.title("PLPtrón 9000 - v1.0.0")
 
+    # Add tabs
+    tabControl = ttk.Notebook(root) 
+    tab1 = ttk.Frame(tabControl)
+    tab2 = ttk.Frame(tabControl)
+    tabControl.add(tab1, text='Inputs PLP y Plexos')
+    tabControl.add(tab2, text='Servers PLP')
+    tabControl.pack(expand=1, fill="both")
+
     # ================== Input Section ==================
-    input_frame = tk.LabelFrame(root, text="Input Selection", padx=10, pady=10)
+    input_frame = tk.LabelFrame(tab1, text="Input Selection", padx=10, pady=10)
     input_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
     # File selection frame
@@ -216,24 +286,24 @@ if __name__ == "__main__":
                                padx=10, pady=10)
     left_frame.grid(row=1, column=0, padx=10, pady=10)
 
-    # Button to toggle visibility of the checkboxes for Inputs PLP
-    toggle_button_A = tk.Button(
-        left_frame, text="Show Inputs PLP", command=toggle_checkboxes_PLP)
-    toggle_button_A.grid(row=0, column=0, padx=5, pady=5)
-
     # Generate inputs button for Inputs PLP
     generate_button_A = tk.Button(
         left_frame, text="Generate Inputs PLP", command=generate_inputs_PLP)
-    generate_button_A.grid(row=0, column=1, padx=5, pady=5)
+    generate_button_A.grid(row=0, column=0, padx=5, pady=5)
 
     # Select All and Deselect All for Inputs PLP
     select_all_button_A = tk.Button(
         left_frame, text="Select All", command=select_all_PLP)
-    select_all_button_A.grid(row=0, column=2, padx=5, pady=5)
+    select_all_button_A.grid(row=0, column=1, padx=5, pady=5)
 
     deselect_all_button_A = tk.Button(
         left_frame, text="Deselect All", command=deselect_all_PLP)
-    deselect_all_button_A.grid(row=0, column=3, padx=5, pady=5)
+    deselect_all_button_A.grid(row=0, column=2, padx=5, pady=5)
+
+    # Button to toggle visibility of the checkboxes for Inputs PLP
+    toggle_button_A = tk.Button(
+        left_frame, text="Show", command=toggle_checkboxes_PLP)
+    toggle_button_A.grid(row=0, column=3, padx=5, pady=5)
 
     # Checkboxes for selecting Inputs PLP to generate (Initially hidden)
     checkbox_frame_A = tk.Frame(left_frame)
@@ -257,32 +327,32 @@ if __name__ == "__main__":
         input_frame, text="Plexos Inputs", padx=10, pady=10)
     right_frame.grid(row=1, column=1, padx=10, pady=10)
 
-    # Button to toggle visibility of the checkboxes for Inputs Plexos
-    toggle_button_B = tk.Button(
-        right_frame, text="Show Inputs Plexos",
-        command=toggle_checkboxes_Plexos)
-    toggle_button_B.grid(row=0, column=0, padx=5, pady=5)
-
     # Generate inputs button for Inputs Plexos
     generate_button_B = tk.Button(
         right_frame, text="Generate Inputs Plexos",
         command=generate_inputs_Plexos)
-    generate_button_B.grid(row=0, column=1, padx=5, pady=5)
+    generate_button_B.grid(row=0, column=0, padx=5, pady=5)
 
     # Select All and Deselect All for Inputs Plexos
     select_all_button_B = tk.Button(
         right_frame, text="Select All", command=select_all_Plexos)
-    select_all_button_B.grid(row=0, column=2, padx=5, pady=5)
+    select_all_button_B.grid(row=0, column=1, padx=5, pady=5)
 
     deselect_all_button_B = tk.Button(
         right_frame, text="Deselect All", command=deselect_all_Plexos)
-    deselect_all_button_B.grid(row=0, column=3, padx=5, pady=5)
+    deselect_all_button_B.grid(row=0, column=2, padx=5, pady=5)
+
+    # Button to toggle visibility of the checkboxes for Inputs Plexos
+    toggle_button_B = tk.Button(
+        right_frame, text="Show",
+        command=toggle_checkboxes_Plexos)
+    toggle_button_B.grid(row=0, column=3, padx=5, pady=5)
 
     # Checkboxes for selecting Inputs Plexos to generate (Initially hidden)
     checkbox_frame_B = tk.Frame(right_frame)
 
     input_vars_B = []
-    for i, option in enumerate(plp_commands):
+    for i, option in enumerate(plexos_commands):
         var = tk.BooleanVar()
         chk = tk.Checkbutton(checkbox_frame_B,
                              text=option['description'],
@@ -295,7 +365,7 @@ if __name__ == "__main__":
     checkbox_frame_B.grid_remove()
 
     # ================== Operations Section ==================
-    operations_frame = tk.LabelFrame(root, text="Operations", padx=10, pady=10)
+    operations_frame = tk.LabelFrame(tab2, text="Operations", padx=10, pady=10)
     operations_frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
     # Server selector (Combobox allows user to enter their own option)
@@ -345,15 +415,25 @@ if __name__ == "__main__":
     operations_frame.grid_columnconfigure(4, weight=1)
 
     # ================== Log Section ==================
-    log_frame = tk.LabelFrame(root, text="Log", padx=10, pady=10)
-    log_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+    log_frame1 = tk.LabelFrame(tab1, text="Log", padx=10, pady=10)
+    log_frame1.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
-    log_box = scrolledtext.ScrolledText(log_frame, width=90, height=10)
-    log_box.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+    log_box1 = scrolledtext.ScrolledText(log_frame1, width=90, height=10)
+    log_box1.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
 
     # Ensure the log box expands with the window
-    log_frame.grid_columnconfigure(0, weight=1)
-    log_frame.grid_rowconfigure(0, weight=1)
+    log_frame1.grid_columnconfigure(0, weight=1)
+    log_frame1.grid_rowconfigure(0, weight=1)
+
+    log_frame2 = tk.LabelFrame(tab2, text="Log", padx=10, pady=10)
+    log_frame2.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+
+    log_box2 = scrolledtext.ScrolledText(log_frame2, width=90, height=10)
+    log_box2.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+
+    # Ensure the log box expands with the window
+    log_frame2.grid_columnconfigure(0, weight=1)
+    log_frame2.grid_rowconfigure(0, weight=1)
 
     # Start the Tkinter event loop
     root.mainloop()

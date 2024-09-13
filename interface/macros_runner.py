@@ -25,41 +25,59 @@ parallel_dict = {
     "cmd4": True,  # Run cmd4 in parallel
 }
 
-
+'''
 # Function to run a command
 def run_command(cmd):
     print(f"Executing: {cmd}")
-    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return result.stdout.decode(), result.stderr.decode()
+    result = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    success = result.returncode == 0
+    return result.stdout.decode(), result.stderr.decode(), success
+
+
+'''
+
+def run_command(cmd):
+    print(f"Executing: {cmd}")
+    # Use subprocess.Popen to open a new shell for each command
+    process = subprocess.Popen(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Wait for the command to finish
+    stdout, stderr = process.communicate()
+    # Check if the command was successful (returncode == 0)
+    success = process.returncode == 0
+    return stdout.decode(), stderr.decode(), success
 
 
 # Function to execute commands in series
-def execute_series(commands):
+def execute_series(commands, logger=None):
     for cmd in commands:
-        stdout, stderr = run_command(cmd)
-        print(f"Series command output:\n{stdout}")
+        stdout, stderr, success = run_command(cmd)
+        logger.info(f"Series command output:\n{stdout}")
         if stderr:
-            print(f"Series command error:\n{stderr}")
+            logger.error(f"Series command error:\n{stderr}")
+        logger.info(f"Series command success: {success}\n")
 
 
 # Function to execute commands using thread pool executor (parallel execution)
-def execute_parallel(commands):
+def execute_parallel(commands, logger=None):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {executor.submit(run_command, cmd): cmd for cmd in commands}
 
         for future in concurrent.futures.as_completed(futures):
             cmd = futures[future]
             try:
-                stdout, stderr = future.result()
-                print(f"Parallel command output ({cmd}):\n{stdout}")
+                stdout, stderr, success = future.result()
+                logger.info(f"Parallel command output ({cmd}):\n{stdout}")
                 if stderr:
-                    print(f"Parallel command error ({cmd}):\n{stderr}")
+                    logger.error(f"Parallel command error ({cmd}):\n{stderr}")
+                logger.info(f"Parallel command success: {success}\n")
             except Exception as e:
-                print(f"{cmd} generated an exception: {e}")
+                logger.error(f"{cmd} generated an exception: {e}")
 
 
 # Main function to run both parallel and series commands
-def execute_commands(bool_dict, parallel_dict, command_dict):
+def execute_commands(bool_dict, parallel_dict, command_dict, logger=None):
     series_commands = []
     parallel_commands = []
 
@@ -72,15 +90,15 @@ def execute_commands(bool_dict, parallel_dict, command_dict):
 
     # Execute series commands first
     if series_commands:
-        print("\nExecuting series commands...")
-        execute_series(series_commands)
+        logger.info("\nExecuting series commands...")
+        execute_series(series_commands, logger)
 
     # Execute parallel commands next
     if parallel_commands:
-        print("\nExecuting parallel commands...")
-        execute_parallel(parallel_commands)
+        logger.info("\nExecuting parallel commands...")
+        execute_parallel(parallel_commands, logger)
 
 
 # Example usage
 if __name__ == "__main__":
-    execute_commands(bool_dict, parallel_dict, command_dict)
+    execute_commands(bool_dict, parallel_dict, command_dict, logger=None)
