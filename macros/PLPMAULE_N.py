@@ -96,14 +96,10 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
 
         for i in range(3, 7):
             write_str_line(maulen_df, i, 2, 5)
-
         write_int_line(maulen_df, 7, 2, 5)
-
         write_str_line(maulen_df, 8, 2, 5)
-
-        for row_idx in range(9, 24):  # Rows 11 to 25
+        for row_idx in range(9, 24):  # Rows 11 to 26
             write_int_line(maulen_df, row_idx, 2, 5)
-
         write_float_line(maulen_df, 24, 2, 5, decimals=1)
         write_float_line(maulen_df, 25, 2, 5, decimals=1)
         write_int_line(maulen_df, 26, 2, 5)
