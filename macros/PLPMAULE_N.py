@@ -20,7 +20,9 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
 
     # Verify initial condition
     if str(path_df.iloc[31, 0]).upper() == 'OFF':
+        logger.info('Convenio Maule deshabilitado.')
         return
+    logger.info('Convenio Maule habilitado.')
 
     # Directory and executable
     directorio = path_inputs
