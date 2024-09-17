@@ -37,7 +37,7 @@ def crea_archivo_PLPIDSIMAPE_MANUAL(iplp_path: Path, path_inputs: Path):
 
     # Rango de aperturas
     ape_df = pd.read_excel(iplp_path, sheet_name='ConfigApe', usecols="A:L")
-    n_ape = ape_df.shape[1] - 2
+    n_ape = ape_df.shape[1] - 1
 
     # n_sim = pd.read_excel(iplp_path, sheet_name='Hidrología').iloc[0, 3]
     # n_ape = pd.read_excel(iplp_path, sheet_name='Hidrología').iloc[1, 3]
@@ -63,17 +63,17 @@ def crea_archivo_PLPIDSIMAPE_MANUAL(iplp_path: Path, path_inputs: Path):
         for i_eta in range(n_eta):
             mes = df_etapas.iloc[i_eta, 1].month
             mes_hid = meses_hid[mes]
-            n_ape_aux = ape_df.iloc[i_eta + 1, 1 + n_ape_hid]
-            x_str = f"{mes_hid:03d}   {i_eta + 1:03d}   {n_ape_aux:02d}     "
+            n_ape_aux = ape_df.iloc[i_eta, 1 + n_ape_hid]
+            x_str = f"  {mes_hid:03d}   {i_eta + 1:03d}   {n_ape_aux:02d}     "
             for i_ape in range(n_ape_aux):
-                x_str += f"{int(ape_df.iloc[i_eta + 1, i_ape + 1]):02d}   "
+                x_str += f"{int(ape_df.iloc[i_eta, i_ape + 1]):02d}   "
             f.write(x_str + "\n")
 
     # Escribe plpidape.dat
     with open(os.path.join(directorio, "plpidape.dat"), "w") as f:
         f.write("# Archivo de caudales por etapa (plpidape.dat)\n")
         f.write("# Numero de simulaciones y etapas con caudales\n")
-        f.write(f"{n_sim:5d}   {n_eta:03d}\n")
+        f.write(f"  {n_sim:5d}     {n_eta:03d}\n")
 
         for i_sim in range(n_sim):
             f.write(f"# Mes   Etapa NApert ApertInd(1,...,NApert) - Simulacion={i_sim + 1:02d}\n")
@@ -81,32 +81,32 @@ def crea_archivo_PLPIDSIMAPE_MANUAL(iplp_path: Path, path_inputs: Path):
             for i_eta in range(n_eta):
                 mes = df_etapas.iloc[i_eta, 1].month
                 mes_hid = meses_hid[mes]
-                n_ape_aux = ape_df.iloc[i_eta + 1, 1 + n_ape_hid]
+                n_ape_aux = ape_df.iloc[i_eta, 1 + n_ape_hid]
                 if i_eta == 0 and n_ape_aux == n_ape_hid:
                     x_str = f"{mes_hid:03d}   {i_eta + 1:03d}   01     {i_sim + 1:02d}   "
                 else:
                     x_str = \
-                        f"{mes_hid:03d}   {i_eta + 1:03d}   {n_ape_aux:02d}     "
+                        f"  {mes_hid:03d}   {i_eta + 1:03d}   {n_ape_aux:02d}     "
                     for i_ape in range(n_ape_aux):
                         if f_desh and (mes < m_lluv_ini or mes > m_lluv_fin):
                             x_str += f"{i_sim + 1:02d}   "
                         else:
-                            x_str += f"{int(ape_df.iloc[i_eta + 1, i_ape + 1]):02d}   "
+                            x_str += f"{int(ape_df.iloc[i_eta, i_ape + 1]):02d}   "
                 f.write(x_str + "\n")
 
     # Escribe plpidsim.dat
     with open(os.path.join(directorio, "plpidsim.dat"), "w") as f:
         f.write("#   Archivo de caudales por etapa (plpidsim.dat)\n")
         f.write("#   Numero de simulaciones, aperturas y etapas con caudales\n")
-        f.write(f"{n_sim:04d} {n_ape:02d} {n_eta:03d}\n")
+        f.write(f"    {n_sim:02d}  {n_ape:02d}  {n_eta:03d}\n")
         f.write("#   Mes Etapa   SimulInd(1,...,NSimul)\n")
 
         for i_eta in range(n_eta):
             mes = df_etapas.iloc[i_eta, 1].month
             mes_hid = meses_hid[mes]
-            x_str = f"{mes_hid:03d} {i_eta + 1:03d}     "
+            x_str = f"    {mes_hid:03d} {i_eta + 1:03d}     "
             for i_sim in range(n_sim):
-                x_str += f"{sim_df.iloc[i_eta + 1, i_sim + 1]:02d}   "
+                x_str += f"{sim_df.iloc[i_eta, i_sim + 1]:02d}  "
             f.write(x_str + "\n")
 
 
