@@ -24,8 +24,6 @@ def crea_archivo_PLPIDSIMAPE_MANUAL(iplp_path: Path, path_inputs: Path):
     # Rango de etapas
     df_etapas = pd.read_excel(iplp_path, sheet_name='Etapas', skiprows=3)
     n_eta = len(df_etapas)
-    # mes0 = df_etapas.iloc[0, 1].month
-    # ano0 = df_etapas.iloc[0, 1].year if mes0 >= 4 else df_etapas.iloc[0, 1].year - 1
 
     df_etapas['Inicial'] = df_etapas['Inicial'].apply(from_excel)
     df_etapas['Final'] = df_etapas['Final'].apply(from_excel)
@@ -76,7 +74,8 @@ def crea_archivo_PLPIDSIMAPE_MANUAL(iplp_path: Path, path_inputs: Path):
         f.write(f"  {n_sim:5d}     {n_eta:03d}\n")
 
         for i_sim in range(n_sim):
-            f.write(f"# Mes   Etapa NApert ApertInd(1,...,NApert) - Simulacion={i_sim + 1:02d}\n")
+            f.write(
+                f"# Mes   Etapa NApert ApertInd(1,...,NApert) - Simulacion={i_sim + 1:02d}\n")
 
             for i_eta in range(n_eta):
                 mes = df_etapas.iloc[i_eta, 1].month
