@@ -659,7 +659,7 @@ def energy_loss_analysis(df_all_redistrib: pd.DataFrame, output_folder: str):
         (df['Redist Curt'] - df['Curt Total'])
     df['Delta Total'] = (df['Delta Energy'] + df['Delta Curt'])
 
-    df_out = df.groupby('Zone').sum().astype(float)
+    df_out = df.groupby(['Zone', 'Node']).sum().astype(float).round(2)
 
     df_out.to_csv(Path(output_folder, "energy_loss_analysis.csv"),
                   encoding="latin1")
