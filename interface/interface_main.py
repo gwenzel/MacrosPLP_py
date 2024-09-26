@@ -22,50 +22,49 @@ servers = [
     {"name": "Server 2 (Antofagasta)", "ip": "192.168.74.250"}
 ]
 
-ANACONDA = "conda activate plp_v1.5.1 & "
-
 logger = create_logger('PLPtron_9000')
 add_file_handler(logger, 'PLPtron_9000', Path(__file__).parent)
 
 plp_commands = [
     {'description': 'Dat Files + Etapa2Dates',
-     'command': '%s filt' % ANACONDA,
+     'command': 'python -c "from macros.filter_files import main; main()"',
      'parallel': False},
     {'description': 'Demand',
-     'command': '%s dda' % ANACONDA,
+     'command': 'python -c "from macros.dem import main; main()"',
      'parallel': True},
     {'description': 'Inflow',
-     'command': '%s afl --plp' % ANACONDA,
+     'command': 'python -c "from macros.inflows import main;' +
+        ' main(plp_enable=True, plx_enable=False)"',
      'parallel': True},
     {'description': 'Variable Cost',
-     'command': '%s cvar' % ANACONDA,
+     'command':  'python -c "from macros.cvar import main; main()"',
      'parallel': True},
     {'description': 'Buses',
-     'command': '%s bar' % ANACONDA,
+     'command':  'python -c "from macros.bar import main; main()"',
      'parallel': False},
     {'description': 'Blocks',
-     'command': '%s blo' % ANACONDA,
+     'command':  'python -c "from macros.blo import main; main()"',
      'parallel': False},
     {'description': 'Lines',
-     'command': '%s lin' % ANACONDA,
+     'command':  'python -c "from macros.lin import main; main()"',
      'parallel': False},
     {'description': 'Lines Maintenance (In/Out)',
-     'command': '%s manli' % ANACONDA,
+     'command':  'python -c "from macros.manli import main; main()"',
      'parallel': False},
     {'description': 'Lines Maintenance (Exp)',
-     'command': '%s manlix' % ANACONDA,
+     'command':  'python -c "from macros.manlix import main; main()"',
      'parallel': False},
     {'description': 'Generators',
-     'command': '%s cen' % ANACONDA,
+     'command':  'python -c "from macros.cen import main; main()"',
      'parallel': False},
-    {'description': 'Generators Maintenance',
-     'command': '%s mantcen' % ANACONDA,
+    {'description': 'Generators Maintenance (Exp)',
+     'command':  'python -c "from macros.mantcen import main; main()"',
      'parallel': False},
     {'description': 'Generators ERNC',
-     'command': '%s ernc' % ANACONDA,
+     'command':  'python -c "from macros.ernc import main; main()"',
      'parallel': False},
-    {'description': 'Mat',
-     'command': '%s mat' % ANACONDA,
+    {'description': 'Mathematical Programming (Iterations)',
+     'command':  'python -c "from macros.mat import main; main()"',
      'parallel': False},
 ]
 

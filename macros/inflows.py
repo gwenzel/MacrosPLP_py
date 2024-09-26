@@ -422,7 +422,7 @@ def filter_df_all_inflows(iplp_path: Path,
 
 
 @timeit
-def main():
+def main(plp_enable=None, plx_enable=None):
     '''
     Main routine
     '''
@@ -445,11 +445,12 @@ def main():
         check_is_path(path_log)
         add_file_handler(logger, 'water_inflows', path_log)
 
-        # Get PLP/PLX enabling booleans
-        plp_enable, plx_enable = get_plp_plx_booleans(parser)
-        if (plx_enable | plp_enable) is False:
-            logger.error('No process enabled. Exiting...')
-            exit()
+        if (plp_enable is None) and (plx_enable is None):
+            # Get PLP/PLX enabling booleans
+            plp_enable, plx_enable = get_plp_plx_booleans(parser)
+            if (plx_enable | plp_enable) is False:
+                logger.error('No process enabled. Exiting...')
+                exit()
 
         if plp_enable:
             logger.info('PLP enabled')

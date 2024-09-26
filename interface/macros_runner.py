@@ -37,6 +37,8 @@ def run_command(cmd):
 
 '''
 
+
+# Function to run a command
 def run_command(cmd):
     print(f"Executing: {cmd}")
     # Use subprocess.Popen to open a new shell for each command

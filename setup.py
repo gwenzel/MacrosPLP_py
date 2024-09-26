@@ -39,7 +39,8 @@ setup(
             "cen = macros.cen:main",
             "mat = macros.mat:main",
             "PLPIDSIMAPE_MANUAL = macros.PLPIDSIMAPE_MANUAL:main",
-            "PLPMAULE_N = macros.PLPMAULE_N:main"
+            "PLPMAULE_N = macros.PLPMAULE_N:main",
+            "PLPLAJA_M = macros.PLPLAJA_M:main",
         ]
     },
     classifiers=[
