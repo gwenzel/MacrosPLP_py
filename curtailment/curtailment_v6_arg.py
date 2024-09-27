@@ -796,7 +796,7 @@ def main():
 
         # Redistribute totals for each algorithm
         for algorithm in ["iterative", "proportional"]:
-            logger.info('--Redistributing totals')
+            logger.info('--Redistributing totals - %s' % algorithm)
             df_all_redistrib = redistribute_totals_old(df_all, time_resolution)
             df_all_redistrib_grouped = group_data_redistrib(
                 df_all_redistrib, time_resolution)
@@ -806,7 +806,7 @@ def main():
                 df_all_redistrib, time_resolution, "Curtailment")
 
             # Print results
-            logger.info('--Printing results to csv files')
+            logger.info('--Printing results to csv files - %s' % algorithm)
             print_outputs_to_csv(output_folder, df_all,
                                  df_all_redistrib, df_all_redistrib_grouped,
                                  df_out_ener_redistrib,
@@ -815,7 +815,7 @@ def main():
                                  time_resolution, algorithm)
 
             # Energy loss analysis
-            logger.info('--Analyzing energy losses')
+            logger.info('--Analyzing energy losses - %s' % algorithm)
             energy_loss_analysis(df_all_redistrib, output_folder, algorithm)
 
     except Exception as e:
