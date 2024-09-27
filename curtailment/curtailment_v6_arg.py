@@ -346,6 +346,35 @@ def preprocess_curtailment(df_all, df_gen_data, df_pmax_per_month):
     return df
 
 
+def redistribute_totals_old(df_all, time_resolution="Block"):
+    # Group values by zone
+    df_all_grouped = df_all.groupby(
+        ['Year', 'Month', time_resolution, 'Zone']).sum()
+    # Calculate grouped values per zone
+    df_all_grouped['Curtailment %'] = \
+        df_all_grouped['Curtailment'] / df_all_grouped['Energy+Curtailment']
+    # First, copy the percentage of corresponding to the zone
+    df_all_redistrib = df_all.copy().reset_index()
+    df_all_redistrib = df_all_redistrib.join(
+        df_all_grouped['Curtailment %'],
+        on=['Year', 'Month', time_resolution, 'Zone'])
+    # Then, redistribute the total energy
+    df_all_redistrib['Redistributed Curtailment'] = \
+        df_all_redistrib['Curtailment %'] * df_all_redistrib[
+            'Energy+Curtailment']
+    # Set index back
+    df_all_redistrib.set_index(
+        ['Year', 'Month', time_resolution, 'Gen', 'Node', 'Zone'],
+        inplace=True)
+    # Drop original curtailment % column
+    df_all_redistrib.drop(columns=['Curtailment %'], inplace=True)
+    # Calculate redistributed total energy
+    df_all_redistrib['Redistributed Energy'] = \
+        df_all_redistrib['Energy+Curtailment'] - \
+        df_all_redistrib['Redistributed Curtailment']
+    return df_all_redistrib
+
+
 def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
     '''
     Algoritmo de redistribución de curtailment
@@ -530,10 +559,10 @@ def print_outputs_to_csv(output_folder, df_all,
                          df_all_redistrib, df_all_redistrib_grouped,
                          df_out_ener_redistrib, df_out_curtail_redistrib,
                          df_cur_header, df_ener_header,
-                         time_resolution="Block"):
+                         time_resolution="Block", algorithm="iterative"):
 
     # Create output folder per time resolution
-    output_folder_aux = Path(output_folder, time_resolution)
+    output_folder_aux = Path(output_folder, algorithm)
     output_folder_aux.mkdir(exist_ok=True)
 
     # Output suffix
@@ -640,7 +669,8 @@ def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
         return Path(arg)
 
 
-def energy_loss_analysis(df_all_redistrib: pd.DataFrame, output_folder: str):
+def energy_loss_analysis(df_all_redistrib: pd.DataFrame, output_folder: str,
+                         algorithm: str):
     # first copy df
     df_all_redistrib = df_all_redistrib.copy()
     df = pd.DataFrame(index=df_all_redistrib.index)
@@ -661,7 +691,7 @@ def energy_loss_analysis(df_all_redistrib: pd.DataFrame, output_folder: str):
 
     df_out = df.groupby(['Zone', 'Node']).sum().astype(float).round(2)
 
-    df_out.to_csv(Path(output_folder, "energy_loss_analysis.csv"),
+    df_out.to_csv(Path(output_folder, algorithm, "energy_loss_analysis.csv"),
                   encoding="latin1")
 
 
@@ -764,26 +794,30 @@ def main():
         df_all = preprocess_curtailment(
             df_all, df_gen_data, df_pmax_per_month)
 
-        # Redistribute totals
-        logger.info('--Redistributing totals')
-        df_all_redistrib = redistribute_totals(df_all, time_resolution)
-        df_all_redistrib_grouped = group_data_redistrib(
-            df_all_redistrib, time_resolution)
-        df_out_ener_redistrib = process_redistributed_out(
-            df_all_redistrib, time_resolution, "Energy")
-        df_out_curtail_redistrib = process_redistributed_out(
-            df_all_redistrib, time_resolution, "Curtailment")
+        # Redistribute totals for each algorithm
+        for algorithm in ["iterative", "proportional"]:
+            logger.info('--Redistributing totals')
+            df_all_redistrib = redistribute_totals_old(df_all, time_resolution)
+            df_all_redistrib_grouped = group_data_redistrib(
+                df_all_redistrib, time_resolution)
+            df_out_ener_redistrib = process_redistributed_out(
+                df_all_redistrib, time_resolution, "Energy")
+            df_out_curtail_redistrib = process_redistributed_out(
+                df_all_redistrib, time_resolution, "Curtailment")
 
-        logger.info('--Analyzing energy losses')
-        energy_loss_analysis(df_all_redistrib, output_folder)
+            # Print results
+            logger.info('--Printing results to csv files')
+            print_outputs_to_csv(output_folder, df_all,
+                                 df_all_redistrib, df_all_redistrib_grouped,
+                                 df_out_ener_redistrib,
+                                 df_out_curtail_redistrib,
+                                 df_cur_header, df_ener_header,
+                                 time_resolution, algorithm)
 
-        # Print results
-        logger.info('--Printing results to csv files')
-        print_outputs_to_csv(output_folder, df_all,
-                             df_all_redistrib, df_all_redistrib_grouped,
-                             df_out_ener_redistrib, df_out_curtail_redistrib,
-                             df_cur_header, df_ener_header,
-                             time_resolution)
+            # Energy loss analysis
+            logger.info('--Analyzing energy losses')
+            energy_loss_analysis(df_all_redistrib, output_folder, algorithm)
+
     except Exception as e:
         logger.error(e, exc_info=True)
         logger.error('Process finished with errors. Check above for details')
