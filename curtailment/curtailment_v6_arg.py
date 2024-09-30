@@ -439,6 +439,7 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
 
     # 6. Proceso iterativo:
     for i in range(ITER_MAX):
+        logger.info(f"--Iteration {i}")
         # a. Calcular factor de prorrata
         df['Factor Prorrata #%s' % i] = df.groupby(
             ['Year', 'Month', time_resolution, 'Zone'])[
@@ -797,7 +798,12 @@ def main():
         # Redistribute totals for each algorithm
         for algorithm in ["iterative", "proportional"]:
             logger.info('--Redistributing totals - %s' % algorithm)
-            df_all_redistrib = redistribute_totals_old(df_all, time_resolution)
+            if algorithm == "iterative":
+                df_all_redistrib = redistribute_totals(
+                    df_all, time_resolution)
+            else:
+                df_all_redistrib = redistribute_totals_old(
+                    df_all, time_resolution)
             df_all_redistrib_grouped = group_data_redistrib(
                 df_all_redistrib, time_resolution)
             df_out_ener_redistrib = process_redistributed_out(
