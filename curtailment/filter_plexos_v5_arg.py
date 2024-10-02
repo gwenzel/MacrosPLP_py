@@ -106,6 +106,11 @@ def last_day_of_month(any_day):
     return next_month - datetime.timedelta(days=next_month.day)
 
 
+def last_hour_of_month(any_day):
+    # Replace hour with 23
+    return any_day.replace(hour=23)
+
+
 def define_outdata(f, wDir, fp, oDir) -> pd.DataFrame:
     '''
     Read data from Plexos outputs specified in folder_paths file,
@@ -129,6 +134,8 @@ def define_outdata(f, wDir, fp, oDir) -> pd.DataFrame:
         date_ini = datetime.datetime(row['Year_Ini'], row['Month_Ini'], 1)
         date_end = datetime.datetime(row['Year_End'], row['Month_End'], 1)
         date_end = last_day_of_month(date_end)
+        # Replace date_end with same day but in the last hour
+        date_end = last_hour_of_month(date_end)
         # Filter data based on date_ini and date_end
         df = df[(df["DATETIME"] >= date_ini) & (df["DATETIME"] <= date_end)]
         list_of_df.append(df)
