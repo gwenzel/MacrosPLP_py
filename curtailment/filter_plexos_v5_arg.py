@@ -87,6 +87,7 @@ def add_blank_lines(out_file: Path, lines: int):
 
 @return_on_failure("Repeat header failed")
 def repeat_header(out_file: Path, lines: int):
+    logger.info("---Repeating header in %s" % out_file)
     with open(out_file, 'r') as original:
         first_line = original.readline()
         data = original.read()
@@ -250,9 +251,6 @@ def print_out_plp(outData, Item_Name, Value_Name, File_Name, PLP_Row,
         File_Name))
 
     csv_in = Path(pDir, File_Name)
-    # Revisar si el archivo existe
-    if not csv_in.exists():
-        raise FileNotFoundError("File %s does not exist" % csv_in)
     # Leer datos y headers separados
     outPLP = pd.read_csv(csv_in, low_memory=False, skiprows=PLP_Row)
 
@@ -352,6 +350,56 @@ def replace_all_headers(pDir, oDir, File_12B, File_24H, File_M, PLP_Row):
                        indexes=['Hyd', 'Year', 'Month', 'Block'])
     add_headers_to_csv(Path(oDir, File_24H), df_header, PLP_Row,
                        indexes=['Hyd', 'Year', 'Month', 'Hour'])
+
+
+@return_on_failure("Failed replacing headers")
+def replace_headers(pDir, oDir, File_Name, PLP_Row, indexes):
+    logger.info(
+        "---Replacing headers in %s" % (File_Name))
+    # Replace headers in File_Name
+    df_header = pd.read_csv(Path(pDir, File_Name), nrows=PLP_Row,
+                            header=None)
+    add_headers_to_csv(Path(oDir, File_Name), df_header, PLP_Row,
+                       indexes=indexes)
+
+
+@return_on_failure("Failed printing PLP files")
+def print_all_plp_files(pDir, oDir, File_12B, File_24H, File_M, PLP_Row,
+                        outData_12B, outData_24H, outData_M, Item_Name,
+                        Value_Name, oDir_long):
+    # Month
+    if not Path(pDir, File_M).exists():
+        repeat_header(Path(oDir, File_M), PLP_Row)
+        logger.error("PLP File %s does not exist" % Path(pDir, File_M))
+        logger.info("Headers in PLP files will be repeated")
+    else:
+        print_out_plp(
+            outData_M, Item_Name, Value_Name, File_M, PLP_Row,
+            oDir, pDir, oDir_long, time_resolution='M')
+        replace_headers(pDir, oDir, File_M, PLP_Row,
+                        ['Hyd', 'Year', 'Month'])
+    # Hour
+    if not Path(pDir, File_24H).exists():
+        repeat_header(Path(oDir, File_24H), PLP_Row)
+        logger.error("File %s does not exist" % Path(pDir, File_24H))
+        logger.info("Headers in PLP files will be repeated")
+    else:
+        print_out_plp(
+            outData_24H, Item_Name, Value_Name, File_24H, PLP_Row,
+            oDir, pDir, oDir_long, time_resolution='H')
+        replace_headers(pDir, oDir, File_24H, PLP_Row,
+                        ['Hyd', 'Year', 'Month', 'Hour'])
+    # Block
+    if not Path(pDir, File_12B).exists():
+        repeat_header(Path(oDir, File_12B), PLP_Row)
+        logger.error("File %s does not exist" % Path(pDir, File_12B))
+        logger.info("Headers in PLP files will be repeated")
+    else:
+        print_out_plp(
+            outData_12B, Item_Name, Value_Name, File_12B, PLP_Row,
+            oDir, pDir, oDir_long, time_resolution='B')
+        replace_headers(pDir, oDir, File_12B, PLP_Row,
+                        ['Hyd', 'Year', 'Month', 'Block'])
 
 
 def define_arg_parser() -> ArgumentParser:
@@ -455,19 +503,10 @@ def main():
             if row['PLP_Bool']:
                 logger.info("PLP_Bool is True, so PLP files will be printed")
                 # Print plp files
-                print_out_plp(
-                    outData_M, Item_Name, Value_Name, File_M, PLP_Row,
-                    oDir, pDir, oDir_long, time_resolution='M')
-                print_out_plp(
-                    outData_24H, Item_Name, Value_Name, File_24H, PLP_Row,
-                    oDir, pDir, oDir_long, time_resolution='H')
-                print_out_plp(
-                    outData_12B, Item_Name, Value_Name, File_12B, PLP_Row,
-                    oDir, pDir, oDir_long, time_resolution='B')
-
-                # Replace headers in File_12B, File_24H, File_M
-                replace_all_headers(pDir, oDir, File_12B, File_24H, File_M,
-                                    PLP_Row)
+                print_all_plp_files(
+                    pDir, oDir, File_12B, File_24H, File_M, PLP_Row,
+                    outData_12B, outData_24H, outData_M, Item_Name,
+                    Value_Name, oDir_long)
             else:
                 logger.info("PLP_Bool is False, so no PLP files were printed")
                 logger.info("Headers in PLP files will be repeated")
