@@ -696,6 +696,30 @@ def energy_loss_analysis(df_all_redistrib: pd.DataFrame, output_folder: str,
                   encoding="latin1")
 
 
+def analysis_per_unit(df_all_redistrib, output_folder, algorithm):
+    # Obtain the yearly % of curtailment for each unit and print to csv
+    # First, copy df
+    df_all_redistrib = df_all_redistrib.copy()
+    # Then, group columns by Year, Gen
+    df_all_redistrib_grouped = df_all_redistrib.groupby(
+        ['Year', 'Zone', 'Gen']).sum()
+    # Calculate the % of curtailment
+    df_all_redistrib_grouped['Redistributed Curtailment %'] = \
+        df_all_redistrib_grouped['Redistributed Curtailment'] / \
+        df_all_redistrib_grouped['Energy+Curtailment']
+    # Pivot and show Units as Units as index, and Year in columns using pivot table
+    df_all_redistrib_grouped = df_all_redistrib_grouped.pivot_table(
+        index=['Zone', 'Gen', 'Year'], columns=None,
+        values=['Energy+Curtailment',
+                'Redistributed Curtailment',
+                'Redistributed Curtailment',
+                'Redistributed Curtailment %'])
+    # Print to csv
+    df_all_redistrib_grouped.to_csv(
+        Path(output_folder, algorithm, "analysis_per_unit.csv"),
+        encoding="latin1")
+
+
 def define_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Get Curtailment input filepaths")
     parser.add_argument('-b', dest='zonas_file', required=True,
@@ -823,6 +847,10 @@ def main():
             # Energy loss analysis
             logger.info('--Analyzing energy losses - %s' % algorithm)
             energy_loss_analysis(df_all_redistrib, output_folder, algorithm)
+
+            # Analysis per unit
+            logger.info('--Analyzing per unit - %s' % algorithm)
+            analysis_per_unit(df_all_redistrib, output_folder, algorithm)
 
     except Exception as e:
         logger.error(e, exc_info=True)
