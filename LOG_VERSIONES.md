@@ -109,3 +109,8 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 1.5.1
 
 - Corrección de magnitudes y nombres de archivos en cambios 1.5.0
+
+### Versión 1.5.2
+
+- Corrección de bug en cen, si habían NaN en columna Check Perfil, valor FlagPerfil en plptec quedaba en 0.
+- Este error causaba que los vertimientos se imprimieran todos en 0.
