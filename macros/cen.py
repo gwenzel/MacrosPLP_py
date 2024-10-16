@@ -469,6 +469,10 @@ def print_plptec(path_inputs: Path, df_centrales: pd.DataFrame):
     df_centrales['Fuel'] = df_centrales['Fuel'].fillna('none')
     df_centrales['Fuel'] = df_centrales['Fuel'].apply(
         lambda x: "'%s'" % x)
+    # Fill nans in column 'CHECK Perfil' with False and parse all values to bool
+    df_centrales['CHECK Perfil'] = df_centrales['CHECK Perfil'].fillna(False)
+    df_centrales['CHECK Perfil'] = df_centrales['CHECK Perfil'].astype(bool)
+    # Define FlagPerfil
     df_centrales['FlagPerfil'] = df_centrales['CHECK Perfil'].apply(
         lambda x: 1 if x is True else 0)
     # Select columns
