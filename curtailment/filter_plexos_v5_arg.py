@@ -150,7 +150,7 @@ def define_outdata(f, wDir, fp, oDir) -> pd.DataFrame:
     outData.insert(2, "Year", outData["DATETIME"].dt.year)
     outData.insert(3, "Month", outData["DATETIME"].dt.month)
     outData.insert(4, "Day", outData["DATETIME"].dt.day)
-    outData.insert(5, "Hour", outData["DATETIME"].dt.hour + 1)
+    outData.insert(5, "Hour", outData["DATETIME"].dt.hour)
 
     # Filter out columns SING_Cero and SIC_Cero, if present
     if 'SING_Cero' in outData.columns:
