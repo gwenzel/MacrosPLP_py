@@ -42,6 +42,7 @@ setup(
             "PLPMAULE_N = macros.PLPMAULE_N:main",
             "PLPLAJA_M = macros.PLPLAJA_M:main",
             "PLPCENPMAX = macros.PLPCENPMAX:main",
+            "PLPCENRE = macros.PLPCENRE:main"
         ]
     },
     classifiers=[
