@@ -30,8 +30,8 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
         f.write("# Numero Embalses\n")
         f.write(f"{num_reservoirs_value}" + "\n")
 
+        offset = 3  # to be updated in loop
         for _ in range(num_reservoirs_value):
-            offset = 3
             # Get reservoir central name
             cen_name = df.iloc[offset, 0].strip("'")
             # Get dam name
@@ -39,9 +39,9 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
             # Get number of segments
             num_segments = int(df.iloc[offset, 2])
             # Write data to file
-            f.write("# Nombre de Central".ljust(36) + "\n")
+            f.write("# Nombre Central".ljust(36) + "\n")
             f.write(f"'{cen_name}'".ljust(36) + "\n")
-            f.write("# Nombre de Embalse".ljust(36) + "\n")
+            f.write("# Nombre Embalse".ljust(36) + "\n")
             f.write(f"'{dam_name}'".ljust(36) + "\n")
             f.write("# Numero de Segmentos".ljust(36) + "\n")
             f.write(f"{num_segments}" + "\n")
