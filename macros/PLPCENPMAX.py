@@ -1,5 +1,8 @@
 '''
+PLPCENPMAX
 
+This script creates the PLPCENPMAX.dat file from the PMAXEmb sheet in the
+IPLP file
 '''
 
 from utils.utils import (timeit,
