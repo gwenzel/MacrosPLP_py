@@ -124,7 +124,7 @@ def process_gen_data_h(gen_data: pd.DataFrame) -> pd.DataFrame:
     gen_data_h = gen_data_h.reindex(gen_data_h.index.repeat(2))
     # Define hour
     gen_data_h["Hour"] = gen_data_h.groupby(
-        ["Hyd", "Year", "Month", "CenNom"]).cumcount() + 1
+        ["Hyd", "Year", "Month", "CenNom"]).cumcount()
     # Replace Block index for Hour index
     gen_data_h.reset_index(inplace=True)
     gen_data_h.drop(columns=["Block"], inplace=True)

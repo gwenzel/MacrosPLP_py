@@ -110,7 +110,7 @@ def process_cmg_dem(bar_data: pd.DataFrame, resolution: str,
         bar_data_h = bar_data_h.reindex(bar_data_h.index.repeat(2))
         # Define hour
         bar_data_h["Hour"] = bar_data_h.groupby(
-            ["Hyd", "Year", "Month", "BarNom"]).cumcount() + 1
+            ["Hyd", "Year", "Month", "BarNom"]).cumcount()
         # Replace Block index for Hour index
         bar_data_h.reset_index(inplace=True)
         bar_data_h.drop(columns=["Block"], inplace=True)
