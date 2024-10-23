@@ -52,27 +52,6 @@ def create_plpfiltemb_file(iplp_file: Path, path_inputs: Path):
         dict_values["Data"] = list_data
         info_data.append(dict_values)
 
-        '''
-        # Filtration data loop for each reservoir
-        for m in range(num_values):
-            data_row = [" " * 5]  # Start with leading spaces
-            for k in range(1, 5):
-                cell_value = df.loc[offset + i + 1 + m, k + 2]
-                if k == 1:
-                    data_row.append(f"{cell_value:0d}{' ' * 5}")  # Integer format
-                elif k <= 2:
-                    data_row.append(f"{cell_value:.00f}{' ' * (10 if k == 2 else 12)}")  # Decimal format
-                else:
-                    data_row.append(f"{cell_value:.6f}{' ' * 12}")  # More decimal places format
-            data_row[0] = data_row[0].replace(",", ".")  # Replace comma with dot
-            info_data.append(data_row)
-
-        # Last information row for each reservoir
-        info_row = [f"{df.loc[6, 6]}{' ' * 37}"]
-        info_row.append(f"'{df.loc[offset + i, 6]}'")  # String value with single quotes
-        info_data.append(info_row)
-        '''
-
         # Update offset for next reservoir block
         offset += num_values + 1
 
