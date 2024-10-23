@@ -5,8 +5,7 @@ from utils.logger import add_file_handler, create_logger
 from utils.utils import (timeit,
                          check_is_path,
                          define_arg_parser,
-                         get_iplp_input_path,
-                         process_etapas_blocks)
+                         get_iplp_input_path)
 
 
 logger = create_logger('PLPRALCO')
@@ -45,6 +44,7 @@ def create_plpralco(iplp_path: Path, path_inputs: Path):
             a = f"{' ' * spaces}{row.iloc[1]:.3f}"
             b = f"{' ' * 5}{row.iloc[2]}"
             f.write(f"{vol}{a}{b}\n")
+
 
 @timeit
 def main():
