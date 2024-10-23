@@ -45,7 +45,8 @@ setup(
             "PLPCENRE = macros.PLPCENRE:main",
             "PLPDEB = macros.PLPDEB:main",
             "PLPEXTRAC = macros.PLPEXTRAC:main",
-            "PLPFILTEMB = macros.PLPFILTEMB:main"
+            "PLPFILTEMB = macros.PLPFILTEMB:main",
+            "PLPRALCO = macros.PLPRALCO:main"
         ]
     },
     classifiers=[

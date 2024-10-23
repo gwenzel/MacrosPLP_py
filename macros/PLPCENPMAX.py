@@ -78,7 +78,7 @@ def main():
         # Add destination folder to logger
         path_log = iplp_path.parent / "Temp" / "log"
         check_is_path(path_log)
-        add_file_handler(logger, 'plpmat', path_log)
+        add_file_handler(logger, 'PLPCENPMAX', path_log)
 
         logger.info('Printing PLPCENPMAX.dat')
         create_plpcenpmax_file(iplp_path, path_inputs)

@@ -100,7 +100,7 @@ def main():
         # Add destination folder to logger
         path_log = iplp_path.parent / "Temp" / "log"
         check_is_path(path_log)
-        add_file_handler(logger, 'plpmat', path_log)
+        add_file_handler(logger, 'PLPFILTEMB', path_log)
 
         logger.info('Printing PLPFILTEMB.dat')
         create_plpfiltemb_file(iplp_path, path_inputs)
