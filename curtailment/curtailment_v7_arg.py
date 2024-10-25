@@ -409,6 +409,10 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
         df['Energy+Curtailment'] * \
         (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
+    df['Energía Disponible Total #0'] = \
+        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
+            'Energía Disponible #0'].transform(lambda x: x.sum())
+
     # 3. Colocación de energía es igual a Energy si participa,
     # menos una prorrata del curtailment adicional de la zona
 
@@ -423,10 +427,6 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
             'Curtailment Adicional 2'].transform(lambda x: x.sum())
         )
 
-    df['Energía Disponible Total #0'] = \
-        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
-            'Energía Disponible #0'].transform(lambda x: x.sum())
-
     # curtailment adicional prorrateable (minimo entre energia y curt add)
 
     df['Curtailment Adicional Prorrateable'] = \
@@ -440,10 +440,12 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
 
     # factor de prorrata curtailment adicional (segun energia)
     df['Factor Prorrata Curtailment Adicional'] = \
-        df['Energía Disponible #0'] / df['Energía Disponible Total #0'] * \
-        (df['Enable Curtailment']) * \
-        (df['Energía Disponible #0'] > 0) * \
+        (
+        df['Energía Disponible #0'] / df['Energía Disponible Total #0'] *
+        (df['Enable Curtailment']) *
+        (df['Energía Disponible #0'] > 0) *
         (df['Energía Disponible Total #0'] > 0)
+        ).fillna(0)
 
     # curtailment adicional prorrateado
     df['Curtailment Adicional Prorrateado'] = \
@@ -464,20 +466,23 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
     # Primero cuantificar la energia si tiene curtailment pero no participa
     df['Energy disabled curt'] = \
         df['Energy+Curtailment'] * \
-        (df['Curtailment'] > 0) * \
+        (df['Curtailment Original'] > 0) * \
         (df['Enable Curtailment'] == 0)
 
     # Luego usar esa columna para calcular factor de prorrata para sobrante
 
     df['Factor Prorrata Curtailment Sobrante'] = \
-        df['Energy disabled curt'] / df['Energy disabled curt'].sum()
+        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
+            'Energy disabled curt'].transform(
+            lambda x: x / x.sum() if x.sum() > 0 else 0)
 
     # Reasignar curtailment que no pudo ser repartido
     df['Curtailment'] = \
         df['Curtailment Adicional Sobrante'] * \
         df['Factor Prorrata Curtailment Sobrante'] * \
-        (df['Curtailment'] > 0) * \
+        (df['Curtailment Original'] > 0) * \
         (df['Enable Curtailment'] == 0)
+    df["Energy"] = df["Energy+Curtailment"] - df["Curtailment"]
 
     # 3.3 Penalizar colocación con curtailment adicional prorrateado
 
@@ -624,7 +629,9 @@ def print_outputs_to_csv(output_folder, df_all,
 
     # Create output folder per time resolution
     output_folder_aux = Path(output_folder, algorithm)
+    output_folder_debug = Path(output_folder, algorithm, "debug")
     output_folder_aux.mkdir(exist_ok=True)
+    output_folder_debug.mkdir(exist_ok=True)
 
     # Output suffix
     if time_resolution == "Block":
@@ -648,26 +655,31 @@ def print_outputs_to_csv(output_folder, df_all,
     indexes_long = ['Hyd', 'Year', 'Month', time_resolution]
     indexes_short = ['Hyd', 'Year', 'Month']
 
+    # Define output tuples
     output_tuples = [
-        (df_all, 'curtailment_%s.csv' % suffix,
-         None, None),
-        (df_all_redistrib, 'curtailment_redistrib_%s.csv' % suffix,
-         None, None),
-        (df_all_redistrib_grouped,
-         'curtailment_redistrib_grouped_%s.csv' % suffix,
-         None, None),
-        (df_out_ener_redistrib, 'outEnerg_%s.csv' % suffix,
-         df_ener_header, indexes_long),
-        (df_out_curtail_redistrib, 'outCurtail_%s.csv' % suffix,
-         df_cur_header, indexes_long),
-        (df_out_ener_redistrib_monthly, 'outEnerg.csv',
-         df_ener_header, indexes_short),
-        (df_out_curtail_redistrib_monthly, 'outCurtail.csv',
-         df_cur_header, indexes_short)
+        (df_all, output_folder_debug,
+         'curtailment_%s.csv' % suffix, None, None),
+        (df_all_redistrib_grouped, output_folder_debug,
+         'curtailment_redistrib_grouped_%s.csv' % suffix, None, None),
+        (df_out_ener_redistrib, output_folder_aux,
+         'outEnerg_%s.csv' % suffix, df_ener_header, indexes_long),
+        (df_out_curtail_redistrib, output_folder_aux,
+         'outCurtail_%s.csv' % suffix, df_cur_header, indexes_long),
+        (df_out_ener_redistrib_monthly, output_folder_aux,
+         'outEnerg.csv', df_ener_header, indexes_short),
+        (df_out_curtail_redistrib_monthly, output_folder_aux,
+         'outCurtail.csv', df_cur_header, indexes_short)
     ]
+    # Split df_all_redistrib per year (to decrease file size)
+    for year in df_all_redistrib.index.get_level_values("Year").unique():
+        df_year = df_all_redistrib[
+            df_all_redistrib.index.get_level_values("Year") == year]
+        output_tuples.append(
+            (df_year, output_folder_debug,
+                'curtailment_redistrib_%s_%s.csv' % (suffix, year), None, None))
 
-    for df, filename, df_header, indexes in output_tuples:
-        df.to_csv(Path(output_folder_aux, filename), encoding="latin1")
+    for df, folder, filename, df_header, indexes in output_tuples:
+        df.to_csv(Path(folder, filename), encoding="latin1")
         if df_header is not None:
             add_headers_to_csv(Path(output_folder_aux, filename),
                                df_header, indexes)
