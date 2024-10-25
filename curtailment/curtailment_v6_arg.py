@@ -412,18 +412,78 @@ def redistribute_totals(df_all, time_resolution="Block", ITER_MAX=5):
     # 3. Colocación de energía es igual a Energy si participa,
     # menos una prorrata del curtailment adicional de la zona
 
-    df['Prorrata Curtailment Adicional'] = \
-        (df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
+    # 3.1 Determinar la prorrata de curtailment adicional de la zona
+    # Comparar energía con curtailment adicional
+
+    df['Curtailment Adicional Zona'] = \
+        (
+        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
             'Curtailment Adicional 1'].transform(lambda x: x.sum()) +
-         df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
+        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
             'Curtailment Adicional 2'].transform(lambda x: x.sum())
-         ) / df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
-            'Enable Curtailment'].transform(lambda x: x.sum())
+        )
+
+    df['Energía Disponible Total #0'] = \
+        df.groupby(['Year', 'Month', time_resolution, 'Zone'])[
+            'Energía Disponible #0'].transform(lambda x: x.sum())
+
+    # curtailment adicional prorrateable (minimo entre energia y curt add)
+
+    df['Curtailment Adicional Prorrateable'] = \
+        df[['Energía Disponible Total #0',
+            'Curtailment Adicional Zona']].min(axis=1)
+
+    # curtailment adicional sobrante
+    df['Curtailment Adicional Sobrante'] = \
+        df['Curtailment Adicional Zona'] - \
+        df['Curtailment Adicional Prorrateable']
+
+    # factor de prorrata curtailment adicional (segun energia)
+    df['Factor Prorrata Curtailment Adicional'] = \
+        df['Energía Disponible #0'] / df['Energía Disponible Total #0'] * \
+        (df['Enable Curtailment']) * \
+        (df['Energía Disponible #0'] > 0) * \
+        (df['Energía Disponible Total #0'] > 0)
+
+    # curtailment adicional prorrateado
+    df['Curtailment Adicional Prorrateado'] = \
+        df['Curtailment Adicional Prorrateable'] * \
+        df['Factor Prorrata Curtailment Adicional']
+
+    # Imprimir warning si hay Curtailment Adicional Sobrante
+    for zona in df['Zone'].unique():
+        if df[df['Zone'] == zona]['Curtailment Adicional Sobrante'].sum() > 0:
+            logger.warning(
+                f"Warning: Curtailment Adicional Sobrante en zona {zona}")
+            logger.warning('Se redistribuirá en la zona')
+
+    # 3.2 Reasignar curtailment sobrante
+
+    # Calcular factor de prorrata de curtailment adicional sobrante
+
+    # Primero cuantificar la energia si tiene curtailment pero no participa
+    df['Energy disabled curt'] = \
+        df['Energy+Curtailment'] * \
+        (df['Curtailment'] > 0) * \
+        (df['Enable Curtailment'] == 0)
+
+    # Luego usar esa columna para calcular factor de prorrata para sobrante
+
+    df['Factor Prorrata Curtailment Sobrante'] = \
+        df['Energy disabled curt'] / df['Energy disabled curt'].sum()
+
+    # Reasignar curtailment que no pudo ser repartido
+    df['Curtailment'] = \
+        df['Curtailment Adicional Sobrante'] * \
+        df['Factor Prorrata Curtailment Sobrante'] * \
+        (df['Curtailment'] > 0) * \
+        (df['Enable Curtailment'] == 0)
+
+    # 3.3 Penalizar colocación con curtailment adicional prorrateado
 
     df['Colocación #0'] = \
-        df['Energy'] * \
-        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment']) - \
-        df['Prorrata Curtailment Adicional']
+        (df['Energy'] - df['Curtailment Adicional Prorrateado']) * \
+        (df['Energy+Curtailment'] > 0) * (df['Enable Curtailment'])
 
     # 4. Colocación Total de energia es la suma de Colocación para todas
     # las unidades participantes, menos el Curtailment Adicional, que viene
