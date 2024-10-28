@@ -676,7 +676,8 @@ def print_outputs_to_csv(output_folder, df_all,
             df_all_redistrib.index.get_level_values("Year") == year]
         output_tuples.append(
             (df_year, output_folder_debug,
-                'curtailment_redistrib_%s_%s.csv' % (suffix, year), None, None))
+                'curtailment_redistrib_%s_%s.csv' % (suffix, year),
+                None, None))
 
     for df, folder, filename, df_header, indexes in output_tuples:
         df.to_csv(Path(folder, filename), encoding="latin1")
@@ -779,7 +780,7 @@ def analysis_per_unit(df_all_redistrib, output_folder, algorithm):
     df_all_redistrib_grouped['Redistributed Curtailment %'] = \
         df_all_redistrib_grouped['Redistributed Curtailment'] / \
         df_all_redistrib_grouped['Energy+Curtailment']
-    # Pivot and show Units as Units as index, and Year in columns using pivot table
+    # Pivot and show Units as Units as index, and Year in columns
     df_all_redistrib_grouped = df_all_redistrib_grouped.pivot_table(
         index=['Zone', 'Gen', 'Year'], columns=None,
         values=['Energy+Curtailment',
