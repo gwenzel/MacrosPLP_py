@@ -47,7 +47,13 @@ setup(
             "PLPEXTRAC = macros.PLPEXTRAC:main",
             "PLPFILTEMB = macros.PLPFILTEMB:main",
             "PLPRALCO = macros.PLPRALCO:main",
-            "PLPVREBEMB = macros.PLPVREBEMB:main"
+            "PLPVREBEMB = macros.PLPVREBEMB:main",
+            "PLPPLEM1 =  macros.PLPPLEM1:main",
+            "PLPPLEM2 =  macros.PLPPLEM2:main",
+            "PLPMANEM_ETA = macros.PLPMANEM_ETA:main",
+            "PLPMINEMBH = macros.PLPMINEMBH:main",
+            "PLPIDAPE_eTA = macros.PLPIDAPE_eTA:main",
+            "PLPGNL = macros.PLPGNL:main"
         ]
     },
     classifiers=[
