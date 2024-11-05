@@ -1,4 +1,5 @@
 import datetime
+import math
 
 # Declare global variables
 volumenes = [319.1, 333.76, 348.83, 364.32, 380.22]
@@ -36,7 +37,7 @@ def Vol_COLBUN(Cota):
     if Cota < 393:
         return 319.1
     elif Cota < 397:
-        i = round(Cota - 392)
+        i = math.floor(Cota - 392)
         m = volumenes[i] - volumenes[i - 1]
         b = volumenes[i - 1] - Cotas[i - 1] * m
         return m * Cota + b

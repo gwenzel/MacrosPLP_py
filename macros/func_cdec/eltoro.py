@@ -1,3 +1,5 @@
+import math
+
 # Declare global variables
 Datos = [0, 48.28954, 97.47766, 147.26746, 197.35679, 248.04517, 299.43508,
          351.82341, 405.0131, 459.20122,
@@ -37,7 +39,7 @@ def punteroA(m, x, i, dc):
     j = 1
     k = m
     while k - j > 1:
-        i = round((k + j) / 2)
+        i = math.floor((k + j) / 2)
         if x <= Datos[i]:
             k = i
         else:
@@ -53,8 +55,8 @@ def Vol_ELTORO(Cota):
         return 5826.53656
     # else
     Cota = Cota - 1300
-    i = min(round(Cota) + 1, 70)
-    result = Datos[i - 1] + (Cota - round(Cota)) * (Datos[i] - Datos[i - 1])
+    i = min(math.floor(Cota) + 1, 70)
+    result = Datos[i - 1] + (Cota - math.floor(Cota)) * (Datos[i] - Datos[i - 1])
     return max(result, 0)
 
 
@@ -95,7 +97,7 @@ def punteroB(m, x, i, dc):
         if k - j <= 1:
             i = k
         else:
-            i = round((k + j) / 2)
+            i = math.floor((k + j) / 2)
 
             if x <= Cotas[i - 1]:
                 k = i
