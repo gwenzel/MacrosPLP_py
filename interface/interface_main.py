@@ -10,6 +10,7 @@ from functools import wraps
 
 from macros_runner import execute_commands
 from logger import create_logger, add_file_handler
+from commands import plp_commands, plexos_commands
 
 USERNAME = "comer"
 PASSWORD = "12345"
@@ -24,61 +25,6 @@ servers = [
 
 logger = create_logger('PLPtron_9000')
 add_file_handler(logger, 'PLPtron_9000', Path(__file__).parent)
-
-plp_commands = [
-    {'description': 'Dat Files + Etapa2Dates',
-     'command': 'python -c "from macros.filter_files import main; main()"',
-     'parallel': False},
-    {'description': 'Demand',
-     'command': 'python -c "from macros.dem import main; main()"',
-     'parallel': True},
-    {'description': 'Inflow',
-     'command': 'python -c "from macros.inflows import main;' +
-        ' main(plp_enable=True, plx_enable=False)"',
-     'parallel': True},
-    {'description': 'Variable Cost',
-     'command':  'python -c "from macros.cvar import main; main()"',
-     'parallel': True},
-    {'description': 'Buses',
-     'command':  'python -c "from macros.bar import main; main()"',
-     'parallel': False},
-    {'description': 'Blocks',
-     'command':  'python -c "from macros.blo import main; main()"',
-     'parallel': False},
-    {'description': 'Lines',
-     'command':  'python -c "from macros.lin import main; main()"',
-     'parallel': False},
-    {'description': 'Lines Maintenance (In/Out)',
-     'command':  'python -c "from macros.manli import main; main()"',
-     'parallel': False},
-    {'description': 'Lines Maintenance (Exp)',
-     'command':  'python -c "from macros.manlix import main; main()"',
-     'parallel': False},
-    {'description': 'Generators',
-     'command':  'python -c "from macros.cen import main; main()"',
-     'parallel': False},
-    {'description': 'Generators Maintenance (Exp)',
-     'command':  'python -c "from macros.mantcen import main; main()"',
-     'parallel': False},
-    {'description': 'Generators ERNC',
-     'command':  'python -c "from macros.ernc import main; main()"',
-     'parallel': False},
-    {'description': 'Mathematical Programming (Iterations)',
-     'command':  'python -c "from macros.mat import main; main()"',
-     'parallel': False},
-]
-
-plexos_commands = [
-    {'description': 'Command 1',
-     'command': 'echo Command 1 executed',
-     'parallel': True},
-    {'description': 'Command 2',
-     'command': 'echo Command 2 executed',
-     'parallel': False},
-    {'description': 'Command 3',
-     'command': 'echo Command 3 executed',
-     }
-]
 
 
 def timeit(func):
