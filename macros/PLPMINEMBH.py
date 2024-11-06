@@ -139,7 +139,7 @@ def create_plpminembh_file(iplp_file: Path, path_inputs: Path):
 
         for emb in dict_result.keys():
             file.write("# Nombre del embalse\n")
-            file.write(f"' {emb}'\n")
+            file.write(f"'{emb}'\n")
 
             # Count stages with maintenance
             file.write("#   Numero de Etapas con vmin\n")
