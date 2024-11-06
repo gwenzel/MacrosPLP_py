@@ -114,3 +114,11 @@ Esta lógica es válida desde la versión 1.0.0.
 
 - Corrección de bug en cen, si habían NaN en columna Check Perfil, valor FlagPerfil en plptec quedaba en 0.
 - Este error causaba que los vertimientos se imprimieran todos en 0.
+
+### Versión 2.0.0
+
+- Adición de módulos faltantes relacionados a Embalses y GNL (PLPCENPMAX, PLPCENRE, etc)
+
+### Versión 2.0.1
+
+- Fix bug in plpminembh
