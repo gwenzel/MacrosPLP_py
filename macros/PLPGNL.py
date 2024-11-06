@@ -18,6 +18,12 @@ logger = create_logger('PLPGNL')
 
 def create_plpgnl_file(iplp_file: Path, path_inputs: Path):
 
+    # Check if PLPGNL_ships sheet exists
+    if "PLPGNL_ships" not in pd.ExcelFile(iplp_file).sheet_names:
+        logger.error("Sheet PLPGNL_ships not found in input file")
+        logger.error("GNL data was not generated")
+        return
+
     # Read data from Excel sheet
     df_params = pd.read_excel(iplp_file, sheet_name='PLPGNL_ships',
                               usecols="A,C:R", skiprows=2, nrows=6,
