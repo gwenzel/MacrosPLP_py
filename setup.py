@@ -52,7 +52,6 @@ setup(
             "PLPPLEM2 =  macros.PLPPLEM2:main",
             "PLPMANEM_ETA = macros.PLPMANEM_ETA:main",
             "PLPMINEMBH = macros.PLPMINEMBH:main",
-            "PLPIDAPE_eTA = macros.PLPIDAPE_eTA:main",
             "PLPGNL = macros.PLPGNL:main"
         ]
     },
