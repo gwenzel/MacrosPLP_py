@@ -61,6 +61,7 @@ def generate_inputs_PLP():
         }
     parallel_dict = {
         plp_commands[i]['description']: plp_commands[i]['parallel']
+        for i, var in enumerate(input_vars_A)
     }
     command_dict = {
         plp_commands[i]['description']: (
@@ -92,6 +93,7 @@ def generate_inputs_Plexos():
         }
     parallel_dict = {
         plexos_commands[i]['description']: plexos_commands[i]['parallel']
+        for i, var in enumerate(input_vars_A)
     }
     command_dict = {
         plexos_commands[i]['description']: (
