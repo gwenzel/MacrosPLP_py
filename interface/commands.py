@@ -38,23 +38,22 @@ plp_commands = [
    {'description': 'GNL',
     'command': 'python -c "from macros.PLPGNL import main; main()"',
     'parallel': False},
-
    {'description': 'Other Commands',
-    'command': 'python -c "from macros.mat import main; main()'
-                           'from macros.PLPCENPMAX import main; main();'
-                           'from macros.PLPCENRE import main; main(); '
-                           'from macros.PLPDEB import main; main(); '
-                           'from macros.PLPEXTRAC import main; main(); '
-                           'from macros.PLPFILTEMB import main; main(); '
-                           'from macros.PLPIDSIMAPE_MANUAL import main; main(); '
-                           'from macros.PLPLAJA_M import main; main(); '
-                           'from macros.PLPMANEM_ETA import main; main(); '
-                           'from macros.PLPMAULE_N import main; main(); '
-                           'from macros.PLPMINEMBH import main; main(); '
-                           'from macros.PLPPLEM1 import main; main(); '
-                           'from macros.PLPPLEM2 import main; main(); '
-                           'from macros.PLPRALCO import main; main(); '
-                           'from macros.PLPVREBEMB import main; main()"',
+    'command': 'python -c "from macros.mat import main; main();'
+                          'from macros.PLPCENPMAX import main; main();'
+                          'from macros.PLPCENRE import main; main(); '
+                          'from macros.PLPDEB import main; main(); '
+                          'from macros.PLPEXTRAC import main; main(); '
+                          'from macros.PLPFILTEMB import main; main(); '
+                          'from macros.PLPIDSIMAPE_MANUAL import main; main();'
+                          'from macros.PLPLAJA_M import main; main(); '
+                          'from macros.PLPMANEM_ETA import main; main(); '
+                          'from macros.PLPMAULE_N import main; main(); '
+                          'from macros.PLPMINEMBH import main; main(); '
+                          'from macros.PLPPLEM1 import main; main(); '
+                          'from macros.PLPPLEM2 import main; main(); '
+                          'from macros.PLPRALCO import main; main(); '
+                          'from macros.PLPVREBEMB import main; main()"',
     'parallel': False},
 ]
 
@@ -67,5 +66,6 @@ plexos_commands = [
      'parallel': False},
     {'description': 'Command 3',
      'command': 'echo Command 3 executed',
+     'parallel': False,
      }
 ]

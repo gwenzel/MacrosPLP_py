@@ -15,8 +15,8 @@ add_file_handler(logger, 'run_all', Path(__file__).parent)
 @timeit
 def generate_inputs(file_path: Path, commands: list):
     # Check if file_path is valid file
-    if (not Path(file_path.get()).exists()) or (
-            not Path(file_path.get()).is_file()):
+    if (not file_path.exists()) or (
+            not file_path.is_file()):
         logger.info("Please select a valid file.")
         return
     # Select inputs if any
@@ -34,7 +34,7 @@ def generate_inputs(file_path: Path, commands: list):
     }
     command_dict = {
         commands[i]['description']: (
-            commands[i]['command'] + ' -f "' + file_path.get() + '"')
+            f'{commands[i]["command"]} -f  "{file_path}"')
         for i, _ in enumerate(commands)
         }
     if any(bool_dict.values()):
