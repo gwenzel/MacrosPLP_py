@@ -76,6 +76,12 @@ def generate_inputs_PLP():
 
 
 def generate_inputs_Plexos():
+    # Check if file_path is valid file
+    if (not Path(file_path.get()).exists()) or (
+            not Path(file_path.get()).is_file()):
+        log_message("Please select a valid file.")
+        return
+    # Select inputs if any
     selected_inputs = [plexos_commands[i]['description']
                        for i, var in enumerate(input_vars_B) if var.get()]
     log_message(f"Generating Inputs Plexos: {', '.join(selected_inputs)}")
@@ -88,14 +94,16 @@ def generate_inputs_Plexos():
         plexos_commands[i]['description']: plexos_commands[i]['parallel']
     }
     command_dict = {
-        plexos_commands[i]['description']: plexos_commands[i]['command']
+        plexos_commands[i]['description']: (
+            plexos_commands[i]['command'] + ' -f "' + file_path.get() + '"')
         for i, var in enumerate(input_vars_B)
         }
-    execute_commands(bool_dict, parallel_dict, command_dict, logger)
     if any(bool_dict.values()):
-        log_message("Inputs Plexos generated.")
+        log_message("Inputs Plexos running.")
+        execute_commands(bool_dict, parallel_dict, command_dict, logger)
     else:
         log_message("No inputs selected.")
+    log_message("Inputs Plexos generated. Please validate files.")
 
 
 def create_folder():
