@@ -22,7 +22,8 @@ def hour2block(df: pd.DataFrame, block2day: pd.DataFrame) -> pd.DataFrame:
     agg_dict = {}
     colnames = df.columns.tolist()
     for colname in colnames:
-        if 'fp_' in colname:
+        # if colname is not Month nor Block
+        if colname != 'Month' and colname != 'Block':
             agg_dict[colname] = 'mean'
     if len(agg_dict) > 0:
         df = df.groupby(['Month', 'Block']).agg(agg_dict)
