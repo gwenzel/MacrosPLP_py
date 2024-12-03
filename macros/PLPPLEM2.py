@@ -45,6 +45,7 @@ def create_plpplem2_file(iplp_file: Path, path_inputs: Path):
     with open(path_inputs / "plpplem2.dat", 'w', encoding='latin1') as f:
         f.write(output_str)
 
+
 @timeit
 def main():
     '''

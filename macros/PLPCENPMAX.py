@@ -27,8 +27,8 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
 
     with open(path_inputs / "plpcenpmax.dat", "w", encoding='latin1') as f:
         f.write("# Archivo con cuva pmax en funcion del volumen\n")
-        f.write("# Numero Embalses\n")
-        f.write(f"{num_reservoirs_value}" + "\n")
+        f.write("# Numero Embalses".ljust(36) + "\n")
+        f.write(f"{num_reservoirs_value}".ljust(9) + "\n")
 
         offset = 3  # to be updated in loop
         for _ in range(num_reservoirs_value):
@@ -39,12 +39,12 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
             # Get number of segments
             num_segments = int(df.iloc[offset, 2])
             # Write data to file
-            f.write("# Nombre Central".ljust(36) + "\n")
-            f.write(f"'{cen_name}'".ljust(36) + "\n")
-            f.write("# Nombre Embalse".ljust(36) + "\n")
-            f.write(f"'{dam_name}'".ljust(36) + "\n")
-            f.write("# Numero de Segmentos".ljust(36) + "\n")
-            f.write(f"{num_segments}" + "\n")
+            f.write("# Nombre de Central".ljust(48) + "\n")
+            f.write(f"'{cen_name}'".ljust(48) + "\n")
+            f.write("# Nombre Embalse".ljust(48) + "\n")
+            f.write(f"'{dam_name}'".ljust(48) + "\n")
+            f.write("# Numero de Segmentos".ljust(48) + "\n")
+            f.write(f"{num_segments}".ljust(15) + "\n")
 
             f.write("#Volumen       Pendiente     Coeficiente\n")
             for seg in range(num_segments):
@@ -53,7 +53,7 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
                 coef = df.iloc[offset + 1 + seg, 3]
                 # Write al values in one row with 14 spaces each
                 f.write(f"{volume:0.1f}".ljust(15) +
-                        f"{slope:0.6f}".ljust(14) +
+                        f"{slope:0.6f}".ljust(15) +
                         f"{coef:0.6f}".ljust(14) + "\n")
 
             # Offset for next reservoir

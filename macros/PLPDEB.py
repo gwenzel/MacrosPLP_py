@@ -32,7 +32,7 @@ def create_plpdeb_file(iplp_file: Path, path_inputs: Path):
 
     # Write the plpdeb.dat file
     with open(path_inputs / "plpdeb.dat", "w") as f:
-        f.write("# Archivo con parametros de Debug (plpdeb.dat)\n")
+        f.write("# Archivo con parametros de Debug (plpdeb.dat) \n")
         f.write("# FLogFile\n")
         f.write(f"{' ' * 9}{f_log}\n")
         f.write("# PriProgDin PDSvFl PMSvFl FDatChe ErSvFl PsFzFl FTSvFl FSvLaPs\n")

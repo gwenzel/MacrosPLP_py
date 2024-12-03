@@ -135,7 +135,7 @@ def create_plpminembh_file(iplp_file: Path, path_inputs: Path):
         file.write("# Archivo de minimos de embalses con holgura"
                    " (plpminembh.dat)\n")
         file.write("# Numero de embalses con mantenimientos\n")
-        file.write(f"{len(dict_result.keys())}\n")
+        file.write(f" {len(dict_result.keys())}\n")
 
         for emb in dict_result.keys():
             file.write("# Nombre del embalse\n")

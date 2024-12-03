@@ -28,21 +28,20 @@ def create_plpralco(iplp_path: Path, path_inputs: Path):
 
         # Lake name and restriction name
         f.write(f"# {rest1_name}{' ' * 40}\n")
-        f.write(f"'{rest1_value}'\n")
+        f.write(f"'{rest1_value}' \n")
 
         # Number of segments
-        f.write(f"# {rest2_name}{' ' * 40}\n")
-        f.write(f"{rest2_value:0d}{' ' * 13}\n")
+        f.write(f"# {rest2_name}".ljust(40) + "\n")
+        f.write(f"{rest2_value:0d}".ljust(14) + "\n")
 
         # Header row for Vcota data
-        f.write("# Vol           a          b\n")
+        f.write("# Vol          a       b\n")
 
         # Vcota data with formatting
         for index, row in vcota_data.iterrows():
-            vol = f"{row.iloc[0]:.1f}"
-            spaces = max(16 - len(vol), 4)
-            a = f"{' ' * spaces}{row.iloc[1]:.3f}"
-            b = f"{' ' * 5}{row.iloc[2]}"
+            vol = f"{row.iloc[0]:.1f}".ljust(15)
+            a = f"{row.iloc[1]:.3f}".ljust(8)
+            b = f"{row.iloc[2]}".ljust(11)
             f.write(f"{vol}{a}{b}\n")
 
 

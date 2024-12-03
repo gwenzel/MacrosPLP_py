@@ -34,7 +34,7 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
 
         # Helper functions to format and write to file
         def write_str_line(df, row_idx, col_data_idx, col_format_idx):
-            file.write(f"# {df.iloc[row_idx, col_data_idx]:<34}\n")
+            file.write(f"# {df.iloc[row_idx, col_data_idx]:<32}\n")
             ndata = int(df.iloc[row_idx, 4])
             if ndata > 1:
                 for i in range(1, ndata + 1):
@@ -44,7 +44,7 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
                     f"'{df.iloc[row_idx, col_format_idx]}'".ljust(48) + "\n")
 
         def write_int_line(df, row_idx, col_data_idx, col_format_idx):
-            file.write(f"# {df.iloc[row_idx, col_data_idx]:<34}\n")
+            file.write(f"# {df.iloc[row_idx, col_data_idx]:<32}\n")
             ndata = int(df.iloc[row_idx, 4])
             if ndata > 1:
                 for i in range(1, ndata + 1):
@@ -57,7 +57,7 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
                 file.write(f"{int(df.iloc[row_idx, col_format_idx]):<15}\n")
 
         def write_bool_line(df, row_idx, col_data_idx, col_format_idx):
-            file.write(f"# {df.iloc[row_idx, col_data_idx]:<34}\n")
+            file.write(f"# {df.iloc[row_idx, col_data_idx]:<32}\n")
             ndata = int(df.iloc[row_idx, 4])
             if ndata > 1:
                 for i in range(1, ndata + 1):
@@ -67,11 +67,11 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
                         file.write(f"{str(value).upper():<} ")
                 file.write("\n")
             else:
-                file.write(f"{df.iloc[row_idx, col_format_idx]:<15}\n")
+                file.write(f"{df.iloc[row_idx, col_format_idx]:<9}\n")
 
         def write_float_line(df, row_idx, col_data_idx, col_format_idx,
                              decimals=2):
-            file.write(f"# {df.iloc[row_idx, col_data_idx]:<34}\n")
+            file.write(f"# {df.iloc[row_idx, col_data_idx]:<32}\n")
             ndata = int(df.iloc[row_idx, 4])
             if ndata > 1:
                 for i in range(1, ndata + 1):
@@ -81,9 +81,9 @@ def create_plpmaule_n(iplp_path: Path, path_inputs: Path):
                         value_str_1f = f"{value:.1f}".replace(',', '.')
                         value_str_2f = f"{value:.2f}".replace(',', '.')
                         if decimals == 1:
-                            file.write(f"{value_str_1f:<7} ")
+                            file.write(f"{value_str_1f:<5} ")
                         else:
-                            file.write(f"{value_str_2f:<7} ")
+                            file.write(f"{value_str_2f:<5} ")
                 file.write("\n")
             else:
                 value = float(df.iloc[row_idx, col_format_idx])

@@ -41,12 +41,12 @@ def create_plpplem1_file(iplp_file: Path, path_inputs: Path):
         "Numero": "{:3d},".format,
         "Nombre": "{:<48},".format,
         "Tipo": "{:<1},".format,
-        "Barra": "{:>3},".format,
+        "Barra": "{:>4},".format,
         "N/A": "{:>2},".format,
-        "VolMin": "{:>10.2f},".format,
-        "VolMax": "{:>10.2f},".format,
-        "VolMinNECF": "{:>10.2f},".format,
-        "VolMaxNECF": "{:>10.2f},".format,
+        "VolMin": "{:>11.2f},".format,
+        "VolMax": "{:>11.2f},".format,
+        "VolMinNECF": "{:>11.2f},".format,
+        "VolMaxNECF": "{:>11.2f},".format,
         "FEscala": "{:>3},".format,
         "FactRendim": "{:>8.3f}".format
     }

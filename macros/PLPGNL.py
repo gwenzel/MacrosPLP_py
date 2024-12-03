@@ -24,24 +24,26 @@ def create_plpgnl_file(iplp_file: Path, path_inputs: Path):
         logger.error("GNL data was not generated")
         return
 
+    logger.warning("Maximum 30 contracts in PLPGNL_ships sheet (columns J:AM)")
+
     # Read data from Excel sheet
     df_params = pd.read_excel(iplp_file, sheet_name='PLPGNL_ships',
-                              usecols="A,C:R", skiprows=2, nrows=6,
+                              usecols="H,J:AM", skiprows=3, nrows=6,
                               index_col=0, engine='pyxlsb')
 
     df_ships = pd.read_excel(iplp_file, sheet_name='PLPGNL_ships',
-                             usecols="A:R", skiprows=11,
-                             engine='pyxlsb').dropna(how='all')
+                             usecols="I:AM", skiprows=12,
+                             index_col=0, engine='pyxlsb').dropna(how='all')
 
     df_rend = pd.read_excel(iplp_file, sheet_name='PLPGNL_ships',
-                            usecols="T:X", skiprows=2,
+                            usecols="B:F", skiprows=3,
                             engine='pyxlsb').dropna(how='all')
 
     df_etapas = pd.read_excel(iplp_file, sheet_name="Etapas",
                               usecols="A:F", skiprows=3)
 
     etapa_max = df_etapas['Etapa'].max()
-    df_ships = df_ships[df_ships['Etapa'].isin(range(1, etapa_max + 1))]
+    df_ships = df_ships[df_ships.index.isin(range(1, etapa_max + 1))]
 
     # Warn if there are NaN values in dataframes
     if (df_ships.isnull().values.any() or
@@ -56,46 +58,51 @@ def create_plpgnl_file(iplp_file: Path, path_inputs: Path):
     # Fill df_ships nan with 0
     df_ships.fillna(0, inplace=True)
     # Get list of active contracts
-    active_contracts = [col for col in df_params.columns if
-                        df_params.loc["Habilitado", col] == 1]
+    list_of_contracts = [col for col in df_params.columns]
+    is_active = [df_params.loc["Habilitado", col] == 1
+                 for col in list_of_contracts]
+    num_active = sum(is_active)
 
     id = 1
     with open(path_inputs / "plpcnfgnl.dat", "w", encoding="latin1") as file:
         file.write("# Archivo que describe terminales GNL\n")
         file.write("# Numero de terminales GNL\n")
-        file.write(f" {len(active_contracts)} \n")
-        for contract in active_contracts:
-            vmax = df_params.loc["Volumen Máximo", contract]
-            vini = df_params.loc["Volumen Inicial", contract]
-            cgnl = 0.00
-            cver = df_params.loc["Costo Vertimiento GNL", contract]
-            creg = df_params.loc["Costo Regasificacion", contract]
-            calm = df_params.loc["Costo Almacenar", contract]
-            rend = 1.00
+        file.write(f" {num_active} \n")
+        for idx_con, contract in enumerate(list_of_contracts):
+            if is_active[idx_con]:
+                vmax = df_params.loc["Volumen Máximo", contract]
+                vini = df_params.loc["Volumen Inicial", contract]
+                cgnl = 0.00
+                cver = df_params.loc["Costo Vertimiento GNL", contract]
+                creg = df_params.loc["Costo Regasificacion", contract]
+                calm = df_params.loc["Costo Almacenar", contract]
+                rend = 1.00
 
-            ncen = df_rend[df_rend["Contrato"] == contract].shape[0]
-            file.write("#ID     Nombre                                       ")
-            file.write("   VMax[TBtu]  Vini[TBtu]  CGNL    CVerGNL CRegGNL ")
-            file.write("CAlmGNL RendGNL\n")
-            file.write(f"{id:2d}      ")
-            file.write(f"'{contract}'".ljust(48))
-            file.write(f"{vmax:<12.2f}{vini:<12.2f}{cgnl:<8.2f}")
-            file.write(f"{cver:<9.1E}".replace("E+0", "E+"))
-            file.write(f"{creg:<8.2f}{calm:<8.2f}{rend:<8.2f}\n")
-            file.write("# Numero centrales\n")
-            file.write(f" {ncen} \n")
-            file.write("# Central                                     ")
-            file.write("Rendimiento [MMBtu/MWh]\n")
-            for _, row in df_rend[df_rend["Contrato"] == contract].iterrows():
-                file.write(f"{row['Central Gas']:45s} ")
-                file.write(f"{row['Rendimiento [MMBtu/MWh]']:<10.8f}\n")
-            file.write("# Numero de barcos futuros\n")
-            file.write(f" {etapa_max} \n")
-            file.write("# Etapa Volumen[TBtu]\n")
-            for _, row in df_ships.iterrows():
-                file.write(f"{row['Etapa']:<8d} {row[contract]:<8.2f}\n")
-            id += 1
+                ncen = df_rend[df_rend["Contrato"] == contract].shape[0]
+                file.write("#ID     Nombre                                       ")
+                file.write("   VMax[TBtu]  Vini[TBtu]  CGNL    CVerGNL CRegGNL ")
+                file.write("CAlmGNL RendGNL\n")
+                file.write(f" {id:2d}     ")
+                file.write(f"'{contract}'".ljust(48))
+                file.write(f"{vmax:<12.2f}{vini:<12.2f}{cgnl:<8.2f}")
+                file.write(f"{cver:<9.1E}".replace("E+0", "E+"))
+                file.write(f"{creg:<8.2f}{calm:<8.2f}{rend:<8.2f}\n")
+                file.write("# Numero centrales\n")
+                file.write(f" {ncen} \n")
+                file.write("# Central                                       ")
+                file.write("Rendimiento [MMBtu/MWh]\n")
 
+                df_rend_filt = df_rend[df_rend["Contrato"] == contract]
+                for _, row in df_rend_filt.iterrows():
+                    file.write(f"{row['Central Gas']:47s} ")
+                    file.write(f"{row['Rendimiento [MMBtu/MWh]']:<10.8f}\n")
+                file.write("# Numero de barcos futuros\n")
+                file.write(f" {etapa_max} \n")
+                file.write("# Etapa Volumen[TBtu]\n")
+                for idx_eta, row in df_ships.iterrows():
+                    contract_name = df_ships.columns[idx_con]
+                    file.write(f"{idx_eta:<7d} {row[contract_name]:<8.2f}\n")
+                id += 1
 
 
 @timeit

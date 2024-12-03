@@ -30,19 +30,19 @@ def create_plpvrebemb_file(iplp_file: Path, path_inputs: Path):
     info_data = []
     for i in range(num_dams):
         dict_data = {}
-        dict_data["Nombre del Embalse"] = \
-            f"'{df.iloc[offset + i, 2]}'{' ' * 36}"  # String value
-        dict_data["Volumen de Rebalse [ 10^3 m3 ]"] = \
-            f"{round(df.iloc[offset + i, 3], 1):.2f}{' ' * 37}"
-        dict_data["Costo de Rebalse"] = \
-            f"{round(df.iloc[offset + i, 4], 1):.2f}{' ' * 37}"
+        dict_data["Nombre del Embalse".ljust(35)] = \
+            f"'{df.iloc[offset + i, 2]}'".ljust(48)  # String value
+        dict_data["Volumen de Rebalse [ 10^3 m3 ]".ljust(35)] = \
+            f"{round(df.iloc[offset + i, 3], 1):.2f}".ljust(37)
+        dict_data["Costo de Rebalse".ljust(35)] = \
+            f"{round(df.iloc[offset + i, 4], 1):.2f}".ljust(37)
         info_data.append(dict_data)
 
     # Create the plpvrebemb.dat file
     with open(path_inputs / "plpvrebemb.dat", "w", encoding="latin1") as f:
         f.write("# Archivo de volumenes de rebalses de embalses (plpvrebemb.dat)\n")
-        f.write(f"# {num_dams_name}{' ' * 48}\n")
-        f.write(f"{num_dams:0d}{' ' * 9}\n")
+        f.write(f"# {num_dams_name}".ljust(48) + "\n")
+        f.write(f"{num_dams:0d}".ljust(9) + "\n")
 
         for row in info_data:
             for key, value in row.items():

@@ -49,7 +49,7 @@ def create_plpcenre_file(iplp_file: Path, path_inputs: Path):
             f.write("# Numero de Tramos\n")
             num_tramos = df.iloc[row_index + 6, 2]
             f.write(str(int(num_tramos)) + "\n")
-            f.write("#Tramo\tVolumen\t\tPendiente\tConstante\tF.Escala\n")
+            f.write("#Tramo      Volumen     Pendiente    Constante  F.Escala\n")
             for j in range(num_tramos):
                 value_row_index = row_index + 8
                 tramo = j + 1
@@ -57,7 +57,7 @@ def create_plpcenre_file(iplp_file: Path, path_inputs: Path):
                 pend = df.iloc[value_row_index, 4]
                 const = df.iloc[value_row_index, 5]
                 fe = df.iloc[value_row_index, 6]
-                f.write(f" {tramo:5d}\t{vol:.7f}\t{pend:.7f}\t{const:.7f}\t{fe:.1E}\n")
+                f.write(f" {tramo:5d}    {vol:.7f}     {pend:.7f}    {const:.7f}   {fe:.1E}\n".replace("E+0", "E+"))
 
 
 @timeit
