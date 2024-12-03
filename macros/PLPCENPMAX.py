@@ -45,7 +45,6 @@ def create_plpcenpmax_file(iplp_file: Path, path_inputs: Path):
             f.write(f"'{dam_name}'".ljust(48) + "\n")
             f.write("# Numero de Segmentos".ljust(48) + "\n")
             f.write(f"{num_segments}".ljust(15) + "\n")
-
             f.write("#Volumen       Pendiente     Coeficiente\n")
             for seg in range(num_segments):
                 volume = df.iloc[offset + 1 + seg, 1]
