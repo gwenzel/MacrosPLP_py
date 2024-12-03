@@ -11,7 +11,7 @@ requirements = [
 
 setup(
     name='macros_plp',
-    version='2.1.1',
+    version='2.1.2',
     description=('A package to replace PLP VBA macros'),
     author='George Wenzel',
     packages=find_packages(),
