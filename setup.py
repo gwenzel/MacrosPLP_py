@@ -53,7 +53,8 @@ setup(
             "PLPMANEM_ETA = macros.PLPMANEM_ETA:main",
             "PLPMINEMBH = macros.PLPMINEMBH:main",
             "PLPGNL = macros.PLPGNL:main",
-            "run_all = macros.run_all:main"
+            "run_all = macros.run_all:main",
+            "check_errors = utils.check_errors:main"
         ]
     },
     classifiers=[
