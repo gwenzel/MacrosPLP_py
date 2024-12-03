@@ -1,7 +1,6 @@
 # Script that reads folder, lists all log files, and checks if they have errors
 
 import os
-import re
 import pandas as pd
 from pathlib import Path
 from utils.utils import check_is_path, define_arg_parser, get_iplp_input_path
@@ -24,13 +23,15 @@ def check_errors(folder: Path) -> pd.DataFrame:
             # Check for errors
             for line in lines:
                 if 'ERROR' in line:
-                    # Get error message, removing line break and timestamp before error
+                    # Get error message, removing line break and timestamp
+                    # before error
                     error = line.split('ERROR : ')[1].replace('\n', '')
                     # Append to dataframe
                     list_of_errors.append({'File': log_file, 'Error': error})
                     file_clean = False
         if file_clean:
-            list_of_errors.append({'File': log_file, 'Error': 'No errors found'})
+            list_of_errors.append({'File': log_file,
+                                   'Error': 'No errors found'})
 
     df = pd.DataFrame(list_of_errors)
     if len(df) == 0:
