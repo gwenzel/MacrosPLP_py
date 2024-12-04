@@ -237,6 +237,23 @@ def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv):
     Generator HeatRate (pure Heatrate) with plexos format
     '''
     df = read_heatrate_and_unit_fuel_mapping(iplp_path)
+
+    # Read gas consumption from PLPGNL_ships sheet
+    # Use it to replace different values
+    df_gas = pd.read_excel(iplp_path, sheet_name="PLPGNL_ships",
+                           usecols="B:F", skiprows=3).dropna(how="all")
+    # Dictionary with data
+    gas_cons_dict = df_gas.set_index('Central Gas')[
+        "Rendimiento [MMBtu/MWh]"].to_dict()
+
+    # loop through all values in df and replace Heat Rate values if
+    # Central matches any key in the dictionary
+    for key in gas_cons_dict.keys():
+        if key in df['Central'].tolist():
+            df.loc[df['Central'] == key, 'Heat Rate'] = gas_cons_dict[key]
+            # logger.info('Replacing %s gas consumption with %s' % (
+            #     key, gas_cons_dict[key]))
+
     # Format dataframe
     df = df.drop(['Fuel Name', 'Non-Fuel Cost'], axis=1)
     df['YEAR'] = df_daily['YEAR'][0]
