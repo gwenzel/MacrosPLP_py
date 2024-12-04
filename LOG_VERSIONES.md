@@ -121,4 +121,22 @@ Esta lógica es válida desde la versión 1.0.0.
 
 ### Versión 2.0.1
 
-- Fix bug in plpminembh
+- Fix bug en plpminembh
+
+### Versión 2.1.0
+
+- Cambios en interfaz y adición de módulo "run_all"
+
+### Versión 2.1.1
+
+- Arreglo de bug que no reconocía perfiles con nombres que no empezaran con "fp_"
+- Ajustes de espacios en módulos nuevos
+- PLPGAS - ajuste de posición de columnas para los consumos (ahora a la izquierda) y los volúmenes (ahora a la derecha)
+
+### Versión 2.1.2
+
+- Adición de check_errors, que imprime una tabla resumen de los logs en la misma carpeta
+
+### Versión 2.1.3
+
+- En plexos, reemplazo de heat rate de consumo de gas en archivo HeatRateFuel, con valores en PLP_ships
