@@ -1,6 +1,7 @@
 from pathlib import Path
 from interface.commands import plp_commands, plexos_commands
 from interface.macros_runner import execute_commands
+from utils.check_errors import check_errors
 from utils.logger import create_logger, add_file_handler
 from utils.utils import (timeit,
                          define_arg_parser,
@@ -8,8 +9,6 @@ from utils.utils import (timeit,
 
 
 logger = create_logger('run_all')
-add_file_handler(logger, 'run_all', Path(__file__).parent)
-
 
 # Functions to interact with remote server
 @timeit
@@ -56,11 +55,18 @@ def main():
         parser = define_arg_parser()
         iplp_path = get_iplp_input_path(parser)
 
+        # Add destination folder to logger
+        path_log = iplp_path.parent / "Temp" / "log"
+        add_file_handler(logger, 'run_all', path_log)
+
         # Generate plp inputs
         generate_inputs(iplp_path, plp_commands)
 
         # Wait until plp inputs are done and run plexos
         generate_inputs(iplp_path, plexos_commands)
+
+        # Check errors - compile log files into csv file
+        check_errors(path_log)
 
     except Exception as e:
         logger.error(e, exc_info=True)
