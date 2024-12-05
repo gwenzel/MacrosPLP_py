@@ -140,3 +140,8 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 2.1.3
 
 - En plexos, reemplazo de heat rate de consumo de gas en archivo HeatRateFuel, con valores en PLP_ships
+
+
+### Versión 2.2.0
+
+- Agregar interface al paquete distribuido, para habilitar comando run_all
