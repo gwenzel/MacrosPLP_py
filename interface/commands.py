@@ -58,7 +58,10 @@ plp_commands = [
 ]
 
 plexos_commands = [
-    {'description': 'Plexos all',
+    {'description': 'Plexos CSV folder',
      'command': 'python -c "from macros.csv_plexos import main; main();',
+     'parallel': True},
+    {'description': 'Inflow Plexos',
+     'command': 'python -c "from macros.inflows import main; main(plp_enable=False, plx_enable=True)"',
      'parallel': True},
 ]
