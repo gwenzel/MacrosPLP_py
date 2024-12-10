@@ -3,7 +3,7 @@ from interface.commands import plp_commands, plexos_commands
 from interface.macros_runner import execute_commands
 from utils.check_errors import check_errors
 from utils.logger import create_logger, add_file_handler
-from utils.utils import (timeit,
+from utils.utils import (check_is_path, timeit,
                          define_arg_parser,
                          get_iplp_input_path)
 
@@ -57,6 +57,7 @@ def main():
 
         # Add destination folder to logger
         path_log = iplp_path.parent / "Temp" / "log"
+        check_is_path(path_log)
         add_file_handler(logger, 'run_all', path_log)
 
         # Generate plp inputs
