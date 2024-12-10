@@ -58,14 +58,7 @@ plp_commands = [
 ]
 
 plexos_commands = [
-    {'description': 'Command 1',
-     'command': 'echo Command 1 executed',
+    {'description': 'Plexos all',
+     'command': 'python -c "from macros.csv_plexos import main; main();',
      'parallel': True},
-    {'description': 'Command 2',
-     'command': 'echo Command 2 executed',
-     'parallel': False},
-    {'description': 'Command 3',
-     'command': 'echo Command 3 executed',
-     'parallel': False,
-     }
 ]
