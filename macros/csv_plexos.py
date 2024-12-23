@@ -179,16 +179,16 @@ def print_generator_rating(df_daily: pd.DataFrame,
     df_gen_rating.to_csv(path_csv / 'Generator_Rating.csv', index=False)
 
 
-def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
+def print_generator_varcost(df_daily, iplp_path, path_csv, path_df):
     '''
     Read df_cvar_with_emissions.csv file and print
-    Generator HeatRate (Variable Cost) with plexos format
+    Generator Variable Cost with plexos format
     '''
     try:
         df = pd.read_csv(path_df / 'df_cvar_with_emissions.csv')
     except FileNotFoundError:
         logger.error('File df_cvar_with_emissions.csv not found')
-        logger.error('File Generator_HeatRate could not be printed')
+        logger.error('File Generator_VarCost could not be printed')
         return
     # Format dataframe
     # Recalculate Month (not hydromonth)
@@ -232,7 +232,7 @@ def print_generator_heatrate(df_daily, iplp_path, path_csv, path_df):
     new_index = ['YEAR', 'MONTH', 'DAY', 'PERIOD']
     df = df.set_index(new_index)
     # Print
-    df.to_csv(path_csv / 'Generator_HeatRate.csv')
+    df.to_csv(path_csv / 'Generator_VarCost.csv')
 
 
 def print_generator_heatrate_fuel(df_daily, iplp_path, path_csv):
@@ -303,8 +303,8 @@ def print_generator_files(iplp_path: Path,
     logger.info('Processing plexos Generator RatingFactor')
     print_generator_rating_factor(iplp_path, path_df, path_csv)
     # Generator HeatRate (Variable Cost)
-    logger.info('Processing plexos Generator HeatRate')
-    print_generator_heatrate(df_daily, iplp_path, path_csv, path_df)
+    logger.info('Processing plexos Generator VarCost')
+    print_generator_varcost(df_daily, iplp_path, path_csv, path_df)
     # Generator HeatRate (Pure HeatRate)
     logger.info('Processing plexos Generator HeatRate Fuel')
     print_generator_heatrate_fuel(df_daily, iplp_path, path_csv)
