@@ -51,7 +51,9 @@ def get_df_hourly_plexos(blo_eta: pd.DataFrame,
 
 def read_centrales_plexos(iplp_path: Path,
                           add_specs: bool = False,
-                          only_thermal: bool = False) -> pd.DataFrame:
+                          only_thermal: bool = False,
+                          filter_x: bool = True,
+                          drop_type: bool = True) -> pd.DataFrame:
     '''
     Read Centrales sheet from iplp_path and return df with generators
     '''
@@ -75,10 +77,12 @@ def read_centrales_plexos(iplp_path: Path,
             'Min Down Time': 'MinDown'})
         df = df.fillna(0)
     # Filter out if X
-    df = df[df['Tipo de Central'] != 'X']
     if only_thermal:
         df = df[df['Tipo de Central'] == 'T']
-    df = df.drop('Tipo de Central', axis=1)
+    if filter_x:
+        df = df[df['Tipo de Central'] != 'X']
+    if drop_type:
+        df = df.drop('Tipo de Central', axis=1)
     return df
 
 
@@ -316,6 +320,9 @@ def print_generator_files(iplp_path: Path,
     # BESS Efficiencies
     logger.info('Processing plexos BESS Efficiencies')
     print_bess_efficiencies(iplp_path, path_csv, path_df, df_bess)
+    # Print Units
+    logger.info('Processing Units file')
+    print_units_file(iplp_path, df_daily, path_csv)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -886,6 +893,40 @@ def calculate_consumption_plexos(x):
     # [Yearly demand] * [% of demand in current bus] *
     #   [% of demand in current hour] * 1000
     return x['Demand'] * x['Factor Barra Consumo'] * x['PowerFactor'] * 1000
+
+
+def print_units_file(iplp_path: Path,
+                     df_daily: pd.DataFrame,
+                     path_csv: Path):
+    '''
+    Print Units file
+    '''
+    # Read cols CENTRALES, Tipo de Central, Conectada a la Barra,
+    # Estado
+    df = pd.read_excel(iplp_path, sheet_name="Centrales",
+                       skiprows=4, usecols="B,C,F,BJ")
+    df = df.rename(columns={'Nombre': 'NAME'})
+    df['YEAR'] = df_daily['YEAR'][0]
+    df['MONTH'] = 1
+    df['DAY'] = 1
+    df['PERIOD'] = 1
+
+    # If Conectada a la Barra = 0 or
+    # Tipo de Central = X or
+    # Estado = "Deshabilitada" or
+    # Estado = "Decommisioned" or
+    # Estado = "Decommissioned"
+    df['VALUE'] = ((df['Conectada a la Barra'] != 0) &
+                   (df['Tipo de Central'] != 'X') &
+                   (df['Estado'] != 'Deshabilitada') &
+                   (df['Estado'] != 'Decommisioned') &
+                   (df['Estado'] != 'Decommissioned'))
+    # Turn VALUE to 1 or 0
+    df['VALUE'] = df['VALUE'].apply(lambda x: 1 if x else 0)
+
+    # Drop Tipo de Central, Conectada a la Barra and Estado
+    df = df.drop(['Tipo de Central', 'Conectada a la Barra', 'Estado'], axis=1)
+    df.to_csv(path_csv / 'Units.csv', index=False)
 
 
 def main():
