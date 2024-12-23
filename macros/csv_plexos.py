@@ -76,6 +76,7 @@ def read_centrales_plexos(iplp_path: Path,
             'Min Up Time': 'MinUp',
             'Min Down Time': 'MinDown'})
         df = df.fillna(0)
+
     # Filter out if X
     if only_thermal:
         df = df[df['Tipo de Central'] == 'T']
@@ -323,6 +324,8 @@ def print_generator_files(iplp_path: Path,
     # Print Units
     logger.info('Processing Units file')
     print_units_file(iplp_path, df_daily, path_csv)
+    logger.info('Processing other Plexos files')
+    print_other_plexos_files(iplp_path, df_daily, path_csv)
 
 
 def build_df_nominal_plexos(df_daily: pd.DataFrame, line_names: list,
@@ -927,6 +930,40 @@ def print_units_file(iplp_path: Path,
     # Drop Tipo de Central, Conectada a la Barra and Estado
     df = df.drop(['Tipo de Central', 'Conectada a la Barra', 'Estado'], axis=1)
     df.to_csv(path_csv / 'Units.csv', index=False)
+
+
+def print_other_plexos_files(iplp_path: Path,
+                             df_daily: pd.DataFrame,
+                             path_csv: Path):
+
+    df = pd.read_excel(
+        iplp_path, sheet_name="Centrales",
+        skiprows=4, usecols="B,C,F,BJ,DP:DU")
+    df = df.rename(columns={'CENTRALES': 'NAME'})
+
+    # Filter out unused units
+    df = df[(df['Conectada a la Barra'] != 0) &
+            (df['Tipo de Central'] != 'X') &
+            (df['Estado'] != 'Deshabilitada') &
+            (df['Estado'] != 'Decommisioned') &
+            (df['Estado'] != 'Decommissioned')]
+    # Drop filter cols
+    df = df.drop(['Conectada a la Barra', 'Tipo de Central', 'Estado'], axis=1)
+
+    # Add YEAR, MONTH, DAY, PERIOD
+    df['YEAR'] = df_daily['YEAR'][0]
+    df['MONTH'] = 1
+    df['DAY'] = 1
+    df['PERIOD'] = 1
+
+    files_list = ["CPF_up", "CPF_down", "CSF_up", "CSF_down",
+                  "Generator_Inercia", "RunupRate"]
+
+    for col in files_list:
+        df_out = df.copy()
+        df_out['VALUE'] = df_out[col]
+        df_out = df_out[['NAME', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']]
+        df_out.to_csv(path_csv / (col + '.csv'), index=False)
 
 
 def main():
