@@ -966,6 +966,88 @@ def print_other_plexos_files(iplp_path: Path,
         df_out.to_csv(path_csv / (col + '.csv'), index=False)
 
 
+def print_control_freq_files(iplp_path: Path,
+                             df_hourly: pd.DataFrame,
+                             path_csv: Path):
+
+    # Check if CtrlFrec sheet is present
+    if 'CtrlFrec' not in pd.ExcelFile(iplp_path).sheet_names:
+        logger.error('Sheet CtrlFrec not found in %s' % iplp_path)
+        logger.error('File Freq_Control could not be printed')
+        return
+
+    df_params = pd.read_excel(iplp_path, sheet_name='CtrlFrec',
+                              usecols="E:R",
+                              skiprows=2, nrows=2, index_col=0,
+                              engine='pyxlsb')
+    df_reqs = pd.read_excel(iplp_path, sheet_name='CtrlFrec',
+                            usecols="B:R", skiprows=6,
+                            engine='pyxlsb')
+
+    # Rename df_hourly col names
+    df_hourly = df_hourly.rename(columns={'Year': 'YEAR',
+                                          'Month': 'MONTH',
+                                          'Day': 'DAY',
+                                          'Hour': 'PERIOD',
+                                          'Date': 'DATE'})
+
+    # Get initial and final year
+    year_ini = df_hourly['YEAR'].min()
+    year_end = df_hourly['YEAR'].max()
+
+    # Filter dates
+    mask_ini = df_reqs['YEAR'] >= year_ini
+    mask_end = df_reqs['YEAR'] <= year_end
+
+    df_reqs = df_reqs[mask_ini & mask_end]
+
+    # If there are missing years, warn
+    if df_reqs['YEAR'].nunique() != year_end - year_ini + 1:
+        logger.warning('There are missing years in CtrlFrec sheet')
+        logger.warning('Check the file and fix the missing years')
+
+    # Get enable list from 1st table
+    enable_list = []
+    for col in df_params.columns:
+        if df_params.loc['Habilitado', col] == 1:
+            enable_list.append(col)
+            logger.info('Frequency Control Requirement %s is enabled' % col)
+
+    # Keep only columns in enable list
+    df_reqs = df_reqs[['YEAR', 'MONTH', 'DAY', 'PERIOD'] + enable_list]
+
+    # Warn if there are NaN values
+    if df_reqs.dropna(axis=1, how='all').isna().any().any():
+        logger.warning('There are NaN values in CtrlFrec sheet')
+        logger.warning('Check the file and fix the NaN values')
+        logger.warning('Missing frequency control requirements replaced by 0')
+        df_reqs = df_reqs.fillna(0)
+
+    # Merge df_hourly with df_reqs
+    df_cf = pd.merge(df_hourly, df_reqs, on=['YEAR', 'MONTH', 'DAY', 'PERIOD'],
+                     how='left')
+
+    # Repeat for each day
+    # Sort by year, month, period, day
+    df_cf = df_cf.sort_values(['YEAR', 'MONTH', 'PERIOD', 'DAY'])
+    # Fill nan with previous value
+    df_cf = df_cf.ffill()
+    # Go back to original sorting
+    df_cf = df_cf.sort_values(['YEAR', 'MONTH', 'DAY', 'PERIOD'])
+
+    # Drop DATE column
+    df_cf = df_cf.drop('DATE', axis=1)
+
+    # Melt dataframe
+    df_cf = df_cf.melt(id_vars=['YEAR', 'MONTH', 'DAY', 'PERIOD'],
+                       var_name='NAME', value_name='VALUE')
+    # Reorder columns
+    df_cf = df_cf[['NAME', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']]
+
+    # Print to csv
+    df_cf.to_csv(path_csv / 'Freq_Control.csv', index=False)
+
+
 def main():
     '''
     Main routine
@@ -1008,6 +1090,10 @@ def main():
         # GNL Base - volumen mensual de cada estanque de gas
         logger.info('Processing plexos Gas volumes')
         print_gas_files(iplp_path, df_daily, path_csv)
+
+        # Freq Control
+        logger.info('Processing plexos Frequency Control Requirements')
+        print_control_freq_files(iplp_path, df_hourly, path_csv)
 
         # Print Node Load (Demand)
         logger.info('Processing plexos Node Load')
