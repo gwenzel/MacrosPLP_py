@@ -860,14 +860,14 @@ def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
     # To avoid memory problems, merge by year, then concatenate
     # Create function to parallelize
 
-    def process_year(year, month):
-        logger.info('Node Load - Processing year, month %s' % (year, month))
-        df_aux = pd.merge(df[(df['Year'] == year) & (df['Month'] == month)],
+    def process_year(year):
+        logger.info('Node Load - Processing year, month %s' % (year))
+        df_aux = pd.merge(df[(df['Year'] == year)],
                           df_hourly_profiles_plexos,
-                          on=['Profile', 'Month'])
+                          on=['Profile', 'Month'], how='left')
         # Calculate consumption, group by Barra and sum, reorder and sort
         df_cons = get_consumption_per_barra_plexos(df_aux)
-        logger.info('Node Load - Ready with year, month %s' % (year, month))
+        logger.info('Node Load - Ready with year, month %s' % (year))
         return df_cons
 
     list_of_years = df['Year'].unique()
@@ -875,11 +875,9 @@ def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for year in list_of_years:
-            for month in range(1, 13):
-                futures.append(executor.submit(process_year, year, month))
+            futures.append(executor.submit(process_year, year))
         results = [future.result()
                    for future in concurrent.futures.as_completed(futures)]
-
     # Concatenate all dataframes
     df = pd.concat(results)
     return df
