@@ -957,13 +957,21 @@ def print_other_plexos_files(iplp_path: Path,
     df['PERIOD'] = 1
 
     files_list = ["CPF_up", "CPF_down", "CSF_up", "CSF_down",
-                  "Generator_Inercia", "RunupRate"]
+                  "Inertia", "RunupRate"]
 
+    # Check if columns are present
+    for col in files_list:
+        if col not in df.columns:
+            logger.error('Column %s not found in Centrales sheet' % col)
+            logger.error('File %s could not be printed' % col)
+            return
+
+    # print values in files
     for col in files_list:
         df_out = df.copy()
         df_out['VALUE'] = df_out[col]
         df_out = df_out[['NAME', 'YEAR', 'MONTH', 'DAY', 'PERIOD', 'VALUE']]
-        df_out.to_csv(path_csv / (col + '.csv'), index=False)
+        df_out.to_csv(path_csv / ('Generator_' + col + '.csv'), index=False)
 
 
 def print_control_freq_files(iplp_path: Path,
