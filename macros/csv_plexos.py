@@ -23,6 +23,7 @@ from utils.utils import (define_arg_parser,
 import pandas as pd
 from pathlib import Path
 from openpyxl.utils.datetime import from_excel
+import concurrent.futures
 
 logger = create_logger('csv_plexos')
 
@@ -854,21 +855,28 @@ def get_all_profiles_plexos(df_monthly_demand: pd.DataFrame,
     df['Profile'] = df['Profile'].astype(str)
     df_hourly_profiles_plexos['Profile'] = df_hourly_profiles_plexos[
         'Profile'].astype(str)
+    
     # Merge with hourly profiles
     # To avoid memory problems, merge by year, then concatenate
-    list_of_df = []
-    for year in df['Year'].unique():
+    # Create function to parallelize
+
+    def process_year(year):
         logger.info('Node Load - Processing year %s' % year)
         df_aux = pd.merge(df[df['Year'] == year],
                           df_hourly_profiles_plexos,
                           on=['Profile', 'Month'])
         # Calculate consumption, group by Barra and sum, reorder and sort
         df_cons = get_consumption_per_barra_plexos(df_aux)
-        list_of_df.append(df_cons)
-        # Free memory
-        del df_aux, df_cons
+        logger.info('Node Load - Ready with year %s' % year)
+        return df_cons
+
+    list_of_years = df['Year'].unique()
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(executor.map(process_year, list_of_years))
+
     # Concatenate all dataframes
-    df = pd.concat(list_of_df)
+    df = pd.concat(results)
     return df
 
 
