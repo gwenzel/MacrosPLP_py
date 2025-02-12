@@ -4,7 +4,45 @@ PLP Macros refactored using python and pandas for better performance.
 
 The code is callable from different entry points, associated to each button of the old Macros.
 
-## How to install (developer)
+
+## User 
+
+### How to Install
+
+From command line, run the following commands to create the virtual environment called plp
+
+```
+%USERPROFILE%\Anaconda3\Scripts\activate
+conda create -n plp Python=3.9
+```
+
+Then, activate the environment, and install the wheel file generated
+
+```
+conda activate plp
+pip install <wheel_file_path>
+```
+
+Example name of wheel_file_path: "D:\Python_wheels\macros_plp-0.0.2-py3-none-any.whl"
+
+To avoid having conflicting packages on the same environment, new wheel files are being installed in new environments, labeled in the same way. For example, version 0.0.2 was installed in the environment "plp_v02".
+
+
+### How to use
+
+After installing and activating the environment, type the "run_all" command, which will ask for the path of the IPLP file you need.
+
+```
+conda activate plp
+run_all
+```
+
+
+## Developer
+
+This command will run all the list of commands specified in the file located in *interface\commands.py*.
+
+### How to install
 
 From command line, run the following commands to create the virtual environment called plp.
 
@@ -33,27 +71,7 @@ python setup.py sdist bdist_wheel
 
 The wheel file should be generated in the project directory, in the dist folder.
 
-## How to install (user)
-
-From command line, run the following commands to create the virtual environment called plp
-
-```
-%USERPROFILE%\Anaconda3\Scripts\activate
-conda create -n plp Python=3.9
-```
-
-Then, activate the environment, and install the wheel file generated
-
-```
-conda activate plp
-pip install <wheel_file_path>
-```
-
-Example name of wheel_file_path: "D:\Python_wheels\macros_plp-0.0.2-py3-none-any.whl"
-
-To avoid having conflicting packages on the same environment, new wheel files are being installed in new environments, labeled in the same way. For example, version 0.0.2 was installed in the environment "plp_v02".
-
-## How to use
+### How to use
 
 You will be able to call each script separately and have it create the required files on the Temp folder.
 
@@ -64,6 +82,14 @@ Before running these scripts, make sure you have activated the previously create
 ```
 %USERPROFILE%\Anaconda3\Scripts\activate
 conda activate plp
+```
+
+Please note that the Anaconda3 directory can be different in other machines. Other likely locations are:
+
+```
+C:\ProgramData\Anaconda3
+%USERPROFILE%\Anaconda3
+%USERPROFILE%\AppData\Local\anaconda3
 ```
 
 Note for most commands: if there is no -f (file) argument, the program will ask for the location.
@@ -159,6 +185,35 @@ plx -f IPLP_FILENAME
 
 Please note that this command requires the creation of certain files in the _Temp/df_ folder. This is done to avoid processing the same information more than once.
 
-## How to check errors
+### Other Files
+
+Other files can be generated using the same logic:
+
+```
+mat -f IPLP_FILENAME
+PLPCENPMAX -f IPLP_FILENAME
+PLPCENRE -f IPLP_FILENAME
+PLPDEB -f IPLP_FILENAME
+PLPEXTRAC -f IPLP_FILENAME
+PLPFILTEMB -f IPLP_FILENAME
+PLPGNL -f IPLP_FILENAME
+PLPIDSIMAPE_MANUAL -f IPLP_FILENAME
+PLPLAJA_M -f IPLP_FILENAME
+PLPMANEM_ETA -f IPLP_FILENAME
+PLPMAULE_N -f IPLP_FILENAME
+PLPMINEMBH -f IPLP_FILENAME
+PLPPLEM1 -f IPLP_FILENAME
+PLPPLEM2 -f IPLP_FILENAME
+PLPRALCO -f IPLP_FILENAME
+PLPVREBEMB -f IPLP_FILENAME
+```
+
+### How to check errors
 
 Logs are created in the folder _Temp/log_. You can check if any of the different routines had an error there.
+
+Additionaly, there is a script to check the errors, that generates a csv file with the summary of all log files. It can be called with:
+
+```
+check_errors -f IPLP_FILENAME
+```
