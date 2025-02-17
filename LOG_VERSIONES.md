@@ -145,3 +145,14 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 2.2.0
 
 - Agregar interface al paquete distribuido, para habilitar comando run_all
+
+
+### Versión 2.3.0
+
+- Archivos adicionales Plexos (Units, Freq_Control, Generator_CPS, Generator_CSF, Generator_Inertia, etc)
+- Cambio de nombre Generator_HeatRate a Generator_VarCost
+
+
+### Versión 2.3.1
+
+- Ajuste de nombre archivos de SSCC ("Generator_" + nombre caracterísitica, como CSF)
