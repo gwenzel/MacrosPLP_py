@@ -69,7 +69,7 @@ def validate_fuel_price(df_fuel_price: pd.DataFrame, fuel: str):
         logger.error('Fuel %s has missing values' % fuel)
 
 
-def read_all_fuel_prices(iplp_path: Path):
+def read_all_fuel_prices(iplp_path: Path, path_df: Path):
     '''
     Build dictionary of dataframes with fuel price info
     for Carbon USD/ton, Gas USD/MMBtu, Diesel USD/ton
@@ -83,6 +83,7 @@ def read_all_fuel_prices(iplp_path: Path):
     df = df.reset_index()
     df = df.drop(columns=['level_1'])
     df = df.rename(columns={'level_0': 'Fuel Category'})
+    df.to_csv(path_df / 'df_fuels.csv', index=False)
     return df
 
 
@@ -327,7 +328,7 @@ def main():
         # Llenado Costo Variable - IM_to_CostoVariable
         # borrar datos
         logger.info('Reading fuel prices')
-        df_fuel_prices = read_all_fuel_prices(iplp_path)
+        df_fuel_prices = read_all_fuel_prices(iplp_path, path_df)
 
         # leer Rendimientos y mapeo central-combustible
         logger.info('Reading heatrate and fuel mapping')
