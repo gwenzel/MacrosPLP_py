@@ -297,6 +297,39 @@ def print_plpcosce(path_inputs: Path,
         write_lines_appending(lines, path_plpcosce)
 
 
+def print_df_units(iplp_path: Path, path_df: Path):
+    # Print df_units file for Sobrecostos
+    try:
+        df = pd.read_excel(iplp_path, sheet_name='Rendimientos y CVarNcomb',
+                           usecols='L:U')
+    except Exception as e:
+        logger.error("Could not read sheet 'Rendimientos y CVarNcomb', cols L:U")
+        # logger.error(e)
+        logger.error("Coult not print df_units.csv. Missing data.")
+        return
+    # Check if required columns are present
+    req_cols = ["Flag Sobrecostos", "Nombre IPLP",
+                "Fuel",	"Bar", "Aux MW",
+                "a0", "a1", "a2", "a3", "CVNC USD/MWh"]
+    skip_rest = False
+    for col in req_cols:
+        if col not in df.columns:
+            logger.error(
+                'Column %s not found in sheet "Rendimientos y CVarNcomb", '
+                'cols L:U' % col)
+            skip_rest = True
+    # If columns are present, skip the rest
+    if skip_rest:
+        logger.warning("Could not print df_units.csv")
+    else:
+        # Filter by Flag Sobrecostos = 1
+        df = df[df['Flag Sobrecostos'] == 1]
+        # Drop Flag Sobrecostos
+        df = df.drop(columns=['Flag Sobrecostos'])
+        # Print to df_units
+        df.to_csv(path_df / 'df_units.csv', index=False)
+
+
 @timeit
 def main():
     '''
@@ -335,6 +368,10 @@ def main():
         df_heatrate_unit_fuel_mapping =\
             read_heatrate_and_unit_fuel_mapping(iplp_path)
         validate_heatrate_unit_fuel_mapping(df_heatrate_unit_fuel_mapping)
+
+        # leer y escribir df_units
+        logger.info('Print df_units.csv - for Sobrecostos')
+        print_df_units(iplp_path, path_df)
 
         # crear matriz de centrales - costos variables
         logger.info('Calculating base Variable Cost')
