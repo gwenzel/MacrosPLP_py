@@ -136,7 +136,8 @@ def is_valid_file(parser: ArgumentParser, arg: str) -> Path:
 
 def define_arg_parser(ext: bool = False,
                       plp: bool = False,
-                      plx: bool = False) -> ArgumentParser:
+                      plx: bool = False,
+                      plx_dem_skip: bool = False) -> ArgumentParser:
     parser = ArgumentParser(description="Get PLP input filepaths")
     parser.add_argument('-f', dest='iplp_path', required=False,
                         help='IPLP input file path',
@@ -154,6 +155,10 @@ def define_arg_parser(ext: bool = False,
     if plx:
         parser.add_argument('--plx', dest='plx',
                             help='PLX outputs flag',
+                            action="store_true")
+    if plx_dem_skip:
+        parser.add_argument('--plx_dem_skip', dest='plx_dem_skip',
+                            help='PLX outputs flag for demand',
                             action="store_true")
     return parser
 
@@ -181,6 +186,11 @@ def get_ext_inputs_path(parser: ArgumentParser) -> Path:
 def get_plp_plx_booleans(parser: ArgumentParser) -> tuple[bool, bool]:
     args = parser.parse_args()
     return args.plp, args.plx
+
+
+def get_plx_dem_skip_bool(parser: ArgumentParser) -> bool:
+    args = parser.parse_args()
+    return args.plx_dem_skip
 
 
 def remove_blank_lines(text_file: Path):

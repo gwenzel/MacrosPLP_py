@@ -13,6 +13,7 @@ from macros.manlix import get_df_manlix
 from macros.ernc import get_input_names
 from utils.logger import add_file_handler, create_logger
 from utils.utils import (define_arg_parser,
+                         get_plx_dem_skip_bool,
                          get_iplp_input_path,
                          check_is_path,
                          get_daily_indexed_df,
@@ -1063,7 +1064,7 @@ def main():
     try:
         # Get input file path
         logger.info('Getting input file path')
-        parser = define_arg_parser()
+        parser = define_arg_parser(plx_dem_skip=True)
         iplp_path = get_iplp_input_path(parser)
         path_inputs = iplp_path.parent / "Temp"
         check_is_path(path_inputs)
@@ -1104,8 +1105,12 @@ def main():
         print_control_freq_files(iplp_path, df_hourly, path_csv)
 
         # Print Node Load (Demand)
-        logger.info('Processing plexos Node Load')
-        print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
+        plx_dem_skip = get_plx_dem_skip_bool(parser)
+        if plx_dem_skip:
+            logger.info('Skipping Node Load (Demand)')
+        else:
+            logger.info('Processing plexos Node Load')
+            print_node_load_new(df_hourly, path_csv, iplp_path, path_df)
 
     except Exception as e:
         logger.error(e, exc_info=True)
