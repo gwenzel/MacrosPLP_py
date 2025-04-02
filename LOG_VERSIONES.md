@@ -156,3 +156,19 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 2.3.1
 
 - Ajuste de nombre archivos de SSCC ("Generator_" + nombre caracterísitica, como CSF)
+
+### Versión 2.4.0 - 2.4.1 - 2.4.2
+
+- (Descontinuadas) Intentos de acelerar la generación del archivo de demanda Plexos con paralelización
+
+### Versión 2.5.0
+
+- Imprimir archivo df_fuels, con las series de combustible -> a ser usado en Modelo Sobrecostos
+
+### Versión 2.6.0
+
+- Imprimir archivo df_units, con los coeficientes y datos de cada unidad térmica (Hoja rendimientos) -> a ser usado en Modelo Sobrecostos
+
+### Versión 3.0.0
+
+- Comando adicional para imprimir demanda plexos aparte.
