@@ -909,7 +909,7 @@ def print_units_file(iplp_path: Path,
     # Estado
     df = pd.read_excel(iplp_path, sheet_name="Centrales",
                        skiprows=4, usecols="B,C,F,BJ")
-    df = df.rename(columns={'Nombre': 'NAME'})
+    df = df.rename(columns={'CENTRALES': 'NAME'})
     df['YEAR'] = df_daily['YEAR'][0]
     df['MONTH'] = 1
     df['DAY'] = 1
@@ -930,6 +930,18 @@ def print_units_file(iplp_path: Path,
 
     # Drop Tipo de Central, Conectada a la Barra and Estado
     df = df.drop(['Tipo de Central', 'Conectada a la Barra', 'Estado'], axis=1)
+
+    # Additional fixed rows for Filt_Laja, Filt_Colb, Filt_Inv, LMauleExt
+    extra_df = pd.DataFrame({
+        'NAME': ['Filt_Laja', 'Filt_Colb', 'Filt_Inv', 'LMauleExt'],
+        'YEAR': [2025, 2025, 2025, 2025],
+        'MONTH': [1, 1, 1, 1],
+        'DAY': [1, 1, 1, 1],
+        'PERIOD': [1, 1, 1, 1],
+        'VALUE': [1, 1, 1, 1]
+    })
+    df = pd.concat([df, extra_df], ignore_index=True)
+    # Print
     df.to_csv(path_csv / 'Units.csv', index=False)
 
 
