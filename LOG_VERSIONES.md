@@ -172,3 +172,8 @@ Esta lógica es válida desde la versión 1.0.0.
 ### Versión 3.0.0
 
 - Comando adicional para imprimir demanda plexos aparte.
+
+### Versión 3.0.1
+
+- Bug: Cambiar nombre "CENTRALES" POR "NAME" en Units.csv
+- Agregar filas fijas al final de Units.csv con Filt_Laja, Filt_Colb, Filt_Inv, LMauleExt
