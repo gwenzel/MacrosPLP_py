@@ -50,12 +50,12 @@ def read_fuel_price_iplp(iplp_path: Path, fuel: str):
                            ' will be filled with previous value' % row[0])
     df = df.stack(future_stack=True)
     df = df.reset_index()
-    df = df.rename(columns={'level_2': 'Date', 0: 'Variable Cost USD/Unit'})
+    df = df.rename(columns={'level_2': 'Date', 0: 'Fuel Cost USD/Unit'})
     df['Date'] = df['Date'].apply(from_excel)
     df['Year'] = df['Date'].dt.year
     df['Month'] = df['Date'].dt.month
     df = df[['Combustible', 'Unidad', 'Year', 'Month', 'Date',
-             'Variable Cost USD/Unit']]
+             'Fuel Cost USD/Unit']]
     df = df.rename(columns={'Combustible': 'Fuel Name', 'Unidad': 'Unit'})
     # Fill missing values using ffill first, then bfill
     df = df.ffill().bfill()
@@ -119,9 +119,9 @@ def read_heatrate_and_unit_fuel_mapping(iplp_path: Path):
     df = pd.read_excel(iplp_path, sheet_name='Rendimientos y CVarNcomb',
                        usecols='B,D:F')
     df = df.rename(columns={
-        'Rendimiento': 'Heat Rate',
+        'Rendimiento': 'Heat Rate Unit/MWh',
         'Combustible OSE': 'Fuel Name',
-        'Costo Variable No Combustible': 'Non-Fuel Cost'})
+        'Costo Variable No Combustible': 'Non-Fuel Cost USD/MWh'})
     # Filter out missing units
     df_cen = pd.read_excel(iplp_path, sheet_name='Centrales',
                            usecols='B:C', skiprows=4)
@@ -137,8 +137,8 @@ def validate_heatrate_unit_fuel_mapping(df: pd.DataFrame):
     assert not df.isna().any().any()
     # Validate data types
     logger.info('Validating data types for heatrate and fuel mapping')
-    assert df.dtypes['Heat Rate'] == np.dtype('float64')
-    assert df.dtypes['Non-Fuel Cost'] == np.dtype('float64')
+    assert df.dtypes['Heat Rate Unit/MWh'] == np.dtype('float64')
+    assert df.dtypes['Non-Fuel Cost USD/MWh'] == np.dtype('float64')
     return False
 
 
@@ -191,13 +191,14 @@ def calculate_cvar(path_df: Path, blo_eta: pd.DataFrame,
     # Warning: for this to work, dataframes must be merged in the right order
     df = df.ffill()
     # Drop rows if price could not be calculated
-    df = df.dropna(subset=['Variable Cost USD/Unit'])
+    df = df.dropna(subset=['Fuel Cost USD/Unit'])
     df['Variable Cost USD/MWh'] = \
-        (df['Variable Cost USD/Unit'] * df['Heat Rate'] +
-         df['Non-Fuel Cost']).round(1)
+        (df['Fuel Cost USD/Unit'] * df['Heat Rate Unit/MWh'] +
+         df['Non-Fuel Cost USD/MWh']).round(1)
     # Select columns to keep
-    df = df[['Etapa', 'Year', 'Month', 'Date', 'Central', 'Heat Rate',
-             'Fuel Name', 'Variable Cost USD/MWh']]
+    df = df[['Etapa', 'Year', 'Month', 'Date', 'Central',
+             'Heat Rate Unit/MWh', 'Fuel Name', 'Fuel Cost USD/Unit',
+             'Non-Fuel Cost USD/MWh', 'Variable Cost USD/MWh']]
     # Translate month to hydromonth
     df = translate_to_hydromonth(df)
     # df.to_csv(path_df / 'df_cvar.csv', index=False)
@@ -255,8 +256,8 @@ def validate_df_cvar_with_emissions(df: pd.DataFrame):
         logger.warning("Month should be int64")
     if not df.dtypes['Date'] == np.dtype('datetime64[ns]'):
         logger.warning("Date should be datetime64[ns]")
-    if not df.dtypes['Heat Rate'] == np.dtype('float64'):
-        logger.warning("Heat Rate should be float64")
+    if not df.dtypes['Heat Rate Unit/MWh'] == np.dtype('float64'):
+        logger.warning("Heat Rate Unit/MWh should be float64")
     if not df.dtypes['Variable Cost USD/MWh'] == np.dtype('float64'):
         logger.warning("Variable Cost USD/MWh should be float64")
     if not df.dtypes['Emissions TonCO2/MWh'] == np.dtype('float64'):
