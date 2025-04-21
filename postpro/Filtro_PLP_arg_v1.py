@@ -21,7 +21,6 @@ from fail import fail_converter
 import concurrent.futures
 
 
-# Hidrologías en Hyd med
 # N_HYD = 20
 CASE_ID = 1
 
